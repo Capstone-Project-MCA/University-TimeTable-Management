@@ -1,8 +1,5 @@
 # 🛒 Store Application
 
-A Spring Boot–based backend application built with Java 17.  
-This project integrates Spring Boot, JPA, Flyway, MySQL, MapStruct, and Thymeleaf.
-
 ---
 
 ## 🚀 Tech Stack
