@@ -1,0 +1,9 @@
+spring:
+  application:
+    name: capstone
+  datasource:
+    url: jdbc:mysql://localhost:3306/capstone?createDatabaseIfNotExist=true
+    username: root
+    password: 6853
+  jpa:
+    show-sql: true
