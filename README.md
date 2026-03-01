@@ -1,6 +1,3 @@
-# 🛒 Store Application
-
----
 
 ## 🚀 Tech Stack
 
