@@ -1,0 +1,13 @@
+{
+	"folders": [
+		{
+			"path": "../../../../Web Development"
+		},
+		{
+			"path": ".."
+		}
+	],
+	"settings": {
+		"java.compile.nullAnalysis.mode": "disabled"
+	}
+}
