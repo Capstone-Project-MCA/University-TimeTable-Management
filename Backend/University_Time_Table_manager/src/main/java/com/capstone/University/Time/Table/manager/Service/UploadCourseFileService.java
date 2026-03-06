@@ -43,8 +43,8 @@ public class UploadCourseFileService {
         List<Course> correctCourses = new ArrayList<>();
         List<Pair<Course, List<String>>> faultyCourses = new ArrayList<>();
 
-        Set<String> courseCodes = new HashSet<>();
-        Set<String> courseTitles = new HashSet<>();
+        Set<String> courseCodesSet = new HashSet<>();
+        Set<String> courseTitlesSet = new HashSet<>();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
@@ -65,14 +65,14 @@ public class UploadCourseFileService {
                 List<String> faults = new ArrayList<>();
 
                 // Course Code
-                Cell cell = row.getCell(0);
+                Cell cellCode = row.getCell(0);
 
-                if (cell != null) {
-                    String courseCode = formatter.formatCellValue(cell).trim();
-                    int colIndex = cell.getColumnIndex() + 1;
+                if (cellCode != null) {
+                    String courseCode = formatter.formatCellValue(cellCode).trim();
+                    int colIndex = cellCode.getColumnIndex() + 1;
 
                     if (!courseCode.isEmpty()) {
-                        if (!courseCodes.add(courseCode)) {
+                        if (!courseCodesSet.add(courseCode)) {
                             faults.add("Duplicate Course code found at Row -> "
                                     + (row.getRowNum() + 1)
                                     + " and Col -> "
@@ -89,30 +89,30 @@ public class UploadCourseFileService {
                 }
 
                 // Course Title
-                Cell cell1 = row.getCell(1);
-                if (cell1 != null) {
-                    String courseTitle = formatter.formatCellValue(cell1).trim();
-                    int colIndex1 = cell1.getColumnIndex() + 1;
+                Cell cellTitle = row.getCell(1);
+                if (cellTitle != null) {
+                    String courseTitle = formatter.formatCellValue(cellTitle).trim();
+                    int colIndex = cellTitle.getColumnIndex() + 1;
 
                     if (!courseTitle.isEmpty()) {
-                        if (courseTitles.add(courseTitle)) {
+                        if (courseTitlesSet.add(courseTitle)) {
                             course.setCourseTitle(courseTitle);
                         } else {
                             faults.add("Duplicate Course Title found at Row -> "
                                     + (row.getRowNum() + 1)
                                     + " and Col -> "
-                                    + colIndex1);
+                                    + colIndex);
                         }
 
                     } else {
                         faults.add("Course Title is empty at Row -> "
                                 + (row.getRowNum() + 1)
                                 + " and Col -> "
-                                + colIndex1);
+                                + colIndex);
                     }
 
                 } else {
-                    faults.add("Course Title is empty at Row -> " + (row.getRowNum() + 1));
+                    faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));
                 }
 
                 // L
@@ -184,35 +184,63 @@ public class UploadCourseFileService {
                 }
 
                 // Course Type
-                String courseType = formatter.formatCellValue(row.getCell(6));
-                if (courseType.equals("CR") || courseType.equals("DE") || courseType.equals("OM")
-                        || courseType.equals("OE")
-                        || courseType.equals("PW") || courseType.equals("DM") || courseType.equals("HC")
-                        || courseType.equals("PE")
-                        || courseType.equals("HE") || courseType.equals("SP")) {
-                    course.setCourseType(courseType);
-                } else {
-                    faults.add("Course Type is Invalid!!");
+                Cell courseTypeCell = row.getCell(6);
+                if(courseTypeCell != null){
+                    String courseType = formatter.formatCellValue(courseTypeCell);
+                    int colIndex = courseTypeCell.getColumnIndex() + 1;
+
+                    if(!courseType.isEmpty()){
+                        Set<String> allowedTypes = Set.of(
+                                "CR","DE","OM","OE","PW","DM","HC","PE","HE","SP"
+                        );
+
+                        if(allowedTypes.contains(courseType)){
+                            course.setCourseType(courseType);
+                        }else{
+                            faults.add("Invalid Course Type at Row: " + (row.getRowNum()+1) + " and Col: " + colIndex);
+                        }
+                    }
+                    else{
+                        faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));
+                    }
                 }
 
                 // Domain
-                String domain = formatter.formatCellValue(row.getCell(7));
-                if (!domain.equals("")) {
-                    course.setDomain(domain);
-                } else {
-                    faults.add("Domain is empty!!");
+                Cell domainCell = row.getCell(8);
+                if(domainCell != null){
+                    String domain = formatter.formatCellValue(domainCell);
+                    int colIndex = domainCell.getColumnIndex() + 1;
+
+                    if(!domain.isBlank()) {
+                        course.setDomain(domain);
+                    } else {
+                        faults.add("Domain is empty!! at Row "
+                                + (row.getRowNum() + 1) + " and Col: " + colIndex);
+                    }
                 }
 
                 // Remarks
                 course.setRemarks(formatter.formatCellValue(row.getCell(8)));
 
                 // Course Nature
-                String nature = formatter.formatCellValue(row.getCell(9));
-                if (nature.equals("L") || nature.equals("P") || nature.equals("B")
-                        || nature.equals("T") || nature.equals("C")) {
-                    course.setCourseNature(nature.charAt(0));
-                } else {
-                    faults.add("Nature is Invalid!!");
+                Cell natureCell = row.getCell(9);
+                if(natureCell != null){
+                    String nature = formatter.formatCellValue(natureCell);
+                    int colIndex = natureCell.getColumnIndex() + 1;
+
+                    if(!nature.isEmpty()){
+                        Set<String> allowedNature = Set.of("L","P","B","T","C");
+
+                        if(allowedNature.contains(nature)){
+                            course.setCourseNature(nature.charAt(0));
+                        }else{
+                            faults.add("Invalid Course Nature at Row: "
+                                    + (row.getRowNum()+1) + " and Col: " + colIndex);
+                        }
+                    }
+                    else{
+                        faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));
+                    }
                 }
 
                 if (faults.isEmpty()) {
@@ -223,11 +251,7 @@ public class UploadCourseFileService {
             }
 
             if (save) {
-                correctCourses.forEach(course -> {
-                    if (course.getStatus().contains("OK") || course.getStatus().contains("PENDING")) {
-                        courseRepository.save(course);
-                    }
-                });
+                courseRepository.saveAll(correctCourses);
             }
 
             // Generate Output Excel

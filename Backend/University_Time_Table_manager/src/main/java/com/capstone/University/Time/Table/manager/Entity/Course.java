@@ -26,7 +26,4 @@ public class Course {
     private String Domain;
     private String remarks;
     private Character CourseNature;
-
-    @ElementCollection
-    private List<String> status = new ArrayList<>(List.of("PENDING"));
 }
