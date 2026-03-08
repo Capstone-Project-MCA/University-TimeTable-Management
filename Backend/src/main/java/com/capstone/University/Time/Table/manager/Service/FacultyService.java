@@ -2,6 +2,8 @@ package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.FacultyDto;
 import com.capstone.University.Time.Table.manager.Entity.Faculty;
+import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
+import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.FacultyMapper;
 import com.capstone.University.Time.Table.manager.Repository.FacultyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -16,7 +18,8 @@ public class FacultyService {
     @Autowired
     private FacultyRepository facultyRepository;
 
-//------------------------------------ All Faculty Get Requests Service ------------------------------------------
+    // ------------------------------------ All Faculty Get Requests Service
+    // ------------------------------------------
     public List<FacultyDto> getAllFaculties() {
         return facultyRepository.findAll()
                 .stream()
@@ -26,56 +29,60 @@ public class FacultyService {
 
     public FacultyDto getFacultyByUID(String facultyUID) {
         Faculty faculty = facultyRepository.findByFacultyUID(facultyUID);
-        if(faculty != null){
-            return facultyMapper.toDto(faculty);
+        if (faculty == null) {
+            throw new ResourceNotFoundException("Faculty not found with UID '" + facultyUID + "'");
         }
-        return null;
+        return facultyMapper.toDto(faculty);
     }
 
     public FacultyDto getFacultyByFacultyName(String facultyName) {
         Faculty faculty = facultyRepository.findByFacultyName(facultyName);
-        if(faculty != null){
-            return facultyMapper.toDto(faculty);
+        if (faculty == null) {
+            throw new ResourceNotFoundException("Faculty not found with name '" + facultyName + "'");
         }
-
-        return null;
+        return facultyMapper.toDto(faculty);
     }
 
-//------------------------------------ All Faculty Post Requests Service -----------------------------------------
+    // ------------------------------------ All Faculty Post Requests Service
+    // -----------------------------------------
     public FacultyDto createFaculty(Faculty faculty) {
         Faculty exists = facultyRepository.findByFacultyUID(faculty.getFacultyUID());
-        if(exists == null) {
-            facultyRepository.save(faculty);
-            return facultyMapper.toDto(faculty);
+        if (exists != null) {
+            throw new DuplicateResourceException("Faculty with UID '" + faculty.getFacultyUID()
+                    + "' already exists. Please use a unique faculty UID.");
         }
-        return null;
+        facultyRepository.save(faculty);
+        return facultyMapper.toDto(faculty);
     }
 
-//----------------------------------- All Faculty Put Requests Service -------------------------------------------
-    public FacultyDto updateFacultyByUID(String facultyUID) {
+    // ----------------------------------- All Faculty Put Requests Service
+    // -------------------------------------------
+    public FacultyDto updateFacultyByUID(String facultyUID, Faculty faculty) {
         Faculty exists = facultyRepository.findByFacultyUID(facultyUID);
-        Faculty updatedFaculty = new Faculty();
-        if(exists != null) {
-            updatedFaculty.setFacultyUID(exists.getFacultyUID());
-            updatedFaculty.setFacultyName(exists.getFacultyName());
-            updatedFaculty.setFacultyDomain(exists.getFacultyDomain());
-
-            facultyRepository.save(updatedFaculty);
-            return facultyMapper.toDto(updatedFaculty);
+        if (exists == null) {
+            throw new ResourceNotFoundException("Cannot update: Faculty not found with UID '" + facultyUID + "'");
         }
 
-        return null;
+        Faculty updatedFaculty = new Faculty();
+        updatedFaculty.setFacultyUID(faculty.getFacultyUID());
+        updatedFaculty.setFacultyName(faculty.getFacultyName());
+        updatedFaculty.setFacultyDomain(faculty.getFacultyDomain());
+
+        facultyRepository.save(updatedFaculty);
+        return facultyMapper.toDto(updatedFaculty);
     }
 
-//----------------------------------- All Faculty Delete Requests Service --------------------------------------
+    // ----------------------------------- All Faculty Delete Requests Service
+    // --------------------------------------
     public void deleteFacultyByUID(String facultyUID) {
         Faculty exists = facultyRepository.findByFacultyUID(facultyUID);
-        if(exists != null) {
-            facultyRepository.delete(exists);
+        if (exists == null) {
+            throw new ResourceNotFoundException("Cannot delete: Faculty not found with UID '" + facultyUID + "'");
         }
+        facultyRepository.delete(exists);
     }
-    
-    public void deleteAllFaculties(){
+
+    public void deleteAllFaculties() {
         facultyRepository.deleteAll();
     }
 }

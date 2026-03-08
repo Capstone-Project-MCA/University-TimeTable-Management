@@ -1,6 +1,7 @@
 package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.Entity.Course;
+import com.capstone.University.Time.Table.manager.Exception.FileProcessingException;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.ss.usermodel.*;
@@ -34,7 +35,10 @@ public class UploadCourseFileService {
                 localCourseList.add(course);
             }
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
+            throw new FileProcessingException(
+                    "Failed to read the course Excel file. " +
+                    "Please ensure the file is a valid .xlsx format and is not corrupted.",
+                    e);
         }
         return localCourseList;
     }
@@ -184,33 +188,32 @@ public class UploadCourseFileService {
 
                 // Course Type
                 Cell courseTypeCell = row.getCell(6);
-                if(courseTypeCell != null){
+                if (courseTypeCell != null) {
                     String courseType = formatter.formatCellValue(courseTypeCell);
                     int colIndex = courseTypeCell.getColumnIndex() + 1;
 
-                    if(!courseType.isEmpty()){
+                    if (!courseType.isEmpty()) {
                         Set<String> allowedTypes = Set.of(
-                                "CR","DE","OM","OE","PW","DM","HC","PE","HE","SP"
-                        );
+                                "CR", "DE", "OM", "OE", "PW", "DM", "HC", "PE", "HE", "SP");
 
-                        if(allowedTypes.contains(courseType)){
+                        if (allowedTypes.contains(courseType)) {
                             course.setCourseType(courseType);
-                        }else{
-                            faults.add("Invalid Course Type at Row: " + (row.getRowNum()+1) + " and Col: " + colIndex);
+                        } else {
+                            faults.add(
+                                    "Invalid Course Type at Row: " + (row.getRowNum() + 1) + " and Col: " + colIndex);
                         }
-                    }
-                    else{
+                    } else {
                         faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));
                     }
                 }
 
                 // Domain
                 Cell domainCell = row.getCell(8);
-                if(domainCell != null){
+                if (domainCell != null) {
                     String domain = formatter.formatCellValue(domainCell);
                     int colIndex = domainCell.getColumnIndex() + 1;
 
-                    if(!domain.isBlank()) {
+                    if (!domain.isBlank()) {
                         course.setDomain(domain);
                     } else {
                         faults.add("Domain is empty!! at Row "
@@ -223,21 +226,20 @@ public class UploadCourseFileService {
 
                 // Course Nature
                 Cell natureCell = row.getCell(9);
-                if(natureCell != null){
+                if (natureCell != null) {
                     String nature = formatter.formatCellValue(natureCell);
                     int colIndex = natureCell.getColumnIndex() + 1;
 
-                    if(!nature.isEmpty()){
-                        Set<String> allowedNature = Set.of("L","P","B","T","C");
+                    if (!nature.isEmpty()) {
+                        Set<String> allowedNature = Set.of("L", "P", "B", "T", "C");
 
-                        if(allowedNature.contains(nature)){
+                        if (allowedNature.contains(nature)) {
                             course.setCourseNature(nature.charAt(0));
-                        }else{
+                        } else {
                             faults.add("Invalid Course Nature at Row: "
-                                    + (row.getRowNum()+1) + " and Col: " + colIndex);
+                                    + (row.getRowNum() + 1) + " and Col: " + colIndex);
                         }
-                    }
-                    else{
+                    } else {
                         faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));
                     }
                 }
@@ -291,7 +293,12 @@ public class UploadCourseFileService {
 
             return response;
         } catch (Exception e) {
-            throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
+            throw new FileProcessingException(
+                    "Failed to process the course Excel file. " +
+                    "Please verify the file format and ensure all required columns " +
+                    "(CourseCode, CourseTitle, L, T, P, Credit, CourseType, Domain, CourseNature) " +
+                    "are present.",
+                    e);
         }
     }
 

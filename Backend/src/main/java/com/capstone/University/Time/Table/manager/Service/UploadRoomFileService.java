@@ -2,6 +2,7 @@ package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.UploadResponse;
 import com.capstone.University.Time.Table.manager.Entity.Room;
+import com.capstone.University.Time.Table.manager.Exception.FileProcessingException;
 import com.capstone.University.Time.Table.manager.Repository.RoomRepository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.ss.usermodel.*;
@@ -22,22 +23,25 @@ public class UploadRoomFileService {
     public List<Room> readRoomExcelFile(MultipartFile file) {
         List<Room> localRoomList = new ArrayList<>();
 
-        try(Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
             int rowIndex = 0;
-            for(Row row : sheet){
-                if(rowIndex++ == 0) continue;
+            for (Row row : sheet) {
+                if (rowIndex++ == 0)
+                    continue;
 
-                if(row == null || row.getCell(0) == null) continue;
+                if (row == null || row.getCell(0) == null)
+                    continue;
                 Room room = new Room();
                 room.setRoomNo(formatter.formatCellValue(row.getCell(0)));
                 localRoomList.add(room);
             }
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Error reading file " + e.getMessage());
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Failed to read the room Excel file. Please ensure the file is a valid .xlsx format and is not corrupted.",
+                    e);
         }
         return localRoomList;
     }
@@ -48,106 +52,102 @@ public class UploadRoomFileService {
 
         Set<String> roomNumbersSet = new HashSet<>();
 
-        try(Workbook workbook = WorkbookFactory.create(file.getInputStream())){
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
             int rowIndex = 0;
 
-            for(Row row : sheet){
-                if(rowIndex++ == 0) continue;
-                if(row == null || row.getCell(0) == null) continue;
+            for (Row row : sheet) {
+                if (rowIndex++ == 0)
+                    continue;
+                if (row == null || row.getCell(0) == null)
+                    continue;
 
                 Room room = new Room();
                 List<String> faults = new ArrayList<>();
 
-//----------------------------------Room Number-----------------------------------
+                // ----------------------------------Room
+                // Number-----------------------------------
                 Cell roomNumberCell = row.getCell(0);
-                if(roomNumberCell != null){
+                if (roomNumberCell != null) {
                     String value = formatter.formatCellValue(roomNumberCell);
                     int colIndex = roomNumberCell.getColumnIndex() + 1;
 
-                    if(!value.isEmpty()){
-                        if(roomNumbersSet.add(value)){
+                    if (!value.isEmpty()) {
+                        if (roomNumbersSet.add(value)) {
                             room.setRoomNo(value);
-                        }
-                        else{
+                        } else {
                             faults.add("Duplicate room number at Row "
-                                + (row.getRowNum() + 1)
-                                + " and Column " + colIndex);
+                                    + (row.getRowNum() + 1)
+                                    + " and Column " + colIndex);
                         }
-                    }
-                    else{
+                    } else {
                         faults.add("Room number is empty!! at Column " + colIndex);
                     }
-                }
-                else{
+                } else {
                     faults.add("Cell is empty!!");
                 }
 
-//---------------------------------Seating Capacity--------------------------------
+                // ---------------------------------Seating
+                // Capacity--------------------------------
                 Cell seatingCell = row.getCell(1);
-                if(seatingCell != null){
+                if (seatingCell != null) {
                     String value = formatter.formatCellValue(seatingCell);
                     int colIndex = seatingCell.getColumnIndex() + 1;
 
-                    try{
+                    try {
                         room.setSeatingCapacity(Short.parseShort(value));
-                    }
-                    catch(NumberFormatException e){
+                    } catch (NumberFormatException e) {
                         faults.add("Invalid seating capacity at Row "
                                 + (row.getRowNum() + 1)
                                 + " and Column " + colIndex);
                     }
-                }
-                else{
+                } else {
                     faults.add("Cell is empty!!");
                 }
 
-//---------------------------------Room type--------------------------------------------
+                // ---------------------------------Room
+                // type--------------------------------------------
                 Cell roomTypeCell = row.getCell(2);
-                if(roomTypeCell != null){
+                if (roomTypeCell != null) {
                     String value = formatter.formatCellValue(roomTypeCell);
                     int colIndex = roomTypeCell.getColumnIndex() + 1;
 
-                    try{
+                    try {
                         room.setRoomType(Short.parseShort(value));
-                    }
-                    catch(NumberFormatException e){
+                    } catch (NumberFormatException e) {
                         faults.add("Invalid Room Type at Row "
                                 + (row.getRowNum() + 1)
                                 + " and Column " + colIndex);
                     }
-                }
-                else{
+                } else {
                     faults.add("Cell is empty!!");
                 }
 
-//-----------------------------------Level------------------------------------------
+                // -----------------------------------Level------------------------------------------
                 Cell levelCell = row.getCell(3);
-                if(levelCell != null){
+                if (levelCell != null) {
                     String value = formatter.formatCellValue(levelCell);
                     int colIndex = levelCell.getColumnIndex() + 1;
 
-                    try{
+                    try {
                         room.setLevel(Short.parseShort(value));
-                    }
-                    catch(NumberFormatException e){
+                    } catch (NumberFormatException e) {
                         faults.add("Invalid Level at Row "
                                 + (row.getRowNum() + 1)
                                 + " and Column " + colIndex);
                     }
                 }
 
-                if(faults.isEmpty()){
+                if (faults.isEmpty()) {
                     correctRoomList.add(room);
-                }
-                else {
+                } else {
                     faultyRooms.add(Pair.of(room, faults));
                 }
             }
 
-            if(save){
+            if (save) {
                 roomRepository.saveAll(correctRoomList);
             }
 
@@ -159,18 +159,18 @@ public class UploadRoomFileService {
                     "Room No", "Seating capacity", "Room type", "Level", "status"
             };
 
-            for(int i = 0; i < columns.length; i++){
+            for (int i = 0; i < columns.length; i++) {
                 headerRow.createCell(i).setCellValue(columns[i]);
             }
 
             int outRowIdx = 1;
 
-            for(Room room : correctRoomList){
+            for (Room room : correctRoomList) {
                 Row row = outSheet.createRow(outRowIdx++);
                 fillRoomRow(row, room, "OK");
             }
 
-            for(Pair<Room, List<String>> pair : faultyRooms){
+            for (Pair<Room, List<String>> pair : faultyRooms) {
                 Row row = outSheet.createRow(outRowIdx++);
                 fillRoomRow(row, pair.getLeft(), String.join(", ", pair.getRight()));
             }
@@ -185,13 +185,14 @@ public class UploadRoomFileService {
             response.setFileData(Base64.getEncoder().encodeToString(out.toByteArray()));
 
             return response;
-        }
-        catch (Exception e) {
-            throw new RuntimeException("Error while reading file " + e.getMessage());
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Failed to process the room Excel file. Please verify the file format and ensure all required columns (RoomNo, SeatingCapacity, RoomType, Level) are present.",
+                    e);
         }
     }
 
-    private void fillRoomRow(Row row, Room room, String status){
+    private void fillRoomRow(Row row, Room room, String status) {
         row.createCell(0).setCellValue(room.getRoomNo() != null ? room.getRoomNo() : "");
         row.createCell(1).setCellValue(room.getSeatingCapacity() != null ? room.getSeatingCapacity().toString() : "");
         row.createCell(2).setCellValue(room.getRoomType() != null ? room.getRoomType().toString() : "");

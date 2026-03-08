@@ -2,6 +2,7 @@ package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.UploadResponse;
 import com.capstone.University.Time.Table.manager.Entity.Faculty;
+import com.capstone.University.Time.Table.manager.Exception.FileProcessingException;
 import com.capstone.University.Time.Table.manager.Repository.FacultyRepository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.apache.poi.ss.usermodel.*;
@@ -17,53 +18,57 @@ public class UploadFacultyFileService {
     @Autowired
     private FacultyRepository facultyRepository;
 
-    public List<Faculty> readFacultyExcelFile(MultipartFile file){
+    public List<Faculty> readFacultyExcelFile(MultipartFile file) {
         List<Faculty> localFacultyList = new ArrayList<>();
 
-        try(Workbook workbook = WorkbookFactory.create(file.getInputStream())){
-            DataFormatter formatter = new DataFormatter(); formatter = new DataFormatter();
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            DataFormatter formatter = new DataFormatter();
+            formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
             int rowIndex = 0;
-            for(Row row : sheet){
-                if(rowIndex++ == 0)
+            for (Row row : sheet) {
+                if (rowIndex++ == 0)
                     continue;
 
-                if(row == null || row.getCell(0) == null)
+                if (row == null || row.getCell(0) == null)
                     continue;
 
                 Faculty faculty = new Faculty();
                 faculty.setFacultyUID(formatter.formatCellValue(row.getCell(0)).trim());
                 localFacultyList.add(faculty);
             }
-        }
-        catch (Exception e){
-            throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Failed to read the faculty Excel file. Please ensure the file is a valid .xlsx format and is not corrupted.",
+                    e);
         }
         return localFacultyList;
     }
 
-    public UploadResponse processFacultyExcelFile(MultipartFile file, boolean save){
+    public UploadResponse processFacultyExcelFile(MultipartFile file, boolean save) {
         List<Faculty> correctFaculty = new ArrayList<>();
         List<Pair<Faculty, List<String>>> faultyFacultys = new ArrayList<>();
 
         Set<String> facultyIdsSet = new HashSet<>();
         Set<String> facultyNamesSet = new HashSet<>();
 
-        try(Workbook workbook = WorkbookFactory.create(file.getInputStream())){
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
             int rowIndex = 0;
-            for(Row row : sheet){
-                //Skip header row
-                if(rowIndex++ == 0) continue;
+            for (Row row : sheet) {
+                // Skip header row
+                if (rowIndex++ == 0)
+                    continue;
 
-                if(row == null || row.getCell(0) == null) continue;
+                if (row == null || row.getCell(0) == null)
+                    continue;
 
                 Faculty faculty = new Faculty();
                 List<String> faults = new ArrayList<>();
 
-//-------------------------- Faculty UID-----------------------------------
+                // -------------------------- Faculty UID-----------------------------------
                 Cell uid = row.getCell(0);
                 if (uid != null) {
                     String value = formatter.formatCellValue(uid).trim();
@@ -72,88 +77,79 @@ public class UploadFacultyFileService {
                     if (!value.isEmpty()) {
                         try {
                             String facultyId = value;
-                            if(facultyIdsSet.add(facultyId)){
+                            if (facultyIdsSet.add(facultyId)) {
                                 faculty.setFacultyUID(facultyId);
-                            }else{
+                            } else {
                                 faults.add("Duplicate Faculty UID at Row -> "
                                         + (row.getRowNum() + 1)
                                         + " and Col -> "
                                         + colIndex);
                             }
-                        }
-                        catch (NumberFormatException e) {
+                        } catch (NumberFormatException e) {
                             faults.add("Invalid Faculty ID at Row -> "
                                     + (row.getRowNum() + 1)
                                     + " and Col -> "
                                     + colIndex);
                         }
-                    }
-                    else {
+                    } else {
                         faults.add("Faculty ID is empty at Row -> "
                                 + (row.getRowNum() + 1)
                                 + " and Col -> "
                                 + colIndex);
                     }
 
-                }
-                else {
+                } else {
                     faults.add("Faculty ID is empty at Row -> " + (row.getRowNum() + 1));
                 }
 
-//---------------------------- Faculty Name------------------------------------
+                // ---------------------------- Faculty Name------------------------------------
                 Cell name = row.getCell(1);
-                if(name != null) {
+                if (name != null) {
                     String facultyName = formatter.formatCellValue(name).trim();
                     int colIndex = name.getColumnIndex() + 1;
 
-                    if(!facultyName.isEmpty()) {
-                        if(facultyNamesSet.add(facultyName)) {
+                    if (!facultyName.isEmpty()) {
+                        if (facultyNamesSet.add(facultyName)) {
                             faculty.setFacultyName(facultyName);
-                        }
-                        else{
+                        } else {
                             faults.add("Duplicate Faculty Name at Row -> "
-                            + (row.getRowNum() + 1)
-                            + " and Col -> "
-                            + colIndex);
+                                    + (row.getRowNum() + 1)
+                                    + " and Col -> "
+                                    + colIndex);
                         }
-                    }
-                    else{
+                    } else {
                         faults.add("Faculty Name is empty at Row -> "
-                        + (row.getRowNum() + 1)
-                        + " and Col -> "
-                        + colIndex);
+                                + (row.getRowNum() + 1)
+                                + " and Col -> "
+                                + colIndex);
                     }
-                }
-                else{
+                } else {
                     faults.add("Faculty Name is empty at Row -> " + (row.getRowNum() + 1));
                 }
 
-//------------------------------ Faculty Domain----------------------------
+                // ------------------------------ Faculty Domain----------------------------
                 Cell domain = row.getCell(2);
-                if(domain != null) {
+                if (domain != null) {
                     String facultyDomain = formatter.formatCellValue(domain).trim();
                     int colIndex = domain.getColumnIndex() + 1;
-                    if(!facultyDomain.isEmpty()) {
+                    if (!facultyDomain.isEmpty()) {
                         faculty.setFacultyDomain(facultyDomain);
-                    }
-                    else{
+                    } else {
                         faults.add("Faculty Domain is empty at Row -> "
                                 + (row.getRowNum() + 1));
                     }
-                }
-                else{
+                } else {
                     faults.add("Domain is empty at Row -> " + (row.getRowNum() + 1));
                 }
 
-                if(faults.isEmpty()){
+                if (faults.isEmpty()) {
                     correctFaculty.add(faculty);
-                }
-                else{
+                } else {
                     faultyFacultys.add(Pair.of(faculty, faults));
                 }
             }
 
-            if(save){
+            if (save) {
                 facultyRepository.saveAll(correctFaculty);
             }
 
@@ -167,19 +163,19 @@ public class UploadFacultyFileService {
                     "Current Load", "ExpectedLoad", "Status"
             };
 
-            for(int i = 0; i < columns.length; i++){
+            for (int i = 0; i < columns.length; i++) {
                 headerRow.createCell(i).setCellValue(columns[i]);
             }
 
             int outRowIdx = 1;
 
             // Add correct Courses
-            for(Faculty faculty : correctFaculty){
+            for (Faculty faculty : correctFaculty) {
                 Row outRow = outSheet.createRow(outRowIdx++);
                 fillFacultyRow(outRow, faculty, "OK");
             }
 
-            for(Pair<Faculty, List<String>> pair : faultyFacultys){
+            for (Pair<Faculty, List<String>> pair : faultyFacultys) {
                 Row outRow = outSheet.createRow(outRowIdx++);
                 fillFacultyRow(outRow, pair.getLeft(), String.join(",", pair.getRight()));
             }
@@ -194,13 +190,14 @@ public class UploadFacultyFileService {
             response.setFileData(Base64.getEncoder().encodeToString(out.toByteArray()));
 
             return response;
-        }
-        catch (Exception e){
-            throw new RuntimeException("Failed to parse Excel file: " + e.getMessage());
+        } catch (Exception e) {
+            throw new FileProcessingException(
+                    "Failed to process the faculty Excel file. Please verify the file format and ensure all required columns (FacultyUID, FacultyName, FacultyDomain) are present.",
+                    e);
         }
     }
 
-    private void fillFacultyRow(Row row, Faculty faculty, String status){
+    private void fillFacultyRow(Row row, Faculty faculty, String status) {
         row.createCell(0).setCellValue(faculty.getFacultyUID() != null ? faculty.getFacultyUID() : "");
         row.createCell(1).setCellValue(faculty.getFacultyName() != null ? faculty.getFacultyName() : "");
         row.createCell(2).setCellValue(faculty.getFacultyDomain() != null ? faculty.getFacultyDomain() : "");
