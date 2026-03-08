@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: capstone
+  datasource:
+    url: jdbc:mysql://localhost:3306/capstone?createDatabaseIfNotExist=true
+    username: root
+    password: 6853 
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    database-platform: org.hibernate.dialect.MySQLDialect

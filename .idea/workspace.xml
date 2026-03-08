@@ -1,0 +1,157 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="253b6d33-3009-4fd1-8d91-22d58aebc353" name="Changes" comment="&quot;first sql script added&quot;">
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/.gitattributes" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/.mvn/wrapper/maven-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/mvnw" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/mvnw.cmd" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/pom.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Controller/CourseController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Controller/FacultyController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Controller/RoomController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Controller/SectionController.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/DTO/UploadResponse.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Entity/Course.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Entity/CourseMapping.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Entity/Faculty.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Entity/Room.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Entity/Section.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Repository/CourseRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Repository/FacultyRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Repository/RoomRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Repository/SectionRepository.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/CourseService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/FacultyService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/RoomService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/SectionService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/UploadCourseFileService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/UploadFacultyFileService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/UploadRoomFileService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/Service/UploadSectionFileService.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java/com/capstone/University/Time/Table/manager/UniversityTimeTableManagerApplication.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/resources/application.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/test/java/com/capstone/University/Time/Table/manager/UniversityTimeTableManagerApplicationTests.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/application.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/src/main/resources/db/migration/V1__first_script.sql" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
+  </component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 5
+}</component>
+  <component name="ProjectId" id="3A3ynlGrbkmzOuadQ2Ke2Q43lrQ" />
+  <component name="ProjectLevelVcsManager">
+    <ConfirmationsSetting value="2" id="Add" />
+  </component>
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Maven.store [org.flywaydb:flyway-maven-plugin:11.7.2:migrate].executor": "Run",
+    "Maven.store [org.flywaydb:flyway-maven-plugin:11.7.2:repair].executor": "Run",
+    "ModuleVcsDetector.initialDetectionPerformed": "true",
+    "RequestMappingsPanelOrder0": "0",
+    "RequestMappingsPanelOrder1": "1",
+    "RequestMappingsPanelWidth0": "75",
+    "RequestMappingsPanelWidth1": "75",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252": "true",
+    "RunOnceActivity.git.unshallow": "true",
+    "Spring Boot.CapstoneApplication.executor": "Run",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/home/nilotpal/capstone/Backend",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
+    "vue.rearranger.settings.migration": "true"
+  },
+  "keyToStringList": {
+    "DatabaseDriversLRU": [
+      "mysql"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+      <recent name="$PROJECT_DIR$/src/main" />
+      <recent name="$PROJECT_DIR$/Backend/src/main/java/com.capstone.university_time_table_manager" />
+      <recent name="$PROJECT_DIR$/Backend" />
+      <recent name="$PROJECT_DIR$/Backend/University_Time_Table_manager/src/main/java" />
+    </key>
+  </component>
+  <component name="RunManager">
+    <configuration name="CapstoneApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.capstone.University.Time.Table.manager.UniversityTimeTableManagerApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.23892.409" />
+        <option value="bundled-js-predefined-d6986cc7102b-e03c56caf84a-JavaScript-IU-252.23892.409" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="253b6d33-3009-4fd1-8d91-22d58aebc353" name="Changes" comment="" />
+      <created>1771835717838</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1771835717838</updated>
+      <workItem from="1771835719248" duration="2415000" />
+      <workItem from="1772179912029" duration="459000" />
+      <workItem from="1772367076403" duration="1785000" />
+      <workItem from="1772368899758" duration="1878000" />
+      <workItem from="1772463284514" duration="163000" />
+      <workItem from="1772463494504" duration="236000" />
+      <workItem from="1772698164910" duration="806000" />
+      <workItem from="1772820473158" duration="3382000" />
+      <workItem from="1772825499389" duration="77000" />
+      <workItem from="1772826836479" duration="1795000" />
+    </task>
+    <task id="LOCAL-00001" summary="&quot;first sql script added&quot;">
+      <option name="closed" value="true" />
+      <created>1772369322499</created>
+      <option name="number" value="00001" />
+      <option name="presentableId" value="LOCAL-00001" />
+      <option name="project" value="LOCAL" />
+      <updated>1772369322499</updated>
+    </task>
+    <option name="localTasksCounter" value="2" />
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="VcsManagerConfiguration">
+    <MESSAGE value="&quot;first sql script added&quot;" />
+    <option name="LAST_COMMIT_MESSAGE" value="&quot;first sql script added&quot;" />
+  </component>
+</project>
