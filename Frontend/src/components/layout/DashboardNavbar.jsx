@@ -21,13 +21,6 @@ export default function DashboardNavbar() {
 
       
       <div className="ml-auto flex items-center gap-4">
-        <button className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
-          Assign faculty to section
-        </button>
-        <button className="text-sm font-medium text-slate-700 dark:text-slate-200 hover:text-primary transition-colors">
-          Assign faculty to course
-        </button>
-        
         <div>
           <input 
             type="file" 

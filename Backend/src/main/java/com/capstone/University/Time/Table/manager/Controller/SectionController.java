@@ -1,5 +1,6 @@
 package com.capstone.University.Time.Table.manager.Controller;
 
+import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.DTO.UploadResponse;
 import com.capstone.University.Time.Table.manager.Entity.Section;
@@ -12,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/section")
@@ -62,6 +64,14 @@ public class SectionController {
         return new ResponseEntity<>(createdSection, HttpStatus.CREATED);
     }
 
+    @PostMapping("/assign-courses")
+    public ResponseEntity<Map<String, Object>> assignCoursesToSections(
+            @RequestBody CourseSectionAssignmentDto dto) {
+        Map<String, Object> result = sectionService.assignCoursesToSections(
+                dto.getSectionIds(), dto.getCourseId());
+        return ResponseEntity.ok(result);
+    }
+
     @PutMapping("/update/{sectionId}")
     public ResponseEntity<SectionDto> updateSection(
             @PathVariable String sectionId,
@@ -81,4 +91,5 @@ public class SectionController {
         sectionService.deleteAllSections();
         return ResponseEntity.noContent().build();
     }
+
 }

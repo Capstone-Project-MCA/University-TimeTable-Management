@@ -27,13 +27,13 @@ public class CourseMapping {
     @Column(name = "AttendanceType", length = 15, nullable = false)
     private String AttendanceType;
 
-    @Column(name = "Mergecode", length = 7, nullable = false)
+    @Column(name = "Mergecode", length = 7)
     private String Mergecode;
 
     @Column(name = "MergeStatus", nullable = false)
     private Boolean MergeStatus;
 
-    @Column(name = "FacultyUID", length = 5, nullable = false)
+    @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;
 
     @Column(name = "L", nullable = false)
@@ -45,7 +45,7 @@ public class CourseMapping {
     @Column(name = "P", nullable = false)
     private Short P;
 
-    @Column(name = "Reserveslot", length = 50, nullable = false)
+    @Column(name = "Reserveslot", length = 50)
     private String Reserveslot;
 
     @Column(name = "CourseNature", nullable = false)

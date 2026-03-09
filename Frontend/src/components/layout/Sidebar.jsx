@@ -104,6 +104,62 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
         </ul>
       </div>
+
+      {/* Divider */}
+      <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-700"></div>
+
+      {/* Assignment Section */}
+      <div className="px-3 w-full">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap px-2">
+          Assign
+        </p>
+
+        <ul className="space-y-1 w-full">
+
+          {/* Faculty Assignment */}
+          <li>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab("facultyAssign");
+              }}
+              className={`${baseClasses} ${
+                activeTab === "facultyAssign" ? activeClasses : inactiveClasses
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px] min-w-[20px]">
+                person_add
+              </span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Faculty Assign
+              </span>
+            </a>
+          </li>
+
+          {/* Section-Course Assignment */}
+          <li>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                setActiveTab("sectionCourseAssign");
+              }}
+              className={`${baseClasses} ${
+                activeTab === "sectionCourseAssign" ? activeClasses : inactiveClasses
+              }`}
+            >
+              <span className="material-symbols-outlined text-[20px] min-w-[20px]">
+                link
+              </span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                Section-Course
+              </span>
+            </a>
+          </li>
+
+        </ul>
+      </div>
     </nav>
   );
 }
