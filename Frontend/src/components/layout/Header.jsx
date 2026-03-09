@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { user } from "../../data/mockData";
+
+const user = {
+  name: "Admin User",
+  role: "Registrar",
+  avatar: "https://lh3.googleusercontent.com/aida-public/AB6AXuDcnY3nKOP6SKVxPEGvdGuqd_My1t6d_dUIxBLIo8g83xYgdurd8eCInsLN1AliTrb7HxBVg-Q85L0jo7n6Rm6MPO6hmT86RviDaRGBoQcqFiwMSaUgGQf3S8dN5_ZdVda_27icJs7goxJvouCrPD4ieuObpILdKsXVXHMfXNrKRAkhFF2K8F_f2QREYRHUdjnbOLkC1L4zVlgtGWgR1D_uTp4s7k4fXUBWwJy7CO7UdVWZZwbcKu6hJR3HeJQD6cQ-GS3jxrPy2YBe",
+};
 
 export default function Header() {
   const [isDarkMode, setIsDarkMode] = useState(() => {

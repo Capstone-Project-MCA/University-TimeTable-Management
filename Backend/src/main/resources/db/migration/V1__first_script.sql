@@ -3,8 +3,8 @@
 
 CREATE TABLE facultymaster (
                                FacultyUID VARCHAR(5) PRIMARY KEY,
-                               FacultyName VARCHAR(30) NOT NULL,
-                               FacultyDomain VARCHAR(4) NOT NULL,
+                               FacultyName VARCHAR(50) NOT NULL,
+                               FacultyDomain VARCHAR(20) NOT NULL,
                                CurrentLoad SMALLINT UNSIGNED NOT NULL,
                                ExpectedLoad SMALLINT UNSIGNED NOT NULL
 );

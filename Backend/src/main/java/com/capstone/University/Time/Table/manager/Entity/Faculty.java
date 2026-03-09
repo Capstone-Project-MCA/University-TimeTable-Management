@@ -18,17 +18,17 @@ public class Faculty {
     @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;
 
-    @Column(name = "FacultyName", length = 30, nullable = false)
+    @Column(name = "FacultyName", length = 50, nullable = false)
     private String FacultyName;
 
-    @Column(name = "FacultyDomain", length = 4, nullable = false)
+    @Column(name = "FacultyDomain", length = 20, nullable = false)
     private String FacultyDomain;
 
     @Column(name = "CurrentLoad", nullable = false)
-    private Short CurrentLoad;
+    private Short CurrentLoad=0;
 
     @Column(name = "ExpectedLoad", nullable = false)
-    private Short ExpectedLoad;
+    private Short ExpectedLoad=0;
 
     @OneToMany(mappedBy = "facultyEntity")
     private List<CourseMapping> courseMappings = new ArrayList<>();

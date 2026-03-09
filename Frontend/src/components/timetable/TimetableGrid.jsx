@@ -1,6 +1,17 @@
 import React from 'react';
-import { scheduledClasses, days, times } from '../../data/mockData';
-import ClassCard from './ClassCard';
+
+const days = [
+  { id: "mon", day: "Mon", date: "12 Oct" },
+  { id: "tue", day: "Tue", date: "13 Oct" },
+  { id: "wed", day: "Wed", date: "14 Oct" },
+  { id: "thu", day: "Thu", date: "15 Oct" },
+  { id: "fri", day: "Fri", date: "16 Oct" },
+];
+
+const times = [
+  "09:00", "10:00", "11:00", "12:00",
+  "13:00", "14:00", "15:00", "16:00",
+];
 
 export default function TimetableGrid() {
   return (
@@ -54,20 +65,12 @@ export default function TimetableGrid() {
 
                 {/* Day Cells */}
                 <div className="grid grid-cols-5 divide-x divide-slate-100 dark:divide-slate-700/50 w-full h-full relative z-10">
-                  {days.map((d) => {
-                    const cellClass = scheduledClasses.find(
-                      (c) => c.day === d.id && c.time === time
-                    );
-
-                    return cellClass ? (
-                      <ClassCard key={`${d.id}-${time}`} {...cellClass} />
-                    ) : (
-                      <div
-                        key={`${d.id}-${time}`}
-                        className="p-0.5 h-full relative z-0"
-                      ></div>
-                    );
-                  })}
+                  {days.map((d) => (
+                    <div
+                      key={`${d.id}-${time}`}
+                      className="p-0.5 h-full relative z-0"
+                    ></div>
+                  ))}
                 </div>
               </div>
             ))}

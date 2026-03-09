@@ -1,8 +1,29 @@
 import React from "react";
 
-function RoomCard({ roomNumber, building, floor, capacity, type }) {
+function RoomCard({ roomNumber, building, floor, capacity, type, onEdit, onDelete }) {
   return (
-    <div className="group bg-white dark:bg-slate-800 p-2.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary/30 transition-all">
+    <div className="group bg-white dark:bg-slate-800 p-2.5 rounded border border-slate-200 dark:border-slate-700 shadow-sm hover:border-primary/30 transition-all relative">
+      {/* Action icons – visible on hover */}
+      <div className='absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity'>
+        {onEdit && (
+          <button
+            onClick={onEdit}
+            title='Edit'
+            className='w-5 h-5 flex items-center justify-center rounded hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-400 hover:text-primary transition-colors'
+          >
+            <span className='material-symbols-outlined text-[14px]'>edit</span>
+          </button>
+        )}
+        {onDelete && (
+          <button
+            onClick={onDelete}
+            title='Delete'
+            className='w-5 h-5 flex items-center justify-center rounded hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors'
+          >
+            <span className='material-symbols-outlined text-[14px]'>delete</span>
+          </button>
+        )}
+      </div>
 
       {/* Room Type Badge */}
       <div className="flex justify-between items-start mb-1">
