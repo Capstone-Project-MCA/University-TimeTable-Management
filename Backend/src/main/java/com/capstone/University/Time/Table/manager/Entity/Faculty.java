@@ -29,4 +29,10 @@ public class Faculty {
 
     @Column(name = "ExpectedLoad", nullable = false)
     private Short ExpectedLoad;
+
+    @OneToMany(mappedBy = "facultyEntity")
+    private List<CourseMapping> courseMappings = new ArrayList<>();
+
+    @OneToMany(mappedBy = "facultyEntity")
+    private List<Ticket> tickets = new ArrayList<>();
 }

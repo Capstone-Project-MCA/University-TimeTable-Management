@@ -25,4 +25,7 @@ public class Room {
 
     @Column(name = "Level", nullable = false)
     private Short Level;
+
+    @OneToMany(mappedBy = "roomEntity")
+    private List<Ticket> tickets = new ArrayList<>();
 }

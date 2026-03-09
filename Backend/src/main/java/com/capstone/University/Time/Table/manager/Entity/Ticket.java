@@ -42,4 +42,20 @@ public class Ticket {
 
     @Column(name = "RoomNo", length = 10)
     private String RoomNo;
+
+    @ManyToOne
+    @JoinColumns({
+            @JoinColumn(name = "Section", referencedColumnName = "Section", insertable = false, updatable = false),
+            @JoinColumn(name = "Coursecode", referencedColumnName = "Coursecode", insertable = false, updatable = false),
+            @JoinColumn(name = "GroupNo", referencedColumnName = "GroupNo", insertable = false, updatable = false)
+    })
+    private CourseMapping courseMappingEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "FacultyUID", insertable = false, updatable = false)
+    private Faculty facultyEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "RoomNo", insertable = false, updatable = false)
+    private Room roomEntity;
 }

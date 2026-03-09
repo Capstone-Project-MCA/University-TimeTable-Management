@@ -45,4 +45,7 @@ public class Course {
 
     @Column(name = "CourseNature")
     private Character CourseNature;
+
+    @OneToMany(mappedBy = "courseEntity")
+    private List<CourseMapping> courseMappings = new ArrayList<>();
 }

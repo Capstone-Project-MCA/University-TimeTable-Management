@@ -50,4 +50,16 @@ public class CourseMapping {
 
     @Column(name = "CourseNature", nullable = false)
     private Character CourseNature;
+
+    @ManyToOne
+    @JoinColumn(name = "Section", insertable = false, updatable = false)
+    private Section sectionEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "Coursecode", insertable = false, updatable = false)
+    private Course courseEntity;
+
+    @ManyToOne
+    @JoinColumn(name = "FacultyUID", insertable = false, updatable = false)
+    private Faculty facultyEntity;
 }
