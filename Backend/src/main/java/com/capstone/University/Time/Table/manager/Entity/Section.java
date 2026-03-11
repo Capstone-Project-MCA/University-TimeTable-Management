@@ -42,6 +42,4 @@ public class Section {
     @Column(name = "ProgramCode", length = 9, nullable = false)
     private String ProgramCode;
 
-    @OneToMany(mappedBy = "sectionEntity")
-    private List<CourseMapping> courseMappings = new ArrayList<>();
 }
