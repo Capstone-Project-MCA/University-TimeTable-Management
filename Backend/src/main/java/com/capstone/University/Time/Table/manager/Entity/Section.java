@@ -42,4 +42,17 @@ public class Section {
     @Column(name = "ProgramCode", length = 9, nullable = false)
     private String ProgramCode;
 
+    @ManyToMany
+    @JoinTable(
+        name = "section_course",
+        joinColumns = @JoinColumn(name = "section_id"),
+        inverseJoinColumns = @JoinColumn(name = "course_code")
+    )
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("sections")
+    private java.util.Set<Course> courses = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "sectionEntity")
+
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"sectionEntity", "courseEntity"})
+    private List<CourseMapping> courseMappings = new ArrayList<>();
 }

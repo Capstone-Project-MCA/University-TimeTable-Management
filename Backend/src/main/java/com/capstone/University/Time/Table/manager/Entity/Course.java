@@ -46,4 +46,12 @@ public class Course {
     @Column(name = "CourseNature")
     private Character CourseNature;
 
+    @ManyToMany(mappedBy = "courses")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("courses")
+    private java.util.Set<Section> sections = new java.util.HashSet<>();
+
+    @OneToMany(mappedBy = "courseEntity")
+
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"courseEntity", "sectionEntity"})
+    private List<CourseMapping> courseMappings = new ArrayList<>();
 }
