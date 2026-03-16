@@ -44,6 +44,7 @@ public class CourseMapping {
     @Column(name = "P", nullable = false)
     private Short P = (short) 0;
 
+    @Id
     @Column(name="MappingType", nullable = false)
     private String mappingType;
 

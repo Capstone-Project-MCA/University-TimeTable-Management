@@ -68,7 +68,7 @@ CREATE TABLE coursemapping (
                                Reserveslot VARCHAR(50) NOT NULL,
                                CourseNature CHAR(1) NOT NULL,
 
-                               PRIMARY KEY (Section, Coursecode, GroupNo),
+                               PRIMARY KEY (Section, Coursecode, GroupNo, MappingType),
 
                                FOREIGN KEY (Section)
                                    REFERENCES sectionmaster(SectionId)

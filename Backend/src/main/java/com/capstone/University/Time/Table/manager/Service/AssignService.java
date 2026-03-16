@@ -17,6 +17,7 @@ import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,7 +39,11 @@ public class AssignService {
     @Autowired
     private CourseMapper courseMapper;
 
+    List<String> errors = new ArrayList<>();
+
+    @Transactional
     public List<Pair<SectionDto, List<CourseDto>>> assignCoursesToSection(CourseSectionAssignmentDto courseSectionAssignmentDto) {
+        errors.clear();
         List<String> sectionIds = courseSectionAssignmentDto.getSectionIds() != null ?
                 courseSectionAssignmentDto.getSectionIds() : new ArrayList<>();
 
@@ -58,9 +63,9 @@ public class AssignService {
 
             for(String courseId : courseIds) {
                 if(courseMappingRepository.existsBySectionAndCoursecode(sectionId, courseId)) {
-                    throw new DuplicateResourceException(
-                            "Courses already assigned to sections"
-                    );
+                    errors.add("Course with id -  " + courseId +
+                            " connected to Section with id - " + sectionId + " already exists");
+                    continue;
                 }
 
                 Course course = courseRepository.getCourseByCourseCode(courseId);
@@ -78,63 +83,66 @@ public class AssignService {
             assigns.add(Pair.of(sectionDto, courses));
         }
 
+//        if(!errors.isEmpty()){
+//            return null;
+//        }
         return assigns;
+    }
+
+    public List<String> courseAssignErrors(){
+        return errors;
     }
 
     private static @NonNull List<CourseMapping> getCourseMappings(String sectionId, String courseId,
                                                                   Course course, Section section) {
         List<CourseMapping> courseMappings = new ArrayList<>();
+        int gmaps = section.getNumberOfGroups();
 
-        if (course.getL() > 0) {
+        if (course.getL() > 0 && section.getStrength() <= 72) {
             CourseMapping courseMapping = new CourseMapping();
             courseMapping.setSection(sectionId);
             courseMapping.setCoursecode(courseId);
             courseMapping.setCourseNature(course.getCourseNature());
             courseMapping.setGroupNo((short) 0);
-            courseMapping.setMappingType("L0");
+            courseMapping.setL(course.getL());
+            courseMapping.setT(course.getT());
+            courseMapping.setP(course.getP());
+            courseMapping.setMappingType("L");
             courseMappings.add(courseMapping);
         }
 
-        int gmaps = section.getNumberOfGroups();
-        if (course.getT() > 0) {
-            for(int i = 0; i < gmaps; i++){
-                CourseMapping courseMapping1 = new CourseMapping();
-                CourseMapping courseMapping2 = new CourseMapping();
+        if (course.getT() > 0 && section.getStrength() <= 72) {
+            for(int i = 1; i <= gmaps; i++){
+                CourseMapping courseMapping = new CourseMapping();
 
-                courseMapping1.setSection(sectionId);
-                courseMapping1.setCoursecode(courseId);
-                courseMapping1.setGroupNo((short) 1);
-                courseMapping1.setCourseNature(course.getCourseNature());
-                courseMapping1.setMappingType("G" +(i + 1) + "T1");
-                courseMappings.add(courseMapping1);
+                courseMapping.setSection(sectionId);
+                courseMapping.setCoursecode(courseId);
+                courseMapping.setGroupNo((short) i);
+                courseMapping.setL(course.getL());
+                courseMapping.setT(course.getT());
+                courseMapping.setP(course.getP());
+                courseMapping.setCourseNature(course.getCourseNature());
+                courseMapping.setMappingType("T");
 
-                courseMapping2.setSection(sectionId);
-                courseMapping2.setCoursecode(courseId);
-                courseMapping2.setGroupNo((short) 2);
-                courseMapping2.setCourseNature(course.getCourseNature());
-                courseMapping2.setMappingType("G" + (i + 1) + "T2");
-                courseMappings.add(courseMapping2);
+                courseMappings.add(courseMapping);
+
             }
         }
 
-        if (course.getP() > 0) {
-            for(int i = 0; i < gmaps; i++){
-                CourseMapping courseMapping1 = new CourseMapping();
-                CourseMapping courseMapping2 = new CourseMapping();
+        if (course.getP() > 0 && section.getStrength() <= 72) {
+            for(int i = 1; i <= gmaps; i++){
+                CourseMapping courseMapping = new CourseMapping();
 
-                courseMapping1.setSection(sectionId);
-                courseMapping1.setCoursecode(courseId);
-                courseMapping1.setGroupNo((short) 1);
-                courseMapping1.setCourseNature(course.getCourseNature());
-                courseMapping1.setMappingType("G" + (i + 1) + "P1");
-                courseMappings.add(courseMapping1);
+                courseMapping.setSection(sectionId);
+                courseMapping.setCoursecode(courseId);
+                courseMapping.setGroupNo((short) i);
+                courseMapping.setL(course.getL());
+                courseMapping.setT(course.getT());
+                courseMapping.setP(course.getP());
+                courseMapping.setCourseNature(course.getCourseNature());
+                courseMapping.setMappingType("P");
 
-                courseMapping2.setSection(sectionId);
-                courseMapping2.setCoursecode(courseId);
-                courseMapping2.setGroupNo((short) 2);
-                courseMapping2.setCourseNature(course.getCourseNature());
-                courseMapping2.setMappingType("G" + (i + 1 )+ "P2");
-                courseMappings.add(courseMapping2);
+                courseMappings.add(courseMapping);
             }
         }
 

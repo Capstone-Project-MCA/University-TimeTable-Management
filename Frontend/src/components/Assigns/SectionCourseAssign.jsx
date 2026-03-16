@@ -13,6 +13,8 @@ const BulkAssignment = () => {
   const [selectedCourses, setSelectedCourses] = useState([]);
   const [assigning, setAssigning] = useState(false);
   const [result, setResult] = useState(null);
+  const [errorList, setErrorList] = useState([]);
+  const [showErrors, setShowErrors] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -90,8 +92,22 @@ const BulkAssignment = () => {
       setResult({ success: true, ...data });
       setSelectedSections([]);
       setSelectedCourses([]);
+
+      // Fetch error list from backend
+      try {
+        const errRes = await fetch(`${API_BASE}/assign/error`);
+        if (errRes.ok) {
+          const errData = await errRes.json();
+          setErrorList(errData || []);
+          setShowErrors(errData && errData.length > 0);
+        }
+      } catch {
+        // silently ignore error fetch failure
+      }
     } catch (err) {
       setResult({ success: false, message: err.message });
+      setErrorList([]);
+      setShowErrors(false);
     } finally {
       setAssigning(false);
     }
@@ -334,6 +350,39 @@ const BulkAssignment = () => {
               </div>
             )}
 
+            {/* Error List Panel */}
+            {errorList.length > 0 && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl overflow-hidden">
+                <button
+                  onClick={() => setShowErrors((prev) => !prev)}
+                  className="w-full p-4 flex items-center justify-between hover:bg-amber-100/50 dark:hover:bg-amber-900/30 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+                    <span className="material-symbols-outlined text-xl">warning</span>
+                    <span className="font-semibold text-sm">
+                      {errorList.length} Warning{errorList.length > 1 ? "s" : ""} During Assignment
+                    </span>
+                  </div>
+                  <span className={`material-symbols-outlined text-amber-500 transition-transform ${showErrors ? "rotate-180" : ""}`}>
+                    expand_more
+                  </span>
+                </button>
+                {showErrors && (
+                  <div className="border-t border-amber-200 dark:border-amber-800 p-4 space-y-2 max-h-60 overflow-y-auto">
+                    {errorList.map((errMsg, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-start gap-2 p-2.5 bg-white/60 dark:bg-slate-800/60 rounded-lg text-sm text-amber-800 dark:text-amber-300"
+                      >
+                        <span className="material-symbols-outlined text-amber-500 text-base mt-0.5 shrink-0">info</span>
+                        <span>{errMsg}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Confirm Bar */}
             <div className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center justify-between">
@@ -345,7 +394,7 @@ const BulkAssignment = () => {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => { setSelectedSections([]); setSelectedCourses([]); setResult(null); }}
+                    onClick={() => { setSelectedSections([]); setSelectedCourses([]); setResult(null); setErrorList([]); setShowErrors(false); }}
                     className="px-6 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
                   >
                     Clear All
