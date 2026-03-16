@@ -1,4 +1,21 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useCallback } from 'react';
+import { downloadTemplate } from './generateTemplate';
+
+// Session-storage key for tracking downloaded templates
+const STORAGE_KEY = 'downloaded_templates';
+
+function getStoredTemplates() {
+    try {
+        const raw = sessionStorage.getItem(STORAGE_KEY);
+        return raw ? new Set(JSON.parse(raw)) : new Set();
+    } catch {
+        return new Set();
+    }
+}
+
+function persistTemplates(set) {
+    sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
+}
 
 export const useFileUpload = () => {
     const fileInputRef = useRef(null);
@@ -7,8 +24,30 @@ export const useFileUpload = () => {
     const [uploadResult, setUploadResult] = useState(null);
     const [selectedFile, setSelectedFile] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
+    const [downloadedTemplates, setDownloadedTemplates] = useState(getStoredTemplates);
 
+    // ── Template download ───────────────────────────────────────────
+    const handleDownloadTemplate = useCallback((type) => {
+        downloadTemplate(type);
+        setDownloadedTemplates((prev) => {
+            const next = new Set(prev);
+            next.add(type);
+            persistTemplates(next);
+            return next;
+        });
+    }, []);
+
+    const isTemplateDownloaded = useCallback(
+        (type) => downloadedTemplates.has(type),
+        [downloadedTemplates]
+    );
+
+    // ── Upload flow (unchanged logic) ───────────────────────────────
     const handleSelectUploadType = (type) => {
+        if (!downloadedTemplates.has(type)) {
+            alert(`Please download the ${type} template first before uploading.`);
+            return;
+        }
         uploadTypeRef.current = type;
         fileInputRef.current?.click();
     };
@@ -116,6 +155,9 @@ export const useFileUpload = () => {
         isUploading,
         uploadResult,
         isSaving,
+        downloadedTemplates,
+        handleDownloadTemplate,
+        isTemplateDownloaded,
         handleSelectUploadType,
         handleFileUpload,
         handleFinalUpload,

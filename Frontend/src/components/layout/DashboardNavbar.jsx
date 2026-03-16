@@ -11,6 +11,8 @@ export default function DashboardNavbar({ activeTab }) {
     isUploading,
     uploadResult,
     isSaving,
+    handleDownloadTemplate,
+    isTemplateDownloaded,
     handleSelectUploadType,
     handleFileUpload,
     handleFinalUpload,
@@ -102,7 +104,9 @@ export default function DashboardNavbar({ activeTab }) {
           />
           <UploadDropdown 
             isUploading={isUploading} 
-            onSelectType={handleSelectUploadType} 
+            onSelectType={handleSelectUploadType}
+            onDownloadTemplate={handleDownloadTemplate}
+            isTemplateDownloaded={isTemplateDownloaded}
           />
         </div>
       </div>
