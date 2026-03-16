@@ -1,15 +1,14 @@
 package com.capstone.University.Time.Table.manager.Entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "facultymaster")
@@ -30,9 +29,9 @@ public class Faculty {
     @Column(name = "ExpectedLoad", nullable = false)
     private Short ExpectedLoad=0;
 
-    @OneToMany(mappedBy = "facultyEntity")
+    @OneToMany(mappedBy = "facultyEntity", cascade = CascadeType.ALL)
     private List<CourseMapping> courseMappings = new ArrayList<>();
 
-    @OneToMany(mappedBy = "facultyEntity")
+    @OneToMany(mappedBy = "facultyEntity", cascade = CascadeType.ALL)
     private List<Ticket> tickets = new ArrayList<>();
 }

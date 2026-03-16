@@ -74,12 +74,12 @@ const BulkAssignment = () => {
     setAssigning(true);
     setResult(null);
     try {
-      const res = await fetch(`${API_BASE}/section/assign-courses`, {
+      const res = await fetch(`${API_BASE}/assign/assign-courses`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           sectionIds: selectedSections.map((s) => s.SectionId),
-          courseId: selectedCourses.map((c) => c.CourseCode),
+          courseIds: selectedCourses.map((c) => c.CourseCode),
         }),
       });
       if (!res.ok) {

@@ -6,6 +6,7 @@ import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceExc
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
+import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -16,7 +17,8 @@ public class CourseService {
 
     @Autowired
     private CourseRepository courseRepository;
-
+    @Autowired
+    private SectionRepository sectionRepository;
     @Autowired
     private CourseMapper courseMapper;
 
@@ -100,6 +102,9 @@ public class CourseService {
     }
 
     public void deleteAllCourses() {
+        sectionRepository.findAll().forEach(section -> {
+            section.getCourses().clear();
+        });
         courseRepository.deleteAll();
     }
 }

@@ -1,14 +1,13 @@
 package com.capstone.University.Time.Table.manager.Entity;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "roommaster")
@@ -26,6 +25,6 @@ public class Room {
     @Column(name = "Level", nullable = false)
     private Short Level;
 
-    @OneToMany(mappedBy = "roomEntity")
+    @OneToMany(mappedBy = "roomEntity", cascade = CascadeType.ALL)
     private List<Ticket> tickets = new ArrayList<>();
 }

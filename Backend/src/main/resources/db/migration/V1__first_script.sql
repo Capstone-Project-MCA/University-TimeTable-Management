@@ -64,6 +64,7 @@ CREATE TABLE coursemapping (
                                L TINYINT UNSIGNED NOT NULL,
                                T TINYINT UNSIGNED NOT NULL,
                                P TINYINT UNSIGNED NOT NULL,
+                               MappingType VARCHAR(5) NOT NULL,
                                Reserveslot VARCHAR(50) NOT NULL,
                                CourseNature CHAR(1) NOT NULL,
 

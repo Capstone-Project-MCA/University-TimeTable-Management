@@ -1,12 +1,11 @@
 package com.capstone.University.Time.Table.manager.Entity;
 
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "coursemapping")
@@ -25,25 +24,28 @@ public class CourseMapping {
     private Short GroupNo;
 
     @Column(name = "AttendanceType", length = 15, nullable = false)
-    private String AttendanceType;
+    private String AttendanceType = "Regular";
 
     @Column(name = "Mergecode", length = 7)
     private String Mergecode;
 
     @Column(name = "MergeStatus", nullable = false)
-    private Boolean MergeStatus;
+    private Boolean MergeStatus = false;
 
     @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;
 
     @Column(name = "L", nullable = false)
-    private Short L;
+    private Short L = (short) 0;
 
     @Column(name = "T", nullable = false)
-    private Short T;
+    private Short T = (short) 0;
 
     @Column(name = "P", nullable = false)
-    private Short P;
+    private Short P = (short) 0;
+
+    @Column(name="MappingType", nullable = false)
+    private String mappingType;
 
     @Column(name = "Reserveslot", length = 50)
     private String Reserveslot;

@@ -1,11 +1,13 @@
 package com.capstone.University.Time.Table.manager.Controller;
 
+import com.capstone.University.Time.Table.manager.DTO.CourseDto;
 import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.DTO.UploadResponse;
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Service.SectionService;
 import com.capstone.University.Time.Table.manager.Service.UploadSectionFileService;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -62,14 +64,6 @@ public class SectionController {
     public ResponseEntity<SectionDto> createSection(@RequestBody Section section) {
         SectionDto createdSection = sectionService.createSection(section);
         return new ResponseEntity<>(createdSection, HttpStatus.CREATED);
-    }
-
-    @PostMapping("/assign-courses")
-    public ResponseEntity<Map<String, Object>> assignCoursesToSections(
-            @RequestBody CourseSectionAssignmentDto dto) {
-        Map<String, Object> result = sectionService.assignCoursesToSections(
-                dto.getSectionIds(), dto.getCourseId());
-        return ResponseEntity.ok(result);
     }
 
     @PutMapping("/update/{sectionId}")

@@ -27,7 +27,7 @@ export default function Dashboard() {
           <>
             <UnscheduledSidebar activeTab={activeTab} />
             <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950 relative">
-              <DashboardNavbar />
+              <DashboardNavbar activeTab={activeTab} />
               <TimetableGrid />
             </main>
           </>

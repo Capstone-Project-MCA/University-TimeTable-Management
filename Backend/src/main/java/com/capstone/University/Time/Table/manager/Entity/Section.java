@@ -1,15 +1,14 @@
 package com.capstone.University.Time.Table.manager.Entity;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Entity
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 @NoArgsConstructor
 @Table(name = "sectionmaster")
@@ -48,11 +47,11 @@ public class Section {
         joinColumns = @JoinColumn(name = "section_id"),
         inverseJoinColumns = @JoinColumn(name = "course_code")
     )
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties("sections")
-    private java.util.Set<Course> courses = new java.util.HashSet<>();
+    @JsonIgnoreProperties("sections")
+    private Set<Course> courses = new HashSet<>();
 
-    @OneToMany(mappedBy = "sectionEntity")
+    @OneToMany(mappedBy = "sectionEntity", cascade = CascadeType.ALL, orphanRemoval = true)
 
-    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"sectionEntity", "courseEntity"})
+    @JsonIgnoreProperties({"sectionEntity", "courseEntity"})
     private List<CourseMapping> courseMappings = new ArrayList<>();
 }
