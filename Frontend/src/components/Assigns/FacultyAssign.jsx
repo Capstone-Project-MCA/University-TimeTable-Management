@@ -8,6 +8,28 @@ const FacultyAssignmentWorkspace = () => {
   const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  // Filtered lists based on search query
+  const filteredFaculties = faculties.filter((f) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (f.FacultyName || "").toLowerCase().includes(q) ||
+      (f.FacultyUID || "").toLowerCase().includes(q) ||
+      (f.FacultyDomain || "").toLowerCase().includes(q)
+    );
+  });
+
+  const filteredCourses = courses.filter((c) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      (c.CourseTitle || "").toLowerCase().includes(q) ||
+      (c.CourseCode || "").toLowerCase().includes(q) ||
+      (c.CourseType || "").toLowerCase().includes(q)
+    );
+  });
 
   const [selectedFaculty, setSelectedFaculty] = useState([]);
   const [selectedCourses, setSelectedCourses] = useState([]);
@@ -78,7 +100,7 @@ const FacultyAssignmentWorkspace = () => {
           <div className="p-4 border-b border-slate-200 dark:border-slate-800">
             <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
               <button
-                onClick={() => setSidebarView("faculty")}
+                onClick={() => { setSidebarView("faculty"); setSearchQuery(""); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
                   sidebarView === "faculty"
                     ? "bg-white dark:bg-slate-700 shadow-sm text-primary"
@@ -89,7 +111,7 @@ const FacultyAssignmentWorkspace = () => {
                 Faculty
               </button>
               <button
-                onClick={() => setSidebarView("courses")}
+                onClick={() => { setSidebarView("courses"); setSearchQuery(""); }}
                 className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
                   sidebarView === "courses"
                     ? "bg-white dark:bg-slate-700 shadow-sm text-primary"
@@ -99,6 +121,28 @@ const FacultyAssignmentWorkspace = () => {
                 <span className="material-symbols-outlined text-[14px] align-middle mr-1">menu_book</span>
                 Courses
               </button>
+            </div>
+          </div>
+
+          {/* Search / Filter Bar */}
+          <div className="px-4 pt-3 pb-1">
+            <div className="relative">
+              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder={`Search ${sidebarView === "faculty" ? "faculty" : "courses"}...`}
+                className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery("")}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
+                >
+                  <span className="material-symbols-outlined text-base">close</span>
+                </button>
+              )}
             </div>
           </div>
 
@@ -116,7 +160,7 @@ const FacultyAssignmentWorkspace = () => {
               </div>
             )}
 
-            {!loading && !error && sidebarView === "faculty" && faculties.map((faculty) => (
+            {!loading && !error && sidebarView === "faculty" && filteredFaculties.map((faculty) => (
               <div
                 key={faculty.FacultyUID}
                 draggable
@@ -138,7 +182,7 @@ const FacultyAssignmentWorkspace = () => {
               </div>
             ))}
 
-            {!loading && !error && sidebarView === "courses" && courses.map((course) => (
+            {!loading && !error && sidebarView === "courses" && filteredCourses.map((course) => (
               <div
                 key={course.CourseCode}
                 draggable
@@ -158,20 +202,34 @@ const FacultyAssignmentWorkspace = () => {
             ))}
 
             {!loading && !error && (
-              (sidebarView === "faculty" && faculties.length === 0) ||
-              (sidebarView === "courses" && courses.length === 0)
+              (sidebarView === "faculty" && filteredFaculties.length === 0) ||
+              (sidebarView === "courses" && filteredCourses.length === 0)
             ) && (
-              <div className="text-center py-12 text-slate-400 text-sm">
-                <span className="material-symbols-outlined text-3xl mb-2 block">inbox</span>
-                No {sidebarView} found
-              </div>
+              searchQuery.trim() ? (
+                <div className="text-center py-12 text-slate-400 text-sm">
+                  <span className="material-symbols-outlined text-3xl mb-2 block">search_off</span>
+                  No matches for "{searchQuery}"
+                </div>
+              ) : (
+                <div className="text-center py-12 text-slate-400 text-sm">
+                  <span className="material-symbols-outlined text-3xl mb-2 block">inbox</span>
+                  No {sidebarView} found
+                </div>
+              )
             )}
           </div>
 
           {/* Footer Count */}
           <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center">
             <p className="text-[11px] text-slate-400">
-              {sidebarView === "faculty" ? faculties.length : courses.length} available {sidebarView}
+              {sidebarView === "faculty"
+                ? (searchQuery.trim()
+                    ? `${filteredFaculties.length} of ${faculties.length}`
+                    : faculties.length)
+                : (searchQuery.trim()
+                    ? `${filteredCourses.length} of ${courses.length}`
+                    : courses.length)
+              } available {sidebarView}
             </p>
           </div>
         </aside>
