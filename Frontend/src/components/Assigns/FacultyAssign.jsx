@@ -3,395 +3,256 @@ import React, { useState, useEffect } from "react";
 const API_BASE = "http://localhost:8080";
 
 const FacultyAssignmentWorkspace = () => {
-  const [sidebarView, setSidebarView] = useState("faculty");
-  const [faculties, setFaculties] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [rows, setRows] = useState([
+    {
+      id: 1,
+      courseCode: "CS302",
+      group: "G1",
+      section: "A",
+      type: "Main",
+      attendance: "Biometric",
+      nature: "Core",
+      uid: "F-9021",
+      l: 3, t: 1, p: 0,
+      mergeStatus: "check_circle",
+      mergeCode: "MC-CS-A",
+      reserve: "Slot 04",
+      statusColor: "text-tertiary"
+    },
+    {
+      id: 2,
+      courseCode: "DS101",
+      group: "G3",
+      section: "C",
+      type: "Elective",
+      attendance: "Manual",
+      nature: "Lab",
+      uid: "",
+      l: 0, t: 0, p: 4,
+      mergeStatus: "circle",
+      mergeCode: "---",
+      reserve: "---",
+      statusColor: "text-slate-300 dark:text-slate-600"
+    },
+    {
+      id: 3,
+      courseCode: "MATH204",
+      group: "G1",
+      section: "B",
+      type: "Main",
+      attendance: "Biometric",
+      nature: "Foundation",
+      uid: "F-8812",
+      l: 4, t: 0, p: 0,
+      mergeStatus: "error",
+      mergeCode: "MC-MA-B",
+      reserve: "Slot 01",
+      statusColor: "text-error"
+    }
+  ]);
 
-  // Filtered lists based on search query
-  const filteredFaculties = faculties.filter((f) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (f.FacultyName || "").toLowerCase().includes(q) ||
-      (f.FacultyUID || "").toLowerCase().includes(q) ||
-      (f.FacultyDomain || "").toLowerCase().includes(q)
-    );
-  });
-
-  const filteredCourses = courses.filter((c) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (c.CourseTitle || "").toLowerCase().includes(q) ||
-      (c.CourseCode || "").toLowerCase().includes(q) ||
-      (c.CourseType || "").toLowerCase().includes(q)
-    );
-  });
-
-  const [selectedFaculty, setSelectedFaculty] = useState([]);
-  const [selectedCourses, setSelectedCourses] = useState([]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const [facultyRes, coursesRes] = await Promise.all([
-          fetch(`${API_BASE}/faculty/all`),
-          fetch(`${API_BASE}/course/all`),
-        ]);
-
-        if (!facultyRes.ok) throw new Error("Failed to fetch faculty");
-        if (!coursesRes.ok) throw new Error("Failed to fetch courses");
-
-        const facultyData = await facultyRes.json();
-        const coursesData = await coursesRes.json();
-
-        setFaculties(facultyData);
-        setCourses(coursesData);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, []);
-
-  const handleDragStart = (e, item, type) => {
-    e.dataTransfer.setData("application/json", JSON.stringify({ ...item, _type: type }));
-    e.dataTransfer.effectAllowed = "copy";
-  };
-
-  const handleDrop = (e, zone) => {
-    e.preventDefault();
-    try {
-      const data = JSON.parse(e.dataTransfer.getData("application/json"));
-      if (zone === "faculty" && data._type === "faculty") {
-        const exists = selectedFaculty.some((f) => f.FacultyUID === data.FacultyUID);
-        if (!exists) setSelectedFaculty((prev) => [...prev, data]);
-      } else if (zone === "courses" && data._type === "course") {
-        const exists = selectedCourses.some((c) => c.CourseCode === data.CourseCode);
-        if (!exists) setSelectedCourses((prev) => [...prev, data]);
-      }
-    } catch { /* ignore */ }
-  };
-
-  const handleDragOver = (e) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "copy";
-  };
-
-  const removeFaculty = (uid) => setSelectedFaculty((prev) => prev.filter((f) => f.FacultyUID !== uid));
-  const removeCourse = (code) => setSelectedCourses((prev) => prev.filter((c) => c.CourseCode !== code));
+  const [autoSync, setAutoSync] = useState(true);
 
   return (
-    <div className="font-display bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
-      <div className="flex flex-1 overflow-hidden">
+    <main className="w-full min-h-screen bg-surface dark:bg-[#020617] flex flex-col font-body">
+      <div className="p-8 flex-1 flex flex-col gap-8 max-w-[1600px] mx-auto w-full">
+        {/* Breadcrumbs & Header */}
+        <div className="flex justify-between items-end">
+          <div>
+            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-headline">Course Mapping Architecture</h1>
+            <p className="text-slate-500 dark:text-slate-400 mt-1">Configure section-wise faculty allocations and semester-wide mapping rules.</p>
+          </div>
+          <div className="flex gap-3">
+            <button className="px-4 py-2 border border-outline-variant dark:border-[#334155] text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-[#1e293b] transition-all flex items-center gap-2">
+              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>file_download</span>
+              Export CSV
+            </button>
+            <button className="px-6 py-2 bg-primary dark:bg-[#3b82f6] text-white rounded-lg font-semibold shadow-lg shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:brightness-110 transition-all flex items-center gap-2 active:scale-95">
+              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>save</span>
+              Save All Changes
+            </button>
+          </div>
+        </div>
 
-        {/* Sidebar */}
-        <aside className="w-80 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 flex flex-col shrink-0">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-primary dark:border-l-[#3b82f6] border border-transparent dark:border-[#334155] shadow-sm">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Total Courses</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">142</h3>
+              <span className="text-[10px] font-bold text-slate-500">Global count</span>
+            </div>
+          </div>
+          <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-tertiary dark:border-l-[#10b981] border border-transparent dark:border-[#334155] shadow-sm">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Faculty Assigned</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">130</h3>
+              <span className="text-[10px] font-bold text-tertiary">91.5% complete</span>
+            </div>
+          </div>
+          <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-error dark:border-l-[#ef4444] border border-transparent dark:border-[#334155] shadow-sm">
+            <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Faculty Not Assigned</p>
+            <div className="flex items-baseline gap-2 mt-1">
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">12</h3>
+              <span className="text-[10px] font-bold text-error">Requires allocation</span>
+            </div>
+          </div>
+        </div>
 
-          {/* Toggle Switch */}
-          <div className="p-4 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg">
-              <button
-                onClick={() => { setSidebarView("faculty"); setSearchQuery(""); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
-                  sidebarView === "faculty"
-                    ? "bg-white dark:bg-slate-700 shadow-sm text-primary"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[14px] align-middle mr-1">person_apron</span>
-                Faculty
+        {/* Mapping Table Container */}
+        <div className="bg-white dark:bg-[#0f172a] rounded-2xl shadow-soft dark:shadow-2xl border border-outline-variant dark:border-[#334155] overflow-hidden flex flex-col flex-1">
+          {/* Filters Header */}
+          <div className="p-6 bg-surface-dim dark:bg-[#1e293b]/50 border-b border-outline-variant dark:border-[#334155] space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Department</label>
+                <select className="text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg px-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]">
+                  <option>All Departments</option>
+                  <option>Computer Science</option>
+                  <option>Design</option>
+                  <option>Mathematics</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Course Code</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>search</span>
+                  <input className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]" placeholder="e.g. CS302" type="text" />
+                </div>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Section</label>
+                <select className="text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg px-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]">
+                  <option>All Sections</option>
+                  <option>A</option>
+                  <option>B</option>
+                  <option>C</option>
+                  <option>D</option>
+                </select>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Faculty UID</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>person</span>
+                  <input className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]" placeholder="Search UID..." type="text" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto scrollbar-hide flex-1">
+            <table className="w-full text-left border-collapse min-w-[1400px]">
+              <thead>
+                <tr className="bg-slate-50/50 dark:bg-[#1e293b] sticky top-0 z-10 border-b border-outline-variant dark:border-[#334155]">
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Course Code</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Group No</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Section</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Mapping Type</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Attendance Type</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Course Nature</th>
+                  <th className="p-4 text-[10px] font-bold text-primary dark:text-[#3b82f6] uppercase tracking-widest bg-primary/5 dark:bg-[#3b82f6]/5 border-x border-primary/10 dark:border-[#3b82f6]/20 w-64">Faculty UID</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">L</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">T</th>
+                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">P</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Merge Status</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Merge Code</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Reserve Slot</th>
+                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky right-0 bg-slate-50 dark:bg-[#1e293b]">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-outline-variant dark:divide-[#334155]">
+                {rows.map((row) => (
+                  <tr key={row.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
+                    <td className="p-4 font-bold text-slate-600 dark:text-slate-300 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.courseCode}</td>
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.group}</td>
+                    <td className="p-4 text-slate-600 dark:text-slate-200 text-sm font-semibold bg-slate-50/40 dark:bg-slate-900/40">{row.section}</td>
+                    <td className="p-4 bg-slate-50/40 dark:bg-slate-900/40">
+                      <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded uppercase border border-slate-200 dark:border-[#334155] whitespace-nowrap">{row.type}</span>
+                    </td>
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.attendance}</td>
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.nature}</td>
+                    <td className="p-4 bg-primary/[0.02] dark:bg-[#3b82f6]/5 border-x border-primary/5 dark:border-[#3b82f6]/10">
+                      <div className="relative">
+                        <input
+                          className="w-full text-sm border-slate-200 dark:border-[#334155] dark:bg-[#020617] dark:text-white rounded-lg py-1.5 px-3 focus:border-primary dark:focus:border-[#3b82f6] focus:ring-4 focus:ring-primary/10 dark:focus:ring-[#3b82f6]/20 transition-all border shadow-sm"
+                          type="text"
+                          defaultValue={row.uid}
+                          placeholder={!row.uid ? "Type UID..." : ""}
+                        />
+                      </div>
+                    </td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.l}</td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.t}</td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.p}</td>
+                    <td className="p-4 bg-slate-50/40 dark:bg-slate-900/40 text-center">
+                      <span className={`material-symbols-outlined text-sm ${row.statusColor}`} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>{row.mergeStatus}</span>
+                    </td>
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.mergeCode}</td>
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.reserve}</td>
+                    <td className="p-4 sticky right-0 bg-white dark:bg-[#0f172a] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/30 transition-colors">
+                      <button className="bg-primary dark:bg-[#3b82f6] text-white text-[10px] font-bold px-4 py-1.5 rounded uppercase shadow-sm shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:bg-on-primary-fixed-variant dark:hover:brightness-110 transition-all">Save</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Pagination & Bulk Action Footer */}
+          <div className="p-4 bg-white dark:bg-[#1e293b]/50 border-t border-outline-variant dark:border-[#334155] flex justify-between items-center">
+            <div className="flex items-center gap-6">
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Rows per page:</span>
+                <select className="text-xs border-none bg-slate-100 dark:bg-[#020617] dark:text-slate-300 rounded-md px-2 py-1 focus:ring-0 dark:ring-1 dark:ring-[#334155]">
+                  <option>10</option>
+                  <option>20</option>
+                  <option>50</option>
+                </select>
+              </div>
+              <button className="px-4 py-1.5 bg-primary/10 text-primary dark:text-[#3b82f6] hover:bg-primary/20 transition-all rounded-lg text-xs font-bold flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>done_all</span>
+                Save All Changes on Page
               </button>
-              <button
-                onClick={() => { setSidebarView("courses"); setSearchQuery(""); }}
-                className={`flex-1 py-2 text-xs font-semibold rounded-md transition-all ${
-                  sidebarView === "courses"
-                    ? "bg-white dark:bg-slate-700 shadow-sm text-primary"
-                    : "text-slate-500 dark:text-slate-400 hover:text-slate-700"
-                }`}
-              >
-                <span className="material-symbols-outlined text-[14px] align-middle mr-1">menu_book</span>
-                Courses
+            </div>
+            <div className="flex items-center gap-1">
+              <button className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30" disabled>
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>first_page</span>
+              </button>
+              <button className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30" disabled>
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>chevron_left</span>
+              </button>
+              <div className="flex items-center px-4 gap-2">
+                <button className="w-8 h-8 rounded-lg bg-primary dark:bg-[#3b82f6] text-white text-xs font-bold">1</button>
+                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">2</button>
+                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">3</button>
+                <span className="text-slate-400 px-1">...</span>
+                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">15</button>
+              </div>
+              <button className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>chevron_right</span>
+              </button>
+              <button className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+                <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>last_page</span>
               </button>
             </div>
           </div>
-
-          {/* Search / Filter Bar */}
-          <div className="px-4 pt-3 pb-1">
-            <div className="relative">
-              <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">search</span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={`Search ${sidebarView === "faculty" ? "faculty" : "courses"}...`}
-                className="w-full pl-9 pr-8 py-2 text-sm rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery("")}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors"
-                >
-                  <span className="material-symbols-outlined text-base">close</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* List */}
-          <div className="flex-1 overflow-y-auto p-4 space-y-2 scrollbar-hide">
-            {loading && (
-              <div className="flex items-center justify-center py-12">
-                <span className="material-symbols-outlined text-slate-400 animate-spin text-2xl">refresh</span>
-              </div>
-            )}
-
-            {error && (
-              <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-sm text-red-600 dark:text-red-400">
-                {error}
-              </div>
-            )}
-
-            {!loading && !error && sidebarView === "faculty" && filteredFaculties.map((faculty) => (
-              <div
-                key={faculty.FacultyUID}
-                draggable
-                onDragStart={(e) => handleDragStart(e, faculty, "faculty")}
-                className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-grab hover:border-primary/50 hover:shadow-sm transition-all active:cursor-grabbing"
-              >
-                <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                  <span className="material-symbols-outlined text-lg">person</span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{faculty.FacultyName}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {faculty.FacultyUID} · {faculty.FacultyDomain}
-                  </p>
-                </div>
-                <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg shrink-0">
-                  drag_indicator
-                </span>
-              </div>
-            ))}
-
-            {!loading && !error && sidebarView === "courses" && filteredCourses.map((course) => (
-              <div
-                key={course.CourseCode}
-                draggable
-                onDragStart={(e) => handleDragStart(e, course, "course")}
-                className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-grab hover:border-primary/50 hover:shadow-sm transition-all active:cursor-grabbing"
-              >
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{course.CourseTitle}</p>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {course.CourseCode} · {course.Credit} Cr · {course.CourseType}
-                  </p>
-                </div>
-                <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg shrink-0">
-                  drag_indicator
-                </span>
-              </div>
-            ))}
-
-            {!loading && !error && (
-              (sidebarView === "faculty" && filteredFaculties.length === 0) ||
-              (sidebarView === "courses" && filteredCourses.length === 0)
-            ) && (
-              searchQuery.trim() ? (
-                <div className="text-center py-12 text-slate-400 text-sm">
-                  <span className="material-symbols-outlined text-3xl mb-2 block">search_off</span>
-                  No matches for "{searchQuery}"
-                </div>
-              ) : (
-                <div className="text-center py-12 text-slate-400 text-sm">
-                  <span className="material-symbols-outlined text-3xl mb-2 block">inbox</span>
-                  No {sidebarView} found
-                </div>
-              )
-            )}
-          </div>
-
-          {/* Footer Count */}
-          <div className="p-3 border-t border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 text-center">
-            <p className="text-[11px] text-slate-400">
-              {sidebarView === "faculty"
-                ? (searchQuery.trim()
-                    ? `${filteredFaculties.length} of ${faculties.length}`
-                    : faculties.length)
-                : (searchQuery.trim()
-                    ? `${filteredCourses.length} of ${courses.length}`
-                    : courses.length)
-              } available {sidebarView}
-            </p>
-          </div>
-        </aside>
-
-        {/* Main Workspace */}
-        <main className="flex-1 flex flex-col relative overflow-hidden">
-
-          <div className="flex-1 p-8 overflow-y-auto pb-32">
-            <div className="max-w-6xl mx-auto space-y-8">
-
-              <div>
-                <h1 className="text-2xl font-bold">Faculty Assignment Workspace</h1>
-                <p className="text-slate-500">
-                  Drag faculty and courses from the sidebar to assign them together.
-                </p>
-              </div>
-
-              {/* Info Banner */}
-              <div className="bg-primary/5 border border-primary/20 p-4 rounded-xl flex gap-4">
-                <span className="material-symbols-outlined text-primary">info</span>
-                <div>
-                  <h3 className="font-semibold text-primary">How to assign</h3>
-                  <p className="text-sm text-slate-600 dark:text-slate-400">
-                    Switch between Faculty and Courses using the toggle, then drag items into the zones below.
-                  </p>
-                </div>
-              </div>
-
-              {/* Drop Zones */}
-              <div className="grid lg:grid-cols-2 gap-8">
-
-                {/* Selected Faculty Drop Zone */}
-                <div
-                  onDrop={(e) => handleDrop(e, "faculty")}
-                  onDragOver={handleDragOver}
-                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-5 min-h-[280px] transition-colors hover:border-primary/40"
-                >
-                  <h3 className="font-bold flex items-center gap-2 mb-4">
-                    <span className="material-symbols-outlined text-primary">group_add</span>
-                    Selected Faculty
-                    {selectedFaculty.length > 0 && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
-                        {selectedFaculty.length}
-                      </span>
-                    )}
-                  </h3>
-
-                  {selectedFaculty.length === 0 && (
-                    <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
-                      <div className="text-center">
-                        <span className="material-symbols-outlined text-3xl mb-2 block">drag_indicator</span>
-                        Drop faculty here
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {selectedFaculty.map((faculty) => (
-                      <div key={faculty.FacultyUID} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center gap-3 group">
-                        <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
-                          <span className="material-symbols-outlined text-lg">person</span>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold truncate">{faculty.FacultyName}</p>
-                          <p className="text-xs text-slate-500">{faculty.FacultyUID} · {faculty.FacultyDomain}</p>
-                        </div>
-                        <button
-                          onClick={() => removeFaculty(faculty.FacultyUID)}
-                          className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Target Courses Drop Zone */}
-                <div
-                  onDrop={(e) => handleDrop(e, "courses")}
-                  onDragOver={handleDragOver}
-                  className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-5 min-h-[280px] transition-colors hover:border-primary/40"
-                >
-                  <h3 className="font-bold flex items-center gap-2 mb-4">
-                    <span className="material-symbols-outlined text-primary">menu_book</span>
-                    Target Courses
-                    {selectedCourses.length > 0 && (
-                      <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-full font-bold">
-                        {selectedCourses.length}
-                      </span>
-                    )}
-                  </h3>
-
-                  {selectedCourses.length === 0 && (
-                    <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
-                      <div className="text-center">
-                        <span className="material-symbols-outlined text-3xl mb-2 block">drag_indicator</span>
-                        Drop courses here
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="space-y-2">
-                    {selectedCourses.map((course) => (
-                      <div key={course.CourseCode} className="p-3 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 flex items-center justify-between group">
-                        <div>
-                          <p className="text-sm font-semibold">{course.CourseTitle}</p>
-                          <p className="text-xs text-slate-500">{course.CourseCode} · {course.Credit} Credits</p>
-                        </div>
-                        <button
-                          onClick={() => removeCourse(course.CourseCode)}
-                          className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
-                        >
-                          <span className="material-symbols-outlined text-lg">close</span>
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-              </div>
-            </div>
-          </div>
-
-          {/* Footer */}
-          <footer className="absolute bottom-0 left-0 right-0 p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800">
-            <div className="max-w-6xl mx-auto flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <span className="material-symbols-outlined text-primary">checklist</span>
-                <div>
-                  <p className="text-sm font-bold">
-                    {selectedFaculty.length > 0 || selectedCourses.length > 0
-                      ? "Ready for assignment"
-                      : "Drag items to get started"}
-                  </p>
-                  <p className="text-xs text-slate-500">
-                    {selectedFaculty.length} faculty → {selectedCourses.length} course(s)
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-3">
-                <button
-                  onClick={() => { setSelectedFaculty([]); setSelectedCourses([]); }}
-                  className="px-6 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
-                >
-                  Clear Workspace
-                </button>
-                <button
-                  disabled={selectedFaculty.length === 0 || selectedCourses.length === 0}
-                  className="px-8 py-2.5 bg-primary text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/30 flex items-center gap-2 hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Confirm Assignment
-                  <span className="material-symbols-outlined text-sm">rocket_launch</span>
-                </button>
-              </div>
-            </div>
-          </footer>
-
-        </main>
-
+        </div>
       </div>
-    </div>
+
+      {/* Float Notification */}
+      {autoSync && (
+        <div className="fixed bottom-8 right-8 bg-on-surface dark:bg-[#1e293b] text-surface dark:text-white py-3 px-6 rounded-2xl shadow-2xl flex items-center gap-4 border border-white/10 dark:border-[#334155] backdrop-blur-xl z-50 transition-all">
+          <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>sync</span>
+          <div className="text-sm">
+            <p className="font-bold">Auto-sync active</p>
+            <p className="text-xs text-slate-400">Assignment updates are staged for batch processing.</p>
+          </div>
+          <button onClick={() => setAutoSync(false)} className="ml-4 text-xs font-bold text-primary dark:text-white hover:text-primary/80 transition-colors">
+            DISMISS
+          </button>
+        </div>
+      )}
+    </main>
   );
 };
 
