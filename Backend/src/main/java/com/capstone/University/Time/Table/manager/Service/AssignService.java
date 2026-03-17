@@ -85,9 +85,9 @@ public class AssignService {
             assigns.add(Pair.of(sectionDto, courses));
         }
 
-        if(!errors.isEmpty()){
-            throw new DuplicateResourceException("Courses are already assigned to sections");
-        }
+//        if(!errors.isEmpty()){
+//            throw new DuplicateResourceException("Courses are already assigned to sections");
+//        }
         return assigns;
     }
 
