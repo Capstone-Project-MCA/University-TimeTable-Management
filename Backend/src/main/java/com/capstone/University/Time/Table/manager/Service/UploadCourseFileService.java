@@ -208,7 +208,7 @@ public class UploadCourseFileService {
                 }
 
                 // Domain
-                Cell domainCell = row.getCell(8);
+                Cell domainCell = row.getCell(7);
                 if (domainCell != null) {
                     String domain = formatter.formatCellValue(domainCell);
                     int colIndex = domainCell.getColumnIndex() + 1;

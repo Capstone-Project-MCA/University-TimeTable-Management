@@ -95,6 +95,18 @@ export const TEMPLATE_SCHEMAS = {
         comment: "Faculty's specialization domain (max 20 characters, e.g., AI, Data Science). Required.",
         example: "AI",
       },
+      {
+        header: "CurrentLoad",
+        type: "number",
+        comment: "Current teaching load of the faculty. Number. Defaults to 0 if empty.",
+        example: 0,
+      },
+      {
+        header: "ExpectedLoad",
+        type: "number",
+        comment: "Expected teaching load of the faculty. Number. Defaults to 0 if empty.",
+        example: 0,
+      },
     ],
   },
 

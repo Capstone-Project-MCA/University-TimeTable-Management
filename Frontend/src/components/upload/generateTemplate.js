@@ -1,12 +1,14 @@
-import * as XLSX from "xlsx";
+import XLSX from "xlsx-js-style";
 import { TEMPLATE_SCHEMAS } from "./templateSchemas";
 
 /**
  * Generate and download a pre-formatted Excel template for the given upload type.
  *
  * Layout:
- *   Sheet 1 (data sheet)  — Row 1: Headers, Row 2: Instruction hints (deletable), Row 3+: Data
- *   Sheet 2 ("Instructions") — Full reference table with column details
+ *   Row 1 — Headers (bold, dark blue background, white text)
+ *   Row 2 — Description of what each column expects (amber/yellow background) ← user deletes this row
+ *   Row 3 — Example / mock data (light green background) ← user deletes this row
+ *   Row 4+ — User enters data here
  *
  * @param {"course"|"faculty"|"room"|"section"} type
  */
@@ -19,32 +21,92 @@ export function downloadTemplate(type) {
 
   const { label, sheetName, columns } = schema;
 
-  // ══════════════════════════════════════════════════════════════════
-  // Sheet 1 — Data Sheet
-  // ══════════════════════════════════════════════════════════════════
-  const headers = columns.map((c) => c.header);
+  // ── Style definitions ─────────────────────────────────────────────
+  const headerStyle = {
+    font: { bold: true, color: { rgb: "FFFFFF" }, sz: 11 },
+    fill: { fgColor: { rgb: "1F4E79" } },
+    alignment: { horizontal: "center", vertical: "center", wrapText: true },
+    border: {
+      top: { style: "thin", color: { rgb: "000000" } },
+      bottom: { style: "thin", color: { rgb: "000000" } },
+      left: { style: "thin", color: { rgb: "000000" } },
+      right: { style: "thin", color: { rgb: "000000" } },
+    },
+  };
 
-  // Row 2: human-readable hints (users can select row → delete)
-  const hintRow = columns.map((c) => {
-    let hint = `[${c.type === "number" ? "Number" : "Text"}]`;
+  const descStyle = {
+    font: { italic: true, color: { rgb: "7A4700" }, sz: 10 },
+    fill: { fgColor: { rgb: "FFF3CD" } },
+    alignment: { vertical: "top", wrapText: true },
+    border: {
+      top: { style: "thin", color: { rgb: "E0C97A" } },
+      bottom: { style: "thin", color: { rgb: "E0C97A" } },
+      left: { style: "thin", color: { rgb: "E0C97A" } },
+      right: { style: "thin", color: { rgb: "E0C97A" } },
+    },
+  };
+
+  const exampleStyle = {
+    font: { color: { rgb: "155724" }, sz: 10 },
+    fill: { fgColor: { rgb: "D4EDDA" } },
+    alignment: { vertical: "center" },
+    border: {
+      top: { style: "thin", color: { rgb: "A3D5B1" } },
+      bottom: { style: "thin", color: { rgb: "A3D5B1" } },
+      left: { style: "thin", color: { rgb: "A3D5B1" } },
+      right: { style: "thin", color: { rgb: "A3D5B1" } },
+    },
+  };
+
+  // ── Build sheet data ──────────────────────────────────────────────
+  // Row 1: Headers
+  const headerRow = columns.map((c) => c.header);
+
+  // Row 2: Descriptions / context
+  const descRow = columns.map((c) => {
+    let desc = c.comment;
     if (c.validation) {
-      hint += ` Values: ${c.validation.join(", ")}`;
+      desc += `\nAllowed: ${c.validation.join(", ")}`;
     }
-    return hint;
+    return desc;
   });
 
-  // Row 3: example data
-  const exampleRow = columns.map((c) => c.example ?? "");
+  // Row 3: Example / mock data
+  const exampleDataRow = columns.map((c) => c.example ?? "");
 
-  const aoa = [headers, hintRow, exampleRow];
-  const ws = XLSX.utils.aoa_to_sheet(aoa);
+  // Create worksheet from array-of-arrays
+  const ws = XLSX.utils.aoa_to_sheet([headerRow, descRow, exampleDataRow]);
 
-  // Column widths
+  // ── Apply styles to each cell ─────────────────────────────────────
+  columns.forEach((_, colIdx) => {
+    const colLetter = XLSX.utils.encode_col(colIdx);
+
+    // Row 1 (index 0) — header
+    const hRef = `${colLetter}1`;
+    if (ws[hRef]) ws[hRef].s = headerStyle;
+
+    // Row 2 (index 1) — description
+    const dRef = `${colLetter}2`;
+    if (ws[dRef]) ws[dRef].s = descStyle;
+
+    // Row 3 (index 2) — example
+    const eRef = `${colLetter}3`;
+    if (ws[eRef]) ws[eRef].s = exampleStyle;
+  });
+
+  // ── Column widths ─────────────────────────────────────────────────
   ws["!cols"] = columns.map((col) => ({
-    wch: Math.max(col.header.length, String(col.example ?? "").length, 22) + 4,
+    wch: Math.max(col.header.length, String(col.example ?? "").length, 20) + 6,
   }));
 
-  // Data validation dropdowns (e.g., CourseType, CourseNature, Semester)
+  // Set row heights for description row to accommodate wrapped text
+  ws["!rows"] = [
+    { hpt: 22 },  // Row 1: headers
+    { hpt: 55 },  // Row 2: descriptions (taller for wrapping)
+    { hpt: 20 },  // Row 3: examples
+  ];
+
+  // ── Data validation dropdowns ─────────────────────────────────────
   const validations = [];
   columns.forEach((col, idx) => {
     if (col.validation && col.validation.length > 0) {
@@ -61,54 +123,9 @@ export function downloadTemplate(type) {
     ws["!dataValidation"] = validations;
   }
 
-  // ══════════════════════════════════════════════════════════════════
-  // Sheet 2 — Instructions
-  // ══════════════════════════════════════════════════════════════════
-  const instrHeader = ["#", "Column Name", "Data Type", "Required", "Constraints / Allowed Values", "Example"];
-  const instrRows = columns.map((col, i) => [
-    i + 1,
-    col.header,
-    col.type === "number" ? "Number" : "Text",
-    col.header === "Remarks" ? "No" : "Yes",
-    col.validation
-      ? `Only: ${col.validation.join(", ")}`
-      : col.comment.replace(/\. Required.*/, "").replace(/Optional.*/, ""),
-    col.example ?? "",
-  ]);
-
-  const instrAoa = [
-    [`${label} Upload — Column Reference`],
-    [],
-    instrHeader,
-    ...instrRows,
-    [],
-    ["Tips:"],
-    ["• Delete Row 2 (hint row) in the data sheet before uploading — it is only for your reference."],
-    ["• The example row (Row 3) should also be replaced or deleted before uploading."],
-    ["• Do NOT rename or reorder columns — the backend reads them by position."],
-    ["• All columns marked 'Yes' under Required must have a value in every row."],
-  ];
-
-  const wsInstr = XLSX.utils.aoa_to_sheet(instrAoa);
-
-  // Merge the title row across all 6 columns
-  wsInstr["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
-
-  wsInstr["!cols"] = [
-    { wch: 4 },
-    { wch: 22 },
-    { wch: 12 },
-    { wch: 10 },
-    { wch: 50 },
-    { wch: 20 },
-  ];
-
-  // ══════════════════════════════════════════════════════════════════
-  // Build workbook & download
-  // ══════════════════════════════════════════════════════════════════
+  // ── Build workbook & download ─────────────────────────────────────
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, sheetName);
-  XLSX.utils.book_append_sheet(wb, wsInstr, "Instructions");
 
   XLSX.writeFile(wb, `${label}_Template.xlsx`);
 }
