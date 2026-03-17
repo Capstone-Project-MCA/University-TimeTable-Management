@@ -12,6 +12,13 @@
 - Thymeleaf  
 - Maven  
 
+## 🚀 Frontend Stack
+
+- React.js
+- React Dom
+- Axios
+- Tailwind CSS
+- Xlsx
 ---
 
 ## 📦 Project Dependencies
