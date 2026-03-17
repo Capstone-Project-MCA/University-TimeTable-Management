@@ -24,22 +24,24 @@ import java.util.List;
 
 @Service
 public class AssignService {
-    @Autowired
-    private CourseRepository courseRepository;
-
-    @Autowired
-    private SectionRepository sectionRepository;
-
-    @Autowired
-    private CourseMappingRepository courseMappingRepository;
-
-    @Autowired
-    private SectionMapper sectionMapper;
-
-    @Autowired
-    private CourseMapper courseMapper;
+    private final CourseRepository courseRepository;
+    private final SectionRepository sectionRepository;
+    private final CourseMappingRepository courseMappingRepository;
+    private final SectionMapper sectionMapper;
+    private final CourseMapper courseMapper;
 
     List<String> errors = new ArrayList<>();
+
+    @Autowired
+    public AssignService(CourseRepository courseRepository, SectionRepository sectionRepository, 
+                         CourseMappingRepository courseMappingRepository, SectionMapper sectionMapper, 
+                         CourseMapper courseMapper) {
+        this.courseRepository = courseRepository;
+        this.sectionRepository = sectionRepository;
+        this.courseMappingRepository = courseMappingRepository;
+        this.sectionMapper = sectionMapper;
+        this.courseMapper = courseMapper;
+    }
 
     @Transactional
     public List<Pair<SectionDto, List<CourseDto>>> assignCoursesToSection(CourseSectionAssignmentDto courseSectionAssignmentDto) {
@@ -83,9 +85,9 @@ public class AssignService {
             assigns.add(Pair.of(sectionDto, courses));
         }
 
-//        if(!errors.isEmpty()){
-//            return null;
-//        }
+        if(!errors.isEmpty()){
+            throw new DuplicateResourceException("Courses are already assigned to sections");
+        }
         return assigns;
     }
 
