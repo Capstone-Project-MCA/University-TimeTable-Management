@@ -142,6 +142,38 @@ public class UploadFacultyFileService {
                     faults.add("Domain is empty at Row -> " + (row.getRowNum() + 1));
                 }
 
+                // ------------------------------ Current Load----------------------------
+                Cell currentLoadCell = row.getCell(3);
+                if (currentLoadCell != null) {
+                    String value = formatter.formatCellValue(currentLoadCell).trim();
+                    if (!value.isEmpty()) {
+                        try {
+                            faculty.setCurrentLoad(Short.parseShort(value));
+                        } catch (NumberFormatException e) {
+                            faults.add("Invalid CurrentLoad at Row -> "
+                                    + (row.getRowNum() + 1)
+                                    + " and Col -> "
+                                    + (currentLoadCell.getColumnIndex() + 1));
+                        }
+                    }
+                }
+
+                // ------------------------------ Expected Load----------------------------
+                Cell expectedLoadCell = row.getCell(4);
+                if (expectedLoadCell != null) {
+                    String value = formatter.formatCellValue(expectedLoadCell).trim();
+                    if (!value.isEmpty()) {
+                        try {
+                            faculty.setExpectedLoad(Short.parseShort(value));
+                        } catch (NumberFormatException e) {
+                            faults.add("Invalid ExpectedLoad at Row -> "
+                                    + (row.getRowNum() + 1)
+                                    + " and Col -> "
+                                    + (expectedLoadCell.getColumnIndex() + 1));
+                        }
+                    }
+                }
+
                 if (faults.isEmpty()) {
                     correctFaculty.add(faculty);
                 } else {
