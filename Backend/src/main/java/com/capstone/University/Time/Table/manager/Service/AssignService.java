@@ -1,14 +1,17 @@
 package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.CourseDto;
+import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
 import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.Entity.Course;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
+import com.capstone.University.Time.Table.manager.Entity.CourseMappingId;
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
+import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
 import com.capstone.University.Time.Table.manager.Mapper.SectionMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
@@ -29,18 +32,47 @@ public class AssignService {
     private final CourseMappingRepository courseMappingRepository;
     private final SectionMapper sectionMapper;
     private final CourseMapper courseMapper;
+    private final CourseMappingMapper courseMappingMapper;
 
     List<String> errors = new ArrayList<>();
 
     @Autowired
-    public AssignService(CourseRepository courseRepository, SectionRepository sectionRepository, 
-                         CourseMappingRepository courseMappingRepository, SectionMapper sectionMapper, 
-                         CourseMapper courseMapper) {
+    public AssignService(CourseRepository courseRepository,
+                         SectionRepository sectionRepository,
+                         CourseMappingRepository courseMappingRepository,
+                         SectionMapper sectionMapper,
+                         CourseMapper courseMapper,
+                         CourseMappingMapper courseMappingMapper
+    ) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
         this.courseMappingRepository = courseMappingRepository;
         this.sectionMapper = sectionMapper;
         this.courseMapper = courseMapper;
+        this.courseMappingMapper = courseMappingMapper;
+    }
+
+    @Transactional
+    public CourseMappingDto assignFacultyToCoursesAndSection(CourseMapping courseMapping) {
+        CourseMappingId id = new CourseMappingId(
+                courseMapping.getSection(),
+                courseMapping.getCoursecode(),
+                courseMapping.getGroupNo(),
+                courseMapping.getMappingType()
+        );
+
+        CourseMapping existMapping = courseMappingRepository.findById(id).orElse(null);
+
+        if(existMapping == null) {
+            throw new ResourceNotFoundException("Course Mapping not found");
+        }
+
+        if(courseMapping.getFacultyUID() != null) existMapping.setFacultyUID(courseMapping.getFacultyUID());
+        if(courseMapping.getMergecode() != null) existMapping.setMergecode(courseMapping.getMergecode());
+        if(courseMapping.getReserveslot() != null) existMapping.setReserveslot(courseMapping.getReserveslot());
+
+        courseMappingRepository.save(existMapping);
+        return courseMappingMapper.toDto(existMapping);
     }
 
     @Transactional
@@ -74,9 +106,9 @@ public class AssignService {
                 if (course == null) {throw new ResourceNotFoundException("Course not found with id -  " + courseId);}
 
                 List<CourseMapping> courseMappings = getCourseMappings(sectionId, courseId, course, section);
-
                 courseMappingRepository.saveAll(courseMappings);
                 section.getCourses().add(course);
+
                 CourseDto courseDto = courseMapper.toDto(course);
                 courses.add(courseDto);
             }
@@ -85,9 +117,10 @@ public class AssignService {
             assigns.add(Pair.of(sectionDto, courses));
         }
 
-//        if(!errors.isEmpty()){
-//            throw new DuplicateResourceException("Courses are already assigned to sections");
-//        }
+        if(!errors.isEmpty()){
+            throw new DuplicateResourceException("Courses are already assigned to sections");
+        }
+
         return assigns;
     }
 
@@ -100,7 +133,7 @@ public class AssignService {
         List<CourseMapping> courseMappings = new ArrayList<>();
         int gmaps = section.getNumberOfGroups();
 
-        if (course.getL() > 0 && section.getStrength() <= 72) {
+        if (course.getL() > 0) {
             CourseMapping courseMapping = new CourseMapping();
             courseMapping.setSection(sectionId);
             courseMapping.setCoursecode(courseId);
@@ -113,7 +146,7 @@ public class AssignService {
             courseMappings.add(courseMapping);
         }
 
-        if (course.getT() > 0 && section.getStrength() <= 72) {
+        if (course.getT() > 0) {
             for(int i = 1; i <= gmaps; i++){
                 CourseMapping courseMapping = new CourseMapping();
 
@@ -131,7 +164,7 @@ public class AssignService {
             }
         }
 
-        if (course.getP() > 0 && section.getStrength() <= 72) {
+        if (course.getP() > 0) {
             for(int i = 1; i <= gmaps; i++){
                 CourseMapping courseMapping = new CourseMapping();
 

@@ -15,12 +15,28 @@ import java.util.*;
 @Service
 public class CourseService {
 
+    private final CourseRepository courseRepository;
+    private final SectionRepository sectionRepository;
+    private final CourseMapper courseMapper;
+
     @Autowired
-    private CourseRepository courseRepository;
-    @Autowired
-    private SectionRepository sectionRepository;
-    @Autowired
-    private CourseMapper courseMapper;
+    public CourseService(
+            CourseRepository courseRepository,
+            SectionRepository sectionRepository,
+            CourseMapper courseMapper
+    ) {
+        this.courseRepository = courseRepository;
+        this.sectionRepository = sectionRepository;
+        this.courseMapper = courseMapper;
+
+    }
+
+//    @Autowired
+//    private CourseRepository courseRepository;
+//    @Autowired
+//    private SectionRepository sectionRepository;
+//    @Autowired
+//    private CourseMapper courseMapper;
 
     // ---------------------------------- All Course Get Requests Service ------------------------------------------
     public List<CourseDto> getAllCourses() {
