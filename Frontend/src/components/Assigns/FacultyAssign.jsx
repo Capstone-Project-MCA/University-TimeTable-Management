@@ -34,24 +34,24 @@ const FacultyAssignmentWorkspace = () => {
       if (mappingRes.ok) {
         const data = await mappingRes.json();
         const formattedData = data.map(item => ({
-          id: `${item.Section}-${item.Coursecode}-${item.GroupNo}-${item.mappingType}`,
-          courseCode: item.Coursecode,
-          group: `G${item.GroupNo}`,
-          groupRaw: item.GroupNo,
-          section: item.Section,
+          id: `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
+          courseCode: item.coursecode || item.Coursecode,
+          group: `G${item.groupNo || item.GroupNo}`,
+          groupRaw: item.groupNo || item.GroupNo,
+          section: item.section || item.Section,
           type: item.mappingType,
-          attendance: item.AttendanceType || "Regular",
-          nature: item.CourseNature || "C",
-          uid: item.FacultyUID || "",
-          originalUid: item.FacultyUID || "",
-          isSaved: !!item.FacultyUID, // Lock initially if it already has a faculty saved
-          l: item.L !== undefined ? item.L : 0,
-          t: item.T !== undefined ? item.T : 0,
-          p: item.P !== undefined ? item.P : 0,
-          mergeStatus: item.MergeStatus ? "check_circle" : "circle",
-          mergeCode: item.Mergecode || "---",
-          reserve: item.Reserveslot || "---",
-          statusColor: item.MergeStatus ? "text-tertiary" : "text-slate-300 dark:text-slate-600"
+          attendance: item.attendanceType || item.AttendanceType || "Regular",
+          nature: item.courseNature || item.CourseNature || "C",
+          uid: item.facultyUID || item.FacultyUID || "",
+          originalUid: item.facultyUID || item.FacultyUID || "",
+          isSaved: !!(item.facultyUID || item.FacultyUID), // Lock initially if it already has a faculty saved
+          l: item.l !== undefined ? item.l : (item.L !== undefined ? item.L : 0),
+          t: item.t !== undefined ? item.t : (item.T !== undefined ? item.T : 0),
+          p: item.p !== undefined ? item.p : (item.P !== undefined ? item.P : 0),
+          mergeStatus: (item.mergeStatus !== undefined ? item.mergeStatus : item.MergeStatus) ? "check_circle" : "circle",
+          mergeCode: item.mergecode || item.Mergecode || "---",
+          reserve: item.reserveslot || item.Reserveslot || "---",
+          statusColor: (item.mergeStatus !== undefined ? item.mergeStatus : item.MergeStatus) ? "text-tertiary" : "text-slate-300 dark:text-slate-600"
         }));
         setRows(formattedData);
       }
@@ -84,10 +84,15 @@ const FacultyAssignmentWorkspace = () => {
     }
     try {
       const payload = {
+        Section: row.section,
+        Coursecode: row.courseCode,
+        GroupNo: row.groupRaw,
+        mappingType: row.type,
+        FacultyUID: row.uid === "" ? null : row.uid,
+        // Fallbacks just in case
         section: row.section,
         coursecode: row.courseCode,
         groupNo: row.groupRaw,
-        mappingType: row.type,
         facultyUID: row.uid === "" ? null : row.uid
       };
       
@@ -139,13 +144,18 @@ const FacultyAssignmentWorkspace = () => {
     try {
       const promises = rowsToSave.map(row => {
         const payload = {
+          Section: row.section,
+          Coursecode: row.courseCode,
+          GroupNo: row.groupRaw,
+          mappingType: row.type,
+          FacultyUID: row.uid,
+          // Fallbacks just in case
           section: row.section,
           coursecode: row.courseCode,
           groupNo: row.groupRaw,
-          mappingType: row.type,
           facultyUID: row.uid
         };
-        return fetch(`${API_BASE}/api/mappings/assign`, {
+        return fetch(`${API_BASE}/assign/assign-faculty`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
