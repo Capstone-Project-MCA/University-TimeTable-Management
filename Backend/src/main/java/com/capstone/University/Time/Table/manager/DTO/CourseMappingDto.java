@@ -16,4 +16,5 @@ public class CourseMappingDto {
     private Short P;
     private String Reserveslot;
     private Character CourseNature;
+    private String mappingType;
 }

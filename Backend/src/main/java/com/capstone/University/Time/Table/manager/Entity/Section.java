@@ -45,7 +45,7 @@ public class Section {
     @JoinTable(
         name = "section_course",
         joinColumns = @JoinColumn(name = "section_id"),
-        inverseJoinColumns = @JoinColumn(name = "course_code")
+        inverseJoinColumns = @JoinColumn(name = "course_code", columnDefinition = "VARCHAR(255)")
     )
     @JsonIgnoreProperties("sections")
     private Set<Course> courses = new HashSet<>();

@@ -14,7 +14,7 @@ import java.util.*;
 @Table(name = "coursemaster")
 public class Course {
     @Id
-    @Column(name = "CourseCode")
+    @Column(name = "CourseCode", length = 7)
     private String CourseCode;
 
     @Column(name = "CourseTitle")

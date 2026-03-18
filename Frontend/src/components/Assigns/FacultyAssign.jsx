@@ -3,55 +3,178 @@ import React, { useState, useEffect } from "react";
 const API_BASE = "http://localhost:8080";
 
 const FacultyAssignmentWorkspace = () => {
-  const [rows, setRows] = useState([
-    {
-      id: 1,
-      courseCode: "CS302",
-      group: "G1",
-      section: "A",
-      type: "Main",
-      attendance: "Biometric",
-      nature: "Core",
-      uid: "F-9021",
-      l: 3, t: 1, p: 0,
-      mergeStatus: "check_circle",
-      mergeCode: "MC-CS-A",
-      reserve: "Slot 04",
-      statusColor: "text-tertiary"
-    },
-    {
-      id: 2,
-      courseCode: "DS101",
-      group: "G3",
-      section: "C",
-      type: "Elective",
-      attendance: "Manual",
-      nature: "Lab",
-      uid: "",
-      l: 0, t: 0, p: 4,
-      mergeStatus: "circle",
-      mergeCode: "---",
-      reserve: "---",
-      statusColor: "text-slate-300 dark:text-slate-600"
-    },
-    {
-      id: 3,
-      courseCode: "MATH204",
-      group: "G1",
-      section: "B",
-      type: "Main",
-      attendance: "Biometric",
-      nature: "Foundation",
-      uid: "F-8812",
-      l: 4, t: 0, p: 0,
-      mergeStatus: "error",
-      mergeCode: "MC-MA-B",
-      reserve: "Slot 01",
-      statusColor: "text-error"
+  const [rows, setRows] = useState([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Faculty Autocomplete State
+  const [faculties, setFaculties] = useState([]);
+  const [focusedRowId, setFocusedRowId] = useState(null);
+
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  const fetchRequiredData = async () => {
+    try {
+      const [mappingRes, facultyRes] = await Promise.all([
+        fetch(`${API_BASE}/api/mappings`),
+        fetch(`${API_BASE}/faculty/all`)
+      ]);
+      
+      if (facultyRes.ok) {
+        setFaculties(await facultyRes.json());
+      }
+
+      if (mappingRes.ok) {
+        const data = await mappingRes.json();
+        const formattedData = data.map(item => ({
+          id: `${item.Section}-${item.Coursecode}-${item.GroupNo}-${item.mappingType}`,
+          courseCode: item.Coursecode,
+          group: `G${item.GroupNo}`,
+          groupRaw: item.GroupNo,
+          section: item.Section,
+          type: item.mappingType,
+          attendance: item.AttendanceType || "Regular",
+          nature: item.CourseNature || "C",
+          uid: item.FacultyUID || "",
+          originalUid: item.FacultyUID || "",
+          isSaved: !!item.FacultyUID, // Lock initially if it already has a faculty saved
+          l: item.L !== undefined ? item.L : 0,
+          t: item.T !== undefined ? item.T : 0,
+          p: item.P !== undefined ? item.P : 0,
+          mergeStatus: item.MergeStatus ? "check_circle" : "circle",
+          mergeCode: item.Mergecode || "---",
+          reserve: item.Reserveslot || "---",
+          statusColor: item.MergeStatus ? "text-tertiary" : "text-slate-300 dark:text-slate-600"
+        }));
+        setRows(formattedData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch data:", error);
+    } finally {
+      setLoading(false);
     }
-  ]);
+  };
+
+  useEffect(() => {
+    fetchRequiredData();
+  }, []);
+
+  const handleUidChange = (id, newUid) => {
+    setRows(prevRows => prevRows.map(row => row.id === id ? { ...row, uid: newUid, isSaved: false } : row));
+  };
+
+  const handleSaveRow = async (row) => {
+    if (!row.uid || row.uid.trim() === "") {
+      alert(`Cannot save empty Faculty UID for row ${row.courseCode} group ${row.group}`);
+      return;
+    }
+    if (!faculties.some(f => {
+       const fUid = String(f.facultyUID || f.FacultyUID || "");
+       return fUid === row.uid;
+    })) {
+      alert(`Invalid Faculty UID: ${row.uid}\nPlease select a valid UID from the list or type it correctly.`);
+      return;
+    }
+    try {
+      const payload = {
+        section: row.section,
+        coursecode: row.courseCode,
+        groupNo: row.groupRaw,
+        mappingType: row.type,
+        facultyUID: row.uid === "" ? null : row.uid
+      };
+      
+      const response = await fetch(`${API_BASE}/api/mappings/assign`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(payload)
+      });
+      
+      if (response.ok) {
+        setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, isSaved: true, originalUid: row.uid } : r));
+        console.log("Saved successfully");
+      } else {
+        console.error("Failed to save");
+      }
+    } catch (error) {
+       console.error("Error saving row:", error);
+    }
+  };
+
+  const handleSaveAll = async () => {
+    const rowsToSave = paginatedRows.filter(r => !r.isSaved && r.uid !== r.originalUid);
+    
+    // Check for empty rows that user might be trying to save
+    const emptyRows = rowsToSave.filter(r => !r.uid || r.uid.trim() === "");
+    if (emptyRows.length > 0) {
+      alert(`Cannot save all! Found empty Faculty UIDs in rows with Code: ${emptyRows.map(r => r.courseCode).join(", ")}.\nPlease fill them or leave them unchanged.`);
+      return;
+    }
+
+    // Validate all first
+    const invalidRows = rowsToSave.filter(row => !faculties.some(f => {
+       const fUid = String(f.facultyUID || f.FacultyUID || "");
+       return fUid === row.uid;
+    }));
+
+    if (invalidRows.length > 0) {
+      alert(`Cannot save all! Found invalid Faculty UIDs in rows with Code: ${invalidRows.map(r => r.courseCode).join(", ")}.\nPlease correct them first.`);
+      return;
+    }
+
+    if (rowsToSave.length === 0) {
+      alert("No new changes to save on this page.");
+      return;
+    }
+
+    try {
+      const promises = rowsToSave.map(row => {
+        const payload = {
+          section: row.section,
+          coursecode: row.courseCode,
+          groupNo: row.groupRaw,
+          mappingType: row.type,
+          facultyUID: row.uid
+        };
+        return fetch(`${API_BASE}/api/mappings/assign`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(res => ({ id: row.id, ok: res.ok }));
+      });
+
+      const results = await Promise.all(promises);
+      const successfulIds = results.filter(r => r.ok).map(r => r.id);
+
+      if (successfulIds.length > 0) {
+        setRows(prevRows => prevRows.map(r => successfulIds.includes(r.id) ? { ...r, isSaved: true, originalUid: r.uid } : r));
+      }
+
+      if (successfulIds.length === rowsToSave.length) {
+        alert("All changes on this page saved successfully!");
+      } else {
+        alert(`Saved ${successfulIds.length} out of ${rowsToSave.length} changes. Some failed.`);
+      }
+    } catch (error) {
+      console.error("Error saving all rows:", error);
+      alert("An error occurred while saving all rows.");
+    }
+  };
 
   const [autoSync, setAutoSync] = useState(true);
+
+  // Pagination Calculations
+  const totalPages = Math.ceil(rows.length / rowsPerPage) || 1;
+  const paginatedRows = rows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+
+  const handlePageChange = (newPage) => {
+    if (newPage >= 1 && newPage <= totalPages) {
+      setCurrentPage(newPage);
+    }
+  };
 
   return (
     <main className="w-full min-h-screen bg-surface dark:bg-[#020617] flex flex-col font-body">
@@ -161,7 +284,7 @@ const FacultyAssignmentWorkspace = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant dark:divide-[#334155]">
-                {rows.map((row) => (
+                {paginatedRows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
                     <td className="p-4 font-bold text-slate-600 dark:text-slate-300 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.courseCode}</td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.group}</td>
@@ -171,14 +294,66 @@ const FacultyAssignmentWorkspace = () => {
                     </td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.attendance}</td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.nature}</td>
-                    <td className="p-4 bg-primary/[0.02] dark:bg-[#3b82f6]/5 border-x border-primary/5 dark:border-[#3b82f6]/10">
+                    <td className="p-4 bg-primary/[0.02] dark:bg-[#3b82f6]/5 border-x border-primary/5 dark:border-[#3b82f6]/10 overflow-visible">
                       <div className="relative">
                         <input
-                          className="w-full text-sm border-slate-200 dark:border-[#334155] dark:bg-[#020617] dark:text-white rounded-lg py-1.5 px-3 focus:border-primary dark:focus:border-[#3b82f6] focus:ring-4 focus:ring-primary/10 dark:focus:ring-[#3b82f6]/20 transition-all border shadow-sm"
+                          className={`w-full text-sm border-slate-200 dark:border-[#334155] rounded-lg py-1.5 px-3 focus:ring-4 transition-all border shadow-sm ${row.isSaved ? "bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed opacity-70" : (!row.isSaved && (!row.uid || row.uid.trim() === "" || !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid))) ? "border-error focus:border-error focus:ring-error/20 dark:border-red-500" : "dark:bg-[#020617] dark:text-white focus:border-primary dark:focus:border-[#3b82f6] focus:ring-primary/10 dark:focus:ring-[#3b82f6]/20"}`}
                           type="text"
-                          defaultValue={row.uid}
-                          placeholder={!row.uid ? "Type UID..." : ""}
+                          value={row.uid}
+                          disabled={row.isSaved}
+                          onChange={(e) => {
+                            handleUidChange(row.id, e.target.value);
+                            setFocusedRowId(row.id);
+                          }}
+                          onFocus={() => setFocusedRowId(row.id)}
+                          onBlur={() => setTimeout(() => setFocusedRowId(null), 200)}
+                          placeholder="Search UID/Name..."
                         />
+                        {/* Autocomplete Dropdown */}
+                        {!row.isSaved && focusedRowId === row.id && (
+                          <div className="absolute top-10 left-0 w-full z-[100] bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-[#334155] rounded-lg shadow-2xl max-h-48 overflow-y-auto">
+                            {faculties
+                              .filter(f => {
+                                const fUid = String(f.facultyUID || f.FacultyUID || "");
+                                const fName = String(f.facultyName || f.FacultyName || f.facultyName || "");
+                                const search = String(row.uid || "").toLowerCase();
+                                return fUid.toLowerCase().includes(search) || fName.toLowerCase().includes(search);
+                              })
+                              .map(f => {
+                                const fUid = String(f.facultyUID || f.FacultyUID || "");
+                                const fName = String(f.facultyName || f.FacultyName || f.facultyName || "");
+                                return (
+                                <div 
+                                  key={fUid}
+                                  className="px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 last:border-0"
+                                  onMouseDown={(e) => {
+                                    e.preventDefault(); // Prevent focus loss on the input
+                                    handleUidChange(row.id, fUid);
+                                    setFocusedRowId(null);
+                                  }}
+                                >
+                                  <span className="font-bold text-primary dark:text-[#3b82f6] block mb-0.5">{fUid}</span>
+                                  <span className="truncate block opacity-80">{fName}</span>
+                                </div>
+                                );
+                              })}
+                              {faculties.filter(f => {
+                                const fUid = String(f.facultyUID || f.FacultyUID || "");
+                                const fName = String(f.facultyName || f.FacultyName || f.facultyName || "");
+                                const search = String(row.uid || "").toLowerCase();
+                                return fUid.toLowerCase().includes(search) || fName.toLowerCase().includes(search);
+                              }).length === 0 && (
+                                <div className="px-3 py-2 text-xs text-slate-400 italic">No matching faculty found.</div>
+                              )}
+                          </div>
+                        )}
+                        {/* Validation Error Text */}
+                        {!row.isSaved && (!row.uid || row.uid.trim() === "") && (
+                          <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-error dark:text-red-400">UID cannot be empty</span>
+                        )}
+                        {!row.isSaved && row.uid && row.uid.trim() !== "" && !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid) && (
+                          <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-error dark:text-red-400">UID not found in Master</span>
+                        )}
                       </div>
                     </td>
                     <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.l}</td>
@@ -190,7 +365,13 @@ const FacultyAssignmentWorkspace = () => {
                     <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.mergeCode}</td>
                     <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.reserve}</td>
                     <td className="p-4 sticky right-0 bg-white dark:bg-[#0f172a] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/30 transition-colors">
-                      <button className="bg-primary dark:bg-[#3b82f6] text-white text-[10px] font-bold px-4 py-1.5 rounded uppercase shadow-sm shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:bg-on-primary-fixed-variant dark:hover:brightness-110 transition-all">Save</button>
+                      <button 
+                        onClick={() => handleSaveRow(row)} 
+                        disabled={row.isSaved}
+                        className={`text-[10px] font-bold px-4 py-1.5 rounded uppercase shadow-sm transition-all ${row.isSaved ? "bg-tertiary/20 text-tertiary cursor-not-allowed shadow-none" : "bg-primary dark:bg-[#3b82f6] text-white shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:bg-on-primary-fixed-variant dark:hover:brightness-110"}`}
+                      >
+                        {row.isSaved ? "Saved" : "Save"}
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -203,35 +384,51 @@ const FacultyAssignmentWorkspace = () => {
             <div className="flex items-center gap-6">
               <div className="flex items-center gap-2">
                 <span className="text-xs text-slate-500 dark:text-slate-400 font-medium">Rows per page:</span>
-                <select className="text-xs border-none bg-slate-100 dark:bg-[#020617] dark:text-slate-300 rounded-md px-2 py-1 focus:ring-0 dark:ring-1 dark:ring-[#334155]">
-                  <option>10</option>
-                  <option>20</option>
-                  <option>50</option>
+                <select 
+                  value={rowsPerPage}
+                  onChange={(e) => {
+                    setRowsPerPage(Number(e.target.value));
+                    setCurrentPage(1);
+                  }}
+                  className="text-xs border-none bg-slate-100 dark:bg-[#020617] dark:text-slate-300 rounded-md px-2 py-1 focus:ring-0 shadow-sm dark:ring-1 dark:ring-[#334155]">
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
                 </select>
               </div>
-              <button className="px-4 py-1.5 bg-primary/10 text-primary dark:text-[#3b82f6] hover:bg-primary/20 transition-all rounded-lg text-xs font-bold flex items-center gap-2">
+              <button onClick={handleSaveAll} className="px-4 py-1.5 bg-primary/10 text-primary dark:text-[#3b82f6] hover:bg-primary/20 transition-all rounded-lg text-xs font-bold flex items-center gap-2">
                 <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>done_all</span>
                 Save All Changes on Page
               </button>
             </div>
             <div className="flex items-center gap-1">
-              <button className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30" disabled>
+              <button 
+                onClick={() => handlePageChange(1)}
+                disabled={currentPage === 1}
+                className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-slate-400">
                 <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>first_page</span>
               </button>
-              <button className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30" disabled>
+              <button 
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 1}
+                className="p-1.5 text-slate-400 dark:text-slate-600 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-slate-400">
                 <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>chevron_left</span>
               </button>
-              <div className="flex items-center px-4 gap-2">
-                <button className="w-8 h-8 rounded-lg bg-primary dark:bg-[#3b82f6] text-white text-xs font-bold">1</button>
-                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">2</button>
-                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">3</button>
-                <span className="text-slate-400 px-1">...</span>
-                <button className="w-8 h-8 rounded-lg text-slate-600 dark:text-slate-400 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800">15</button>
+              <div className="flex items-center px-3 gap-2">
+                <span className="text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700">
+                  Page {currentPage} of {totalPages}
+                </span>
               </div>
-              <button className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+              <button 
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-slate-600">
                 <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>chevron_right</span>
               </button>
-              <button className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors">
+              <button 
+                onClick={() => handlePageChange(totalPages)}
+                disabled={currentPage === totalPages}
+                className="p-1.5 text-slate-600 dark:text-slate-400 hover:text-primary transition-colors disabled:opacity-30 disabled:hover:text-slate-600">
                 <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>last_page</span>
               </button>
             </div>

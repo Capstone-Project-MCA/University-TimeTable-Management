@@ -20,7 +20,7 @@ public class CourseMapping {
     private String Coursecode;
 
     @Id
-    @Column(name = "GroupNo", nullable = false)
+    @Column(name = "GroupNo", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short GroupNo;
 
     @Column(name = "AttendanceType", length = 15, nullable = false)
@@ -35,13 +35,13 @@ public class CourseMapping {
     @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;
 
-    @Column(name = "L", nullable = false)
+    @Column(name = "L", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short L = (short) 0;
 
-    @Column(name = "T", nullable = false)
+    @Column(name = "T", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short T = (short) 0;
 
-    @Column(name = "P", nullable = false)
+    @Column(name = "P", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short P = (short) 0;
 
     @Id
