@@ -22,15 +22,29 @@ import java.util.List;
 
 @Service
 public class SectionService {
+    private final SectionMapper sectionMapper;
+    private final SectionRepository sectionRepository;
+    private final CourseRepository courseRepository;
 
     @Autowired
-    private SectionRepository sectionRepository;
+    public SectionService(
+            SectionMapper sectionMapper,
+            SectionRepository sectionRepository,
+            CourseRepository courseRepository
+    ) {
+        this.sectionMapper = sectionMapper;
+        this.sectionRepository = sectionRepository;
+        this.courseRepository = courseRepository;
+    }
 
-    @Autowired
-    private SectionMapper sectionMapper;
-
-    @Autowired
-    private CourseRepository courseRepository;
+//    @Autowired
+//    private SectionRepository sectionRepository;
+//
+//    @Autowired
+//    private SectionMapper sectionMapper;
+//
+//    @Autowired
+//    private CourseRepository courseRepository;
 
     // ------------------------------------- All Section Get Requests Service ----------------------------------------------
     public SectionDto getSectionById(String id) {

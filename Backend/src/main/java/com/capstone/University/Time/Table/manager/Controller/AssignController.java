@@ -1,8 +1,10 @@
 package com.capstone.University.Time.Table.manager.Controller;
 
 import com.capstone.University.Time.Table.manager.DTO.CourseDto;
+import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
 import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
+import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
 import com.capstone.University.Time.Table.manager.Service.AssignService;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -29,5 +31,10 @@ public class AssignController {
     @GetMapping("/error")
     public ResponseEntity<List<String>> courseAssignErrors(){
         return ResponseEntity.ok(assignService.courseAssignErrors());
+    }
+
+    @PutMapping("/assign-faculty")
+    public ResponseEntity<CourseMappingDto> assignFacultyToSection(@RequestBody CourseMapping courseMapping){
+        return ResponseEntity.ok(assignService.assignFacultyToCoursesAndSection(courseMapping));
     }
 }

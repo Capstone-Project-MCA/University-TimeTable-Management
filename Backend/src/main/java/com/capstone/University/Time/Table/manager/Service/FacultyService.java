@@ -12,11 +12,21 @@ import java.util.*;
 
 @Service
 public class FacultyService {
-    @Autowired
-    private FacultyMapper facultyMapper;
+    private final FacultyMapper facultyMapper;
+    private final FacultyRepository facultyRepository;
 
     @Autowired
-    private FacultyRepository facultyRepository;
+    public FacultyService(FacultyMapper facultyMapper, FacultyRepository facultyRepository) {
+        this.facultyMapper = facultyMapper;
+        this.facultyRepository = facultyRepository;
+
+    }
+
+//    @Autowired
+//    private FacultyMapper facultyMapper;
+//
+//    @Autowired
+//    private FacultyRepository facultyRepository;
 
     // ------------------------------------ All Faculty Get Requests Service
     // ------------------------------------------

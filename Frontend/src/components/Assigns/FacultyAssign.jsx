@@ -91,7 +91,7 @@ const FacultyAssignmentWorkspace = () => {
         facultyUID: row.uid === "" ? null : row.uid
       };
       
-      const response = await fetch(`${API_BASE}/api/mappings/assign`, {
+      const response = await fetch(`${API_BASE}/assign/assign-faculty`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

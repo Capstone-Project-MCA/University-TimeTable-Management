@@ -5,6 +5,7 @@ import com.capstone.University.Time.Table.manager.Entity.Room;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.RoomMapper;
+import com.capstone.University.Time.Table.manager.Repository.FacultyRepository;
 import com.capstone.University.Time.Table.manager.Repository.RoomRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -14,11 +15,20 @@ import java.util.List;
 @Service
 public class RoomService {
 
-    @Autowired
-    private RoomRepository roomRepository;
+    private final RoomRepository roomRepository;
+    private final RoomMapper roomMapper;
 
     @Autowired
-    private RoomMapper roomMapper;
+    public RoomService(RoomRepository roomRepository, RoomMapper roomMapper) {
+        this.roomRepository = roomRepository;
+        this.roomMapper = roomMapper;
+    }
+
+//    @Autowired
+//    private RoomRepository roomRepository;
+//
+//    @Autowired
+//    private RoomMapper roomMapper;
 
 //------------------------------------- All Room get Requests Service -------------------------------------------------
     public RoomDto getRoomByRoomNo(String roomNo) {
