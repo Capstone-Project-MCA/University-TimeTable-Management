@@ -1,10 +1,16 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect } from 'react';
+import * as XLSX from 'xlsx-js-style';
 
 const API_BASE = "http://localhost:8080";
 
 const FacultyAssignmentWorkspace = () => {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  
+  // Header Filters
+  const [filterCourse, setFilterCourse] = useState('');
+  const [filterSection, setFilterSection] = useState('All Sections');
+  const [filterUid, setFilterUid] = useState('');
   
   // Faculty Autocomplete State
   const [faculties, setFaculties] = useState([]);
@@ -164,11 +170,70 @@ const FacultyAssignmentWorkspace = () => {
     }
   };
 
+  // Card Data Calculations
+  const totalAssigns = rows.length;
+  const assignedCount = rows.filter(r => !!r.originalUid).length;
+  const remainingCount = totalAssigns - assignedCount;
+  const mergeIssuesCount = rows.filter(r => r.mergeStatus === "circle").length;
+
+  const handleExportExcel = () => {
+    // 1. Prepare worksheet data
+    const wsData = [
+      ["Course Code", "Group", "Section", "Mapping Type", "Attendance", "Nature", "Faculty UID", "L", "T", "P", "Merge Code", "Reserve Slot"]
+    ];
+
+    rows.forEach(r => {
+      wsData.push([
+        r.courseCode,
+        r.groupRaw,
+        r.section,
+        r.type,
+        r.attendance,
+        r.nature,
+        r.originalUid, // Export what is actually saved in backend
+        r.l,
+        r.t,
+        r.p,
+        r.mergeCode,
+        r.reserve
+      ]);
+    });
+
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
+    
+    // Auto-size columns roughly
+    const cols = wsData[0].map((_, i) => ({ wch: Math.max(...wsData.map(row => (row[i] ? row[i].toString().length : 0))) + 2 }));
+    ws['!cols'] = cols;
+
+    // Header styling
+    for (let i = 0; i < wsData[0].length; i++) {
+        const cellRef = XLSX.utils.encode_cell({ r: 0, c: i });
+        if (ws[cellRef]) {
+            ws[cellRef].s = {
+                font: { bold: true, color: { rgb: "FFFFFF" } },
+                fill: { fgColor: { rgb: "3B82F6" } }
+            };
+        }
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Course Mappings");
+    XLSX.writeFile(wb, "Faculty_Assignments.xlsx");
+  };
+
   const [autoSync, setAutoSync] = useState(true);
 
-  // Pagination Calculations
-  const totalPages = Math.ceil(rows.length / rowsPerPage) || 1;
-  const paginatedRows = rows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
+  // Pagination & Filtering Calculations
+  const uniqueSections = ["All Sections", ...Array.from(new Set(rows.map(r => String(r.section)))).sort()];
+  
+  const filteredRows = rows.filter(r => 
+    r.courseCode.toLowerCase().includes(filterCourse.toLowerCase()) &&
+    (filterSection === "All Sections" || String(r.section) === filterSection) &&
+    r.uid.toLowerCase().includes(filterUid.toLowerCase())
+  );
+
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
+  const paginatedRows = filteredRows.slice((currentPage - 1) * rowsPerPage, currentPage * rowsPerPage);
 
   const handlePageChange = (newPage) => {
     if (newPage >= 1 && newPage <= totalPages) {
@@ -185,15 +250,20 @@ const FacultyAssignmentWorkspace = () => {
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight font-headline">Course Mapping Architecture</h1>
             <p className="text-slate-500 dark:text-slate-400 mt-1">Configure section-wise faculty allocations and semester-wide mapping rules.</p>
           </div>
-          <div className="flex gap-3">
-            <button className="px-4 py-2 border border-outline-variant dark:border-[#334155] text-slate-700 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-[#1e293b] transition-all flex items-center gap-2">
-              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>file_download</span>
-              Export CSV
-            </button>
-            <button className="px-6 py-2 bg-primary dark:bg-[#3b82f6] text-white rounded-lg font-semibold shadow-lg shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:brightness-110 transition-all flex items-center gap-2 active:scale-95">
-              <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>save</span>
-              Save All Changes
-            </button>
+          {/* Metrics & Actions */}
+          <div className="flex flex-wrap items-center justify-end gap-6 mb-8 mt-4">
+            <div className="flex items-center gap-3">
+              <button 
+                onClick={handleExportExcel}
+                className="px-4 py-2.5 bg-white dark:bg-[#1e293b] text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-[#334155] hover:bg-slate-50 dark:hover:bg-slate-800 transition-all rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm">
+                <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>download</span>
+                Export Excel
+              </button>
+              <button onClick={handleSaveAll} className="px-5 py-2.5 bg-primary dark:bg-[#3b82f6] hover:bg-on-primary-fixed-variant dark:hover:brightness-110 text-white transition-all rounded-lg text-sm font-bold flex items-center gap-2 shadow-sm shadow-primary/20 dark:shadow-[#3b82f6]/20">
+                <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>save</span>
+                Save All Changes
+              </button>
+            </div>
           </div>
         </div>
 
@@ -202,21 +272,21 @@ const FacultyAssignmentWorkspace = () => {
           <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-primary dark:border-l-[#3b82f6] border border-transparent dark:border-[#334155] shadow-sm">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Total Courses</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">142</h3>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">{loading ? "-" : totalAssigns}</h3>
               <span className="text-[10px] font-bold text-slate-500">Global count</span>
             </div>
           </div>
           <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-tertiary dark:border-l-[#10b981] border border-transparent dark:border-[#334155] shadow-sm">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Faculty Assigned</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">130</h3>
-              <span className="text-[10px] font-bold text-tertiary">91.5% complete</span>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">{loading ? "-" : assignedCount}</h3>
+              <span className="text-[10px] font-bold text-tertiary">{loading ? "-" : totalAssigns > 0 ? ((assignedCount / totalAssigns) * 100).toFixed(1) + "%" : "0%"} complete</span>
             </div>
           </div>
           <div className="bg-surface-container-low dark:bg-[#0f172a] p-5 rounded-xl border-l-4 border-l-error dark:border-l-[#ef4444] border border-transparent dark:border-[#334155] shadow-sm">
             <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider font-label">Faculty Not Assigned</p>
             <div className="flex items-baseline gap-2 mt-1">
-              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">12</h3>
+              <h3 className="text-2xl font-bold text-slate-900 dark:text-white font-headline">{loading ? "-" : remainingCount}</h3>
               <span className="text-[10px] font-bold text-error">Requires allocation</span>
             </div>
           </div>
@@ -224,7 +294,7 @@ const FacultyAssignmentWorkspace = () => {
 
         {/* Mapping Table Container */}
         <div className="bg-white dark:bg-[#0f172a] rounded-2xl shadow-soft dark:shadow-2xl border border-outline-variant dark:border-[#334155] overflow-hidden flex flex-col flex-1">
-          {/* Filters Header */}
+              {/* Filters Header */}
           <div className="p-6 bg-surface-dim dark:bg-[#1e293b]/50 border-b border-outline-variant dark:border-[#334155] space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
               <div className="flex flex-col gap-1.5">
@@ -240,24 +310,38 @@ const FacultyAssignmentWorkspace = () => {
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Course Code</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>search</span>
-                  <input className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]" placeholder="e.g. CS302" type="text" />
+                  <input 
+                    value={filterCourse}
+                    onChange={(e) => { setFilterCourse(e.target.value); setCurrentPage(1); }}
+                    className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155] outline-none" 
+                    placeholder="e.g. CS302" 
+                    type="text" 
+                  />
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Section</label>
-                <select className="text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg px-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]">
-                  <option>All Sections</option>
-                  <option>A</option>
-                  <option>B</option>
-                  <option>C</option>
-                  <option>D</option>
+                <select 
+                  value={filterSection}
+                  onChange={(e) => { setFilterSection(e.target.value); setCurrentPage(1); }}
+                  className="text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg px-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155] outline-none"
+                >
+                  {uniqueSections.map(sec => (
+                    <option key={sec} value={sec}>{sec}</option>
+                  ))}
                 </select>
               </div>
               <div className="flex flex-col gap-1.5">
                 <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest px-1">Faculty UID</label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 dark:text-slate-500 text-lg" style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>person</span>
-                  <input className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155]" placeholder="Search UID..." type="text" />
+                  <input 
+                    value={filterUid}
+                    onChange={(e) => { setFilterUid(e.target.value); setCurrentPage(1); }}
+                    className="w-full text-sm border-none bg-white dark:bg-[#020617] dark:text-white rounded-lg pl-10 pr-3 py-2.5 shadow-sm focus:ring-2 focus:ring-primary/20 dark:focus:ring-[#3b82f6]/40 ring-1 ring-slate-200 dark:ring-[#334155] outline-none" 
+                    placeholder="Search UID..." 
+                    type="text" 
+                  />
                 </div>
               </div>
             </div>
@@ -265,22 +349,22 @@ const FacultyAssignmentWorkspace = () => {
 
           <div className="overflow-x-auto scrollbar-hide flex-1">
             <table className="w-full text-left border-collapse min-w-[1400px]">
-              <thead>
-                <tr className="bg-slate-50/50 dark:bg-[#1e293b] sticky top-0 z-10 border-b border-outline-variant dark:border-[#334155]">
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Course Code</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Group No</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Section</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Mapping Type</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Attendance Type</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest break-nowrap">Course Nature</th>
-                  <th className="p-4 text-[10px] font-bold text-primary dark:text-[#3b82f6] uppercase tracking-widest bg-primary/5 dark:bg-[#3b82f6]/5 border-x border-primary/10 dark:border-[#3b82f6]/20 w-64">Faculty UID</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">L</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">T</th>
-                  <th className="p-2 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">P</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Merge Status</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Merge Code</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest">Reserve Slot</th>
-                  <th className="p-4 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest sticky right-0 bg-slate-50 dark:bg-[#1e293b]">Actions</th>
+              <thead className="bg-[#f8fafc] dark:bg-[#0f172a] text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider sticky top-0 z-20 shadow-sm border-b border-outline-variant dark:border-[#334155]">
+                <tr>
+                  <th className="p-4 w-32">Course Code</th>
+                  <th className="p-4">Group</th>
+                  <th className="p-4">Section</th>
+                  <th className="p-4">Type</th>
+                  <th className="p-4">Attendance</th>
+                  <th className="p-4">Nature</th>
+                  <th className="p-4 min-w-[200px] text-primary dark:text-[#3b82f6] bg-primary/[0.04] dark:bg-[#3b82f6]/10 border-x border-primary/10 dark:border-[#3b82f6]/20">Faculty UID</th>
+                  <th className="p-4 text-center">L</th>
+                  <th className="p-4 text-center">T</th>
+                  <th className="p-4 text-center">P</th>
+                  <th className="p-4 text-center">Merge</th>
+                  <th className="p-4">Merge Code</th>
+                  <th className="p-4">Reserve Slot</th>
+                  <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant dark:divide-[#334155]">
