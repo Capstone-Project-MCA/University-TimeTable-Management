@@ -28,9 +28,17 @@ public class AssignController {
         return ResponseEntity.ok(assignService.assignCoursesToSection(courseSectionAssignmentDto));
     }
 
+    @PostMapping("/save-all-faculty")
+    public ResponseEntity<List<CourseMappingDto>> saveAllFacultyMappings(
+            @RequestBody List<CourseMapping> courseMappings)
+    {
+        return ResponseEntity.ok(assignService.saveAllFacultyAssign(courseMappings));
+    }
 
     @PutMapping("/assign-faculty")
-    public ResponseEntity<CourseMappingDto> assignFacultyToSection(@RequestBody CourseMapping courseMapping){
+    public ResponseEntity<CourseMappingDto> assignFacultyToSection(
+            @RequestBody CourseMapping courseMapping)
+    {
         return ResponseEntity.ok(assignService.assignFacultyToCoursesAndSection(courseMapping));
     }
 }

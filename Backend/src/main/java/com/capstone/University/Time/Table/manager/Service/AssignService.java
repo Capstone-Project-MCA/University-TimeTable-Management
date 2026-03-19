@@ -6,7 +6,6 @@ import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.Entity.Course;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
-
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
@@ -36,12 +35,13 @@ public class AssignService {
 
 
     @Autowired
-    public AssignService(CourseRepository courseRepository,
-                         SectionRepository sectionRepository,
-                         CourseMappingRepository courseMappingRepository,
-                         SectionMapper sectionMapper,
-                         CourseMapper courseMapper,
-                         CourseMappingMapper courseMappingMapper
+    public AssignService(
+            CourseRepository courseRepository,
+            SectionRepository sectionRepository,
+            CourseMappingRepository courseMappingRepository,
+            SectionMapper sectionMapper,
+            CourseMapper courseMapper,
+            CourseMappingMapper courseMappingMapper
     ) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
@@ -49,6 +49,17 @@ public class AssignService {
         this.sectionMapper = sectionMapper;
         this.courseMapper = courseMapper;
         this.courseMappingMapper = courseMappingMapper;
+    }
+
+    public List<CourseMappingDto> saveAllFacultyAssign(List<CourseMapping> courseMappings) {
+        List<CourseMappingDto> courseMappingDTOs = new ArrayList<>();
+
+        courseMappings.forEach(courseMapping -> {
+            courseMappingDTOs.add(courseMappingMapper.toDto(courseMapping));
+        });
+
+        courseMappingRepository.saveAll(courseMappings);
+        return courseMappingDTOs;
     }
 
     @Transactional
