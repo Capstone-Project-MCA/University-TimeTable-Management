@@ -2,10 +2,13 @@ import React, { useState } from 'react';
 import UploadDropdown from '../upload/UploadDropdown';
 import UploadModal from '../upload/UploadModal';
 import { useFileUpload } from '../upload/useFileUpload';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const API_BASE = "http://localhost:8080";
 
 export default function DashboardNavbar({ activeTab }) {
+  const { triggerRefresh } = useDataRefresh();
+
   const {
     fileInputRef,
     isUploading,
@@ -18,7 +21,7 @@ export default function DashboardNavbar({ activeTab }) {
     handleFinalUpload,
     downloadReport,
     closeResultMode
-  } = useFileUpload();
+  } = useFileUpload({ onRefresh: triggerRefresh });
 
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -64,9 +67,7 @@ export default function DashboardNavbar({ activeTab }) {
       }
       
       alert(`Successfully deleted all ${label}.`);
-      // You may want to trigger a data refresh here by calling a prop function, if the UI needs it.
-      // Currently, reloading the page is the easiest way to reflect changes immediately.
-      window.location.reload();
+      triggerRefresh(endpointPrefix); // refresh the list without page reload
     } catch (error) {
       alert(error.message);
     } finally {

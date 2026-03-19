@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
+import { useDataRefresh } from '../../context/DataRefreshContext'
 
 import CourseCard from '../common/CourseCard'
 import FacultyCard from '../common/FacultyCard'
@@ -14,6 +15,11 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
   const [rooms, setRooms] = useState([])
   const [sections, setSections] = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+
+  const { refreshKey, lastRefreshedEntity } = useDataRefresh()
+
+  // Map upload entity type → tab name
+  const entityToTab = { course: 'courses', faculty: 'faculties', room: 'rooms', section: 'sections' }
 
   useEffect(() => {
     setSearchQuery('')
@@ -51,6 +57,23 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
         break
     }
   }, [activeTab])
+
+  // Auto-refresh when an upload/delete completes for the currently visible tab
+  useEffect(() => {
+    if (refreshKey === 0) return; // skip initial render
+    const affectedTab = lastRefreshedEntity ? entityToTab[lastRefreshedEntity] : null;
+    // Refresh if it's a global refresh OR if the affected entity matches this tab
+    if (affectedTab && affectedTab !== activeTab) return;
+
+    const fetchers = {
+      courses:   () => axios.get('http://localhost:8080/course/all').then(r => setCourses(r.data)),
+      faculties: () => axios.get('http://localhost:8080/faculty/all').then(r => setFaculties(r.data)),
+      rooms:     () => axios.get('http://localhost:8080/room/all').then(r => setRooms(r.data)),
+      sections:  () => axios.get('http://localhost:8080/section/all').then(r => setSections(r.data)),
+    };
+    fetchers[activeTab]?.().catch(err => console.error('Auto-refresh failed:', err));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey])
 
   // ---------- pick raw list ----------
   let rawData = []

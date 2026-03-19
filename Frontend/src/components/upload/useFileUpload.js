@@ -17,7 +17,7 @@ function persistTemplates(set) {
     sessionStorage.setItem(STORAGE_KEY, JSON.stringify([...set]));
 }
 
-export const useFileUpload = () => {
+export const useFileUpload = ({ onRefresh } = {}) => {
     const fileInputRef = useRef(null);
     const uploadTypeRef = useRef('course');
     const [isUploading, setIsUploading] = useState(false);
@@ -113,7 +113,8 @@ export const useFileUpload = () => {
 
             setUploadResult(null);
             setSelectedFile(null);
-            alert("File uploaded and saved to database successfully.");
+            // Notify all subscribers so data lists auto-refresh
+            onRefresh?.(endpointType);
 
         } catch (error) {
             console.error(error);

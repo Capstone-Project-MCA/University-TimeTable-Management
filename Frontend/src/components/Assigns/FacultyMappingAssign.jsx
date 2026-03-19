@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import { useDataRefresh } from "../../context/DataRefreshContext";
 
 const API_BASE = "http://localhost:8080";
 
@@ -41,6 +42,19 @@ export default function FacultyMappingAssign() {
     }
     init();
   }, []);
+
+  // Auto-refresh faculty/section lists when relevant uploads complete
+  const { refreshKey, lastRefreshedEntity } = useDataRefresh();
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    if (!lastRefreshedEntity || lastRefreshedEntity === 'faculty') {
+      fetch(`${API_BASE}/faculty/all`).then(r => r.ok ? r.json() : []).then(setFaculties).catch(() => {});
+    }
+    if (!lastRefreshedEntity || lastRefreshedEntity === 'section') {
+      fetch(`${API_BASE}/section/all`).then(r => r.ok ? r.json() : []).then(setSections).catch(() => {});
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
   // ── faculty search autocomplete ────────────────────────────────────────────
   useEffect(() => {
