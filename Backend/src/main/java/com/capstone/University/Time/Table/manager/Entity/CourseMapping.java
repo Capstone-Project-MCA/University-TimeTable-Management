@@ -18,7 +18,6 @@ import lombok.*;
     }
 )
 public class CourseMapping {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "CourseMappingId")
