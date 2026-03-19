@@ -137,46 +137,65 @@ export default function FacultyMappingAssign() {
     if (!selectedFaculty || checkedIds.size === 0) return;
     setSaving(true);
     setResult(null);
-    let succeeded = 0, failed = 0;
 
     const selected = mappings.filter((m) => {
       const id = m.courseMappingId ?? m.CourseMappingId ?? JSON.stringify(m);
       return checkedIds.has(id);
     });
 
-    for (const m of selected) {
-      try {
-        const res = await fetch(`${API_BASE}/assign/assign-faculty`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            section: m.section || m.Section,
-            courseCode: m.coursecode || m.Coursecode,
-            groupNo: m.groupNo ?? m.GroupNo,
-            mappingType: m.mappingType,
-            facultyUID: selectedFaculty.FacultyUID,
-          }),
-        });
-        res.ok ? succeeded++ : failed++;
-      } catch { failed++; }
-    }
+    // Build full CourseMapping payloads with the new facultyUID
+    // Include courseMappingId so backend's saveAll does UPDATE not INSERT
+    const payload = selected.map((m) => ({
+      courseMappingId: m.courseMappingId ?? m.CourseMappingId ?? null,
+      section:         m.section       || m.Section,
+      coursecode:      m.coursecode    || m.Coursecode,
+      groupNo:         m.groupNo       ?? m.GroupNo,
+      mappingType:     m.mappingType,
+      attendanceType:  m.attendanceType || m.AttendanceType || "Regular",
+      courseNature:    m.courseNature   || m.CourseNature,
+      facultyUID:      selectedFaculty.FacultyUID,
+      l:               m.l ?? m.L ?? 0,
+      t:               m.t ?? m.T ?? 0,
+      p:               m.p ?? m.P ?? 0,
+      mergecode:       m.mergecode  || m.Mergecode  || null,
+      mergeStatus:     m.mergeStatus ?? m.MergeStatus ?? false,
+      reserveslot:     m.reserveslot || m.Reserveslot || null,
+    }));
 
-    setSaving(false);
-    if (failed === 0) {
-      setResult({ success: true, message: `Successfully assigned ${succeeded} mapping(s) to ${selectedFaculty.FacultyUID}.` });
-      // update local mapping state to show the new UID
-      setMappings((prev) =>
-        prev.map((m) => {
-          const id = m.courseMappingId ?? m.CourseMappingId ?? JSON.stringify(m);
-          if (checkedIds.has(id)) return { ...m, facultyUID: selectedFaculty.FacultyUID, FacultyUID: selectedFaculty.FacultyUID };
-          return m;
-        })
-      );
-      setCheckedIds(new Set());
-    } else {
-      setResult({ success: false, message: `${succeeded} succeeded, ${failed} failed. Check console for details.` });
+    try {
+      const response = await fetch(`${API_BASE}/assign/save-all-faculty`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      setSaving(false);
+
+      if (response.ok) {
+        setResult({
+          success: true,
+          message: `Successfully assigned ${selected.length} mapping(s) to ${selectedFaculty.FacultyUID}.`,
+        });
+        // Reflect new UID in local state immediately
+        setMappings((prev) =>
+          prev.map((m) => {
+            const id = m.courseMappingId ?? m.CourseMappingId ?? JSON.stringify(m);
+            if (checkedIds.has(id))
+              return { ...m, facultyUID: selectedFaculty.FacultyUID, FacultyUID: selectedFaculty.FacultyUID };
+            return m;
+          })
+        );
+        setCheckedIds(new Set());
+      } else {
+        const errText = await response.text().catch(() => "Unknown error");
+        setResult({ success: false, message: `Assign failed: ${errText}` });
+      }
+    } catch (err) {
+      setSaving(false);
+      setResult({ success: false, message: `Network error: ${err.message}` });
     }
   }
+
 
   // ── row id helper ─────────────────────────────────────────────────────────
   function rowId(m) {

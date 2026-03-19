@@ -118,22 +118,18 @@ const FacultyAssignmentWorkspace = () => {
 
   const handleSaveAll = async () => {
     const rowsToSave = paginatedRows.filter(r => !r.isSaved && r.uid !== r.originalUid);
-    
-    // Check for empty rows that user might be trying to save
+
     const emptyRows = rowsToSave.filter(r => !r.uid || r.uid.trim() === "");
     if (emptyRows.length > 0) {
-      alert(`Cannot save all! Found empty Faculty UIDs in rows with Code: ${emptyRows.map(r => r.courseCode).join(", ")}.\nPlease fill them or leave them unchanged.`);
+      alert(`Cannot save all! Empty Faculty UIDs in: ${emptyRows.map(r => r.courseCode).join(", ")}.`);
       return;
     }
 
-    // Validate all first
-    const invalidRows = rowsToSave.filter(row => !faculties.some(f => {
-       const fUid = String(f.facultyUID || f.FacultyUID || "");
-       return fUid === row.uid;
-    }));
-
+    const invalidRows = rowsToSave.filter(row =>
+      !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid)
+    );
     if (invalidRows.length > 0) {
-      alert(`Cannot save all! Found invalid Faculty UIDs in rows with Code: ${invalidRows.map(r => r.courseCode).join(", ")}.\nPlease correct them first.`);
+      alert(`Cannot save all! Invalid Faculty UIDs in: ${invalidRows.map(r => r.courseCode).join(", ")}.`);
       return;
     }
 
@@ -142,44 +138,47 @@ const FacultyAssignmentWorkspace = () => {
       return;
     }
 
+    // Build full CourseMapping payloads — include courseMappingId so backend does UPDATE not INSERT
+    const payload = rowsToSave.map(row => ({
+      courseMappingId: row.courseMappingId ?? null,
+      section:         row.section,
+      coursecode:      row.courseCode,
+      groupNo:         row.groupRaw,
+      mappingType:     row.type,
+      attendanceType:  row.attendance,
+      courseNature:    row.nature,
+      facultyUID:      row.uid || null,
+      l:               row.l,
+      t:               row.t,
+      p:               row.p,
+      mergecode:       row.mergeCode !== "---" ? row.mergeCode : null,
+      mergeStatus:     row.mergeStatus === "check_circle",
+      reserveslot:     row.reserve   !== "---" ? row.reserve   : null,
+    }));
+
     try {
-      const promises = rowsToSave.map(row => {
-        const payload = {
-          Section: row.section,
-          Coursecode: row.courseCode,
-          GroupNo: row.groupRaw,
-          mappingType: row.type,
-          FacultyUID: row.uid,
-          // Fallbacks just in case
-          section: row.section,
-          coursecode: row.courseCode,
-          groupNo: row.groupRaw,
-          facultyUID: row.uid
-        };
-        return fetch(`${API_BASE}/assign/assign-faculty`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        }).then(res => ({ id: row.id, ok: res.ok }));
+      const response = await fetch(`${API_BASE}/assign/save-all-faculty`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      const results = await Promise.all(promises);
-      const successfulIds = results.filter(r => r.ok).map(r => r.id);
-
-      if (successfulIds.length > 0) {
-        setRows(prevRows => prevRows.map(r => successfulIds.includes(r.id) ? { ...r, isSaved: true, originalUid: r.uid } : r));
-      }
-
-      if (successfulIds.length === rowsToSave.length) {
-        alert("All changes on this page saved successfully!");
+      if (response.ok) {
+        const savedIds = rowsToSave.map(r => r.id);
+        setRows(prev => prev.map(r =>
+          savedIds.includes(r.id) ? { ...r, isSaved: true, originalUid: r.uid } : r
+        ));
+        alert(`${rowsToSave.length} mapping(s) saved successfully!`);
       } else {
-        alert(`Saved ${successfulIds.length} out of ${rowsToSave.length} changes. Some failed.`);
+        const errText = await response.text().catch(() => "Unknown error");
+        alert(`Save failed: ${errText}`);
       }
     } catch (error) {
-      console.error("Error saving all rows:", error);
-      alert("An error occurred while saving all rows.");
+      console.error("Error in save-all-faculty:", error);
+      alert("Network error while saving. Please try again.");
     }
   };
+
 
   // Card Data Calculations
   const totalAssigns = rows.length;
