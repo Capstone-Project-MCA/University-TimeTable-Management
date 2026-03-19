@@ -28,10 +28,6 @@ public class AssignController {
         return ResponseEntity.ok(assignService.assignCoursesToSection(courseSectionAssignmentDto));
     }
 
-    @GetMapping("/error")
-    public ResponseEntity<List<String>> courseAssignErrors(){
-        return ResponseEntity.ok(assignService.courseAssignErrors());
-    }
 
     @PutMapping("/assign-faculty")
     public ResponseEntity<CourseMappingDto> assignFacultyToSection(@RequestBody CourseMapping courseMapping){

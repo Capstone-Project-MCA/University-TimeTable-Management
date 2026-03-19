@@ -97,6 +97,8 @@ const BulkAssignment = () => {
     if (selectedSections.length === 0 || selectedCourses.length === 0) return;
     setAssigning(true);
     setResult(null);
+    setErrorList([]);
+    setShowErrors(false);
     try {
       const res = await fetch(`${API_BASE}/assign/assign-courses`, {
         method: "POST",
@@ -106,30 +108,36 @@ const BulkAssignment = () => {
           courseIds: selectedCourses.map((c) => c.CourseCode),
         }),
       });
+
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        throw new Error(errData?.message || `Server error (${res.status})`);
+        const rawMessage = errData?.message || `Server error (${res.status})`;
+
+        // Parse inline duplicate-entry warnings from the message
+        // Backend now returns: "Courses are already assigned to sections: Course with id - X connected to Section with id - Y already exists, ..."
+        const colonIdx = rawMessage.indexOf(":");
+        if (colonIdx !== -1 && rawMessage.toLowerCase().includes("already assigned")) {
+          const detailsPart = rawMessage.substring(colonIdx + 1).trim();
+          const lines = detailsPart.split(",").map(s => s.trim()).filter(Boolean);
+          setErrorList(lines);
+          setShowErrors(lines.length > 0);
+          setResult({ success: false, message: "Some courses are already assigned. See warnings below." });
+        } else {
+          setResult({ success: false, message: rawMessage });
+        }
+        return;
       }
+
       const data = await res.json();
-      setResult({ success: true, ...data });
+      // data is a list of [SectionDto, List<CourseDto>] pairs
+      const totalCreated = Array.isArray(data)
+        ? data.reduce((sum, pair) => sum + (pair.right?.length ?? pair[1]?.length ?? 0), 0)
+        : 0;
+      setResult({ success: true, message: `Successfully assigned ${totalCreated} course mapping(s).` });
       setSelectedSections([]);
       setSelectedCourses([]);
-
-      // Fetch error list from backend
-      try {
-        const errRes = await fetch(`${API_BASE}/assign/error`);
-        if (errRes.ok) {
-          const errData = await errRes.json();
-          setErrorList(errData || []);
-          setShowErrors(errData && errData.length > 0);
-        }
-      } catch {
-        // silently ignore error fetch failure
-      }
     } catch (err) {
       setResult({ success: false, message: err.message });
-      setErrorList([]);
-      setShowErrors(false);
     } finally {
       setAssigning(false);
     }
@@ -396,11 +404,6 @@ const BulkAssignment = () => {
                 <div className="flex-1">
                   <p className="font-semibold">{result.success ? "Assignment Complete" : "Assignment Failed"}</p>
                   <p className="text-sm mt-0.5">{result.message}</p>
-                  {result.success && (
-                    <p className="text-xs mt-1 opacity-75">
-                      {result.created} created · {result.skipped} skipped
-                    </p>
-                  )}
                 </div>
                 <button onClick={() => setResult(null)} className="opacity-60 hover:opacity-100 transition-opacity">
                   <span className="material-symbols-outlined text-lg">close</span>

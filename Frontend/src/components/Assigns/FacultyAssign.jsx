@@ -34,7 +34,8 @@ const FacultyAssignmentWorkspace = () => {
       if (mappingRes.ok) {
         const data = await mappingRes.json();
         const formattedData = data.map(item => ({
-          id: `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
+          id: item.courseMappingId ?? `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
+          courseMappingId: item.courseMappingId,
           courseCode: item.coursecode || item.Coursecode,
           group: `G${item.groupNo || item.GroupNo}`,
           groupRaw: item.groupNo || item.GroupNo,

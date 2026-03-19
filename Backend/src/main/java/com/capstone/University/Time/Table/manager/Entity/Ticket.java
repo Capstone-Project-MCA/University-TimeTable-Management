@@ -22,7 +22,7 @@ public class Ticket {
     @Column(name = "Coursecode", length = 7, nullable = false)
     private String Coursecode;
 
-    @Column(name = "GroupNo", nullable = false)
+    @Column(name = "GroupNo", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short GroupNo;
 
     @Column(name = "LectureNo", nullable = false)
@@ -43,12 +43,11 @@ public class Ticket {
     @Column(name = "RoomNo", length = 10)
     private String RoomNo;
 
+    @Column(name = "CourseMappingId")
+    private Long courseMappingId;
+
     @ManyToOne
-    @JoinColumns({
-            @JoinColumn(name = "Section", referencedColumnName = "Section", insertable = false, updatable = false),
-            @JoinColumn(name = "Coursecode", referencedColumnName = "Coursecode", insertable = false, updatable = false),
-            @JoinColumn(name = "GroupNo", referencedColumnName = "GroupNo", insertable = false, updatable = false)
-    })
+    @JoinColumn(name = "CourseMappingId", referencedColumnName = "CourseMappingId", insertable = false, updatable = false)
     private CourseMapping courseMappingEntity;
 
     @ManyToOne

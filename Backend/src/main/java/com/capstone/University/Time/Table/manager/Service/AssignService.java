@@ -6,7 +6,7 @@ import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.Entity.Course;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
-import com.capstone.University.Time.Table.manager.Entity.CourseMappingId;
+
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
@@ -34,7 +34,6 @@ public class AssignService {
     private final CourseMapper courseMapper;
     private final CourseMappingMapper courseMappingMapper;
 
-    List<String> errors = new ArrayList<>();
 
     @Autowired
     public AssignService(CourseRepository courseRepository,
@@ -54,22 +53,23 @@ public class AssignService {
 
     @Transactional
     public CourseMappingDto assignFacultyToCoursesAndSection(CourseMapping courseMapping) {
-        CourseMappingId id = new CourseMappingId(
-                courseMapping.getSection(),
-                courseMapping.getCoursecode(),
-                courseMapping.getGroupNo(),
-                courseMapping.getMappingType()
-        );
+        CourseMapping existMapping = courseMappingRepository
+                .findByNaturalKey(
+                        courseMapping.getSection(),
+                        courseMapping.getCoursecode(),
+                        courseMapping.getGroupNo(),
+                        courseMapping.getMappingType()
+                )
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Course Mapping not found for Section=" + courseMapping.getSection()
+                        + ", Course=" + courseMapping.getCoursecode()
+                        + ", GroupNo=" + courseMapping.getGroupNo()
+                        + ", MappingType=" + courseMapping.getMappingType()
+                ));
 
-        CourseMapping existMapping = courseMappingRepository.findById(id).orElse(null);
-
-        if(existMapping == null) {
-            throw new ResourceNotFoundException("Course Mapping not found");
-        }
-
-        if(courseMapping.getFacultyUID() != null) existMapping.setFacultyUID(courseMapping.getFacultyUID());
-        if(courseMapping.getMergecode() != null) existMapping.setMergecode(courseMapping.getMergecode());
-        if(courseMapping.getReserveslot() != null) existMapping.setReserveslot(courseMapping.getReserveslot());
+        if (courseMapping.getFacultyUID() != null) existMapping.setFacultyUID(courseMapping.getFacultyUID());
+        if (courseMapping.getMergecode() != null) existMapping.setMergecode(courseMapping.getMergecode());
+        if (courseMapping.getReserveslot() != null) existMapping.setReserveslot(courseMapping.getReserveslot());
 
         courseMappingRepository.save(existMapping);
         return courseMappingMapper.toDto(existMapping);
@@ -77,7 +77,7 @@ public class AssignService {
 
     @Transactional
     public List<Pair<SectionDto, List<CourseDto>>> assignCoursesToSection(CourseSectionAssignmentDto courseSectionAssignmentDto) {
-        errors.clear();
+        List<String> errors = new ArrayList<>();
         List<String> sectionIds = courseSectionAssignmentDto.getSectionIds() != null ?
                 courseSectionAssignmentDto.getSectionIds() : new ArrayList<>();
 
@@ -118,14 +118,10 @@ public class AssignService {
         }
 
         if(!errors.isEmpty()){
-            throw new DuplicateResourceException("Courses are already assigned to sections");
+            throw new DuplicateResourceException("Courses are already assigned to sections: " + String.join(", ", errors));
         }
 
         return assigns;
-    }
-
-    public List<String> courseAssignErrors(){
-        return errors;
     }
 
     private static @NonNull List<CourseMapping> getCourseMappings(String sectionId, String courseId,

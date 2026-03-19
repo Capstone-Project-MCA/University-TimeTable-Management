@@ -8,20 +8,33 @@ import lombok.*;
 @Setter
 @AllArgsConstructor
 @NoArgsConstructor
-@Table(name = "coursemapping")
-@IdClass(CourseMappingId.class)
+@Table(
+    name = "coursemapping",
+    uniqueConstraints = {
+        @UniqueConstraint(
+            name = "UK_coursemapping_biz_key",
+            columnNames = {"Section", "Coursecode", "GroupNo", "MappingType"}
+        )
+    }
+)
 public class CourseMapping {
+
     @Id
-    @Column(name = "Section", length = 5)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "CourseMappingId")
+    private Long courseMappingId;
+
+    @Column(name = "Section", length = 5, nullable = false)
     private String Section;
 
-    @Id
-    @Column(name = "Coursecode", length = 7)
+    @Column(name = "Coursecode", length = 7, nullable = false)
     private String Coursecode;
 
-    @Id
     @Column(name = "GroupNo", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short GroupNo;
+
+    @Column(name = "MappingType", nullable = false)
+    private String mappingType;
 
     @Column(name = "AttendanceType", length = 15, nullable = false)
     private String AttendanceType = "Regular";
@@ -43,10 +56,6 @@ public class CourseMapping {
 
     @Column(name = "P", nullable = false, columnDefinition = "TINYINT UNSIGNED")
     private Short P = (short) 0;
-
-    @Id
-    @Column(name="MappingType", nullable = false)
-    private String mappingType;
 
     @Column(name = "Reserveslot", length = 50)
     private String Reserveslot;
