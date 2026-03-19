@@ -35,7 +35,7 @@ public class AssignController {
         return ResponseEntity.ok(assignService.saveAllFacultyAssign(courseMappings));
     }
 
-    @PutMapping("/assign-multiple")
+    @PutMapping("/assign-multiple/{facultyUID}/{sectionId}")
     public ResponseEntity<List<Pair<String, Pair<String, List<CourseMappingDto>>>>> assignMultiple(
             @PathVariable String facultyUID,
             @PathVariable String sectionId,

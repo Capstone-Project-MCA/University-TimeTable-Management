@@ -333,8 +333,8 @@ export default function FacultyMappingAssign() {
                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer transition-all"
               >
                 <option value="">— Choose a section to load mappings —</option>
-                {sections.map((s) => (
-                  <option key={s.SectionId} value={s.SectionId}>
+                {sections.map((s, idx) => (
+                  <option key={s.SectionId ?? idx} value={s.SectionId}>
                     {s.SectionId} — {s.ProgramName} · Sem {s.Semester}
                   </option>
                 ))}

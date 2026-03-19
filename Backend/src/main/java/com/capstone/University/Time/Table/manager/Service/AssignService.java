@@ -60,15 +60,38 @@ public class AssignService {
         this.facultyMapper = facultyMapper;
     }
 
+    @Transactional
     public List<CourseMappingDto> saveAllFacultyAssign(List<CourseMapping> courseMappings) {
-        List<CourseMappingDto> courseMappingDTOs = new ArrayList<>();
+        List<CourseMappingDto> results = new ArrayList<>();
 
-        courseMappings.forEach(courseMapping -> {
-            courseMappingDTOs.add(courseMappingMapper.toDto(courseMapping));
-        });
+        for (CourseMapping incoming : courseMappings) {
+            // Find the existing record — by ID if available, otherwise by natural key
+            CourseMapping existing;
+            if (incoming.getCourseMappingId() != null) {
+                existing = courseMappingRepository.findById(incoming.getCourseMappingId())
+                        .orElseThrow(() -> new ResourceNotFoundException(
+                                "CourseMapping not found with id=" + incoming.getCourseMappingId()));
+            } else {
+                existing = courseMappingRepository.findByNaturalKey(
+                        incoming.getSection(), incoming.getCoursecode(),
+                        incoming.getGroupNo(), incoming.getMappingType()
+                ).orElseThrow(() -> new ResourceNotFoundException(
+                        "CourseMapping not found for Section=" + incoming.getSection()
+                        + ", Course=" + incoming.getCoursecode()
+                        + ", GroupNo=" + incoming.getGroupNo()
+                        + ", MappingType=" + incoming.getMappingType()));
+            }
 
-        courseMappingRepository.saveAll(courseMappings);
-        return courseMappingDTOs;
+            // Only update the faculty-related fields on the existing record
+            if (incoming.getFacultyUID() != null) existing.setFacultyUID(incoming.getFacultyUID());
+            if (incoming.getMergecode() != null) existing.setMergecode(incoming.getMergecode());
+            if (incoming.getReserveslot() != null) existing.setReserveslot(incoming.getReserveslot());
+
+            courseMappingRepository.save(existing);
+            results.add(courseMappingMapper.toDto(existing));
+        }
+
+        return results;
     }
 
     @Transactional

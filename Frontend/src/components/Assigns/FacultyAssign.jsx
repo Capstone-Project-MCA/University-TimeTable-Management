@@ -36,7 +36,7 @@ const FacultyAssignmentWorkspace = () => {
         const formattedData = data.map(item => ({
           id: item.courseMappingId ?? `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
           courseMappingId: item.courseMappingId,
-          courseCode: item.coursecode || item.Coursecode,
+          courseCode: item.coursecode || item.Coursecode || "",
           group: `G${item.groupNo || item.GroupNo}`,
           groupRaw: item.groupNo || item.GroupNo,
           section: item.section || item.Section,
@@ -237,9 +237,9 @@ const FacultyAssignmentWorkspace = () => {
   const uniqueSections = ["All Sections", ...Array.from(new Set(rows.map(r => String(r.section)))).sort()];
   
   const filteredRows = rows.filter(r => 
-    r.courseCode.toLowerCase().includes(filterCourse.toLowerCase()) &&
+    (r.courseCode || "").toLowerCase().includes(filterCourse.toLowerCase()) &&
     (filterSection === "All Sections" || String(r.section) === filterSection) &&
-    r.uid.toLowerCase().includes(filterUid.toLowerCase())
+    (r.uid || "").toLowerCase().includes(filterUid.toLowerCase())
   );
 
   const totalPages = Math.ceil(filteredRows.length / rowsPerPage) || 1;
