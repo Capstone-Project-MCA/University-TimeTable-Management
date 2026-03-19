@@ -6,14 +6,17 @@ import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.Entity.Course;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
+import com.capstone.University.Time.Table.manager.Entity.Faculty;
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
+import com.capstone.University.Time.Table.manager.Mapper.FacultyMapper;
 import com.capstone.University.Time.Table.manager.Mapper.SectionMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
+import com.capstone.University.Time.Table.manager.Repository.FacultyRepository;
 import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.NonNull;
@@ -32,6 +35,8 @@ public class AssignService {
     private final SectionMapper sectionMapper;
     private final CourseMapper courseMapper;
     private final CourseMappingMapper courseMappingMapper;
+    private final FacultyRepository facultyRepository;
+    private final FacultyMapper facultyMapper;
 
 
     @Autowired
@@ -41,7 +46,9 @@ public class AssignService {
             CourseMappingRepository courseMappingRepository,
             SectionMapper sectionMapper,
             CourseMapper courseMapper,
-            CourseMappingMapper courseMappingMapper
+            CourseMappingMapper courseMappingMapper,
+            FacultyRepository facultyRepository,
+            FacultyMapper facultyMapper
     ) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
@@ -49,6 +56,8 @@ public class AssignService {
         this.sectionMapper = sectionMapper;
         this.courseMapper = courseMapper;
         this.courseMappingMapper = courseMappingMapper;
+        this.facultyRepository = facultyRepository;
+        this.facultyMapper = facultyMapper;
     }
 
     public List<CourseMappingDto> saveAllFacultyAssign(List<CourseMapping> courseMappings) {
@@ -85,6 +94,45 @@ public class AssignService {
         courseMappingRepository.save(existMapping);
         return courseMappingMapper.toDto(existMapping);
     }
+
+    public List<Pair<String, Pair<String, List<CourseMappingDto>>>> assignMultipleCoursesToFaculty(
+            String facultyUID,
+            String sectionId,
+            List<CourseMapping> courseMappings) {
+
+        List<Pair<String, Pair<String, List<CourseMappingDto>>>> pairs = new ArrayList<>();
+
+        Faculty faculty = facultyRepository.findByFacultyUID(facultyUID);
+        if (faculty == null) throw new ResourceNotFoundException("Faculty Not Found");
+
+        Section section = sectionRepository.findBySectionId(sectionId);
+        if (section == null) throw new ResourceNotFoundException("Section Not Found");
+
+        List<CourseMappingDto> list = new ArrayList<>();
+
+        courseMappings.forEach(courseMapping -> {
+            CourseMapping courseMappingTemp = courseMappingRepository.findById(
+                    courseMapping.getCourseMappingId()
+            ).orElseThrow(() -> new ResourceNotFoundException("Course Mapping Not Found"));
+
+            if (courseMappingTemp.getFacultyUID() == null) {
+                courseMappingTemp.setFacultyUID(faculty.getFacultyUID());
+                courseMappingRepository.save(courseMappingTemp);
+                list.add(courseMappingMapper.toDto(courseMappingTemp));
+            }
+        });
+
+        Pair<String, List<CourseMappingDto>> innerPair =
+                Pair.of(sectionId, list);
+
+        Pair<String, Pair<String, List<CourseMappingDto>>> outerPair =
+                Pair.of(facultyUID, innerPair);
+
+        pairs.add(outerPair);
+
+        return pairs;
+    }
+
 
     @Transactional
     public List<Pair<SectionDto, List<CourseDto>>> assignCoursesToSection(CourseSectionAssignmentDto courseSectionAssignmentDto) {
