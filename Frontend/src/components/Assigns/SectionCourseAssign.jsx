@@ -316,11 +316,11 @@ const BulkAssignment = () => {
                 </h3>
 
                 {selectedSections.length === 0 && (
-                  <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
-                    <div className="text-center">
-                      <span className="material-symbols-outlined text-3xl mb-2 block">drag_indicator</span>
-                      Drop sections here
+                  <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400 select-none">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-2xl text-slate-300 dark:text-slate-600">move_to_inbox</span>
                     </div>
+                    <span className="text-sm font-medium">Drop sections here</span>
                   </div>
                 )}
 
@@ -361,11 +361,11 @@ const BulkAssignment = () => {
                 </h3>
 
                 {selectedCourses.length === 0 && (
-                  <div className="flex items-center justify-center h-48 text-slate-400 text-sm">
-                    <div className="text-center">
-                      <span className="material-symbols-outlined text-3xl mb-2 block">drag_indicator</span>
-                      Drop courses here
+                  <div className="flex flex-col items-center justify-center h-48 gap-3 text-slate-400 select-none">
+                    <div className="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                      <span className="material-symbols-outlined text-2xl text-slate-300 dark:text-slate-600">move_to_inbox</span>
                     </div>
+                    <span className="text-sm font-medium">Drop courses here</span>
                   </div>
                 )}
 
