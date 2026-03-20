@@ -159,12 +159,13 @@ const FacultyAssignmentWorkspace = () => {
       const res = await fetch(`${API_BASE}/assign/assign-faculty`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
+        // ⚠️  Keys MUST match the Java entity's PascalCase field names
         body: JSON.stringify({
-          section: row.section, Section: row.section,
-          coursecode: row.courseCode, Coursecode: row.courseCode,
-          groupNo: row.groupRaw, GroupNo: row.groupRaw,
+          Section:    row.section,
+          Coursecode: row.courseCode,
+          GroupNo:    row.groupRaw,
           mappingType: row.type,
-          facultyUID: row.uid || null, FacultyUID: row.uid || null,
+          FacultyUID: row.uid || null,
         }),
       });
       if (res.ok) {
@@ -188,16 +189,22 @@ const FacultyAssignmentWorkspace = () => {
     if (empty.length)   { alert(`Empty UID in: ${empty.map(r => r.courseCode).join(", ")}`);   return; }
     if (invalid.length) { alert(`Invalid UID in: ${invalid.map(r => r.courseCode).join(", ")}`); return; }
 
+    // ⚠️  Keys MUST match the Java entity's PascalCase field names
     const payload = toSave.map(row => ({
       courseMappingId: row.courseMappingId ?? null,
-      section: row.section, coursecode: row.courseCode,
-      groupNo: row.groupRaw, mappingType: row.type,
-      attendanceType: row.attendance, courseNature: row.nature,
-      facultyUID: row.uid || null,
-      l: row.l, t: row.t, p: row.p,
-      mergecode:   row.mergeCode !== "---" ? row.mergeCode : null,
-      mergeStatus: row.mergeStatus === "check_circle",
-      reserveslot: row.reserve   !== "---" ? row.reserve   : null,
+      Section:        row.section,
+      Coursecode:     row.courseCode,
+      GroupNo:        row.groupRaw,
+      mappingType:    row.type,
+      AttendanceType: row.attendance,
+      CourseNature:   String(row.nature || "C"),
+      FacultyUID:     row.uid || null,
+      L:              row.l,
+      T:              row.t,
+      P:              row.p,
+      Mergecode:      row.mergeCode !== "---" ? row.mergeCode : null,
+      MergeStatus:    row.mergeStatus === "check_circle",
+      Reserveslot:    row.reserve    !== "---" ? row.reserve   : null,
     }));
 
     try {
