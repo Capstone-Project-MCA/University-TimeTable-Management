@@ -335,7 +335,7 @@ const FacultyAssignmentWorkspace = () => {
             disabled={row.isSaved}
             onChange={e => { handleUidChange(row.id, e.target.value); setFocusedRowId(row.id); }}
             onFocus={() => setFocusedRowId(row.id)}
-            onBlur={() => setTimeout(() => setFocusedRowId(null), 200)}
+            onBlur={() => setTimeout(() => setFocusedRowId(prev => prev === row.id ? null : prev), 200)}
             placeholder="Search UID / Name…"
           />
           {/* Autocomplete dropdown */}

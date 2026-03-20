@@ -73,13 +73,14 @@ public class FacultyService {
             throw new ResourceNotFoundException("Cannot update: Faculty not found with UID '" + facultyUID + "'");
         }
 
-        Faculty updatedFaculty = new Faculty();
-        updatedFaculty.setFacultyUID(faculty.getFacultyUID());
-        updatedFaculty.setFacultyName(faculty.getFacultyName());
-        updatedFaculty.setFacultyDomain(faculty.getFacultyDomain());
+        // Patch only the fields that are provided (non-null)
+        if (faculty.getFacultyName()   != null) exists.setFacultyName(faculty.getFacultyName());
+        if (faculty.getFacultyDomain() != null) exists.setFacultyDomain(faculty.getFacultyDomain());
+        if (faculty.getCurrentLoad()   != null) exists.setCurrentLoad(faculty.getCurrentLoad());
+        if (faculty.getExpectedLoad()  != null) exists.setExpectedLoad(faculty.getExpectedLoad());
 
-        facultyRepository.save(updatedFaculty);
-        return facultyMapper.toDto(updatedFaculty);
+        facultyRepository.save(exists);
+        return facultyMapper.toDto(exists);
     }
 
     // ----------------------------------- All Faculty Delete Requests Service

@@ -178,10 +178,24 @@ export default function FacultyMappingAssign() {
   const allAssignedChecked = assignedPageRows.length > 0 && assignedPageRows.every(m => checkedIds.has(rowId(m)));
 
   const selectedFacultyObj = faculties.find(f => f.FacultyUID === selectedFaculty?.FacultyUID);
-  const currentLoad   = selectedFacultyObj?.CurrentLoad  ?? 0;
-  const expectedLoad  = selectedFacultyObj?.ExpectedLoad ?? 0;
-  const workloadPct   = expectedLoad > 0 ? Math.min(100, Math.round((currentLoad / expectedLoad) * 100)) : 0;
-  const workloadColor = workloadPct >= 90 ? "text-red-500" : workloadPct >= 70 ? "text-amber-500" : "text-tertiary";
+  const currentLoad  = selectedFacultyObj?.CurrentLoad  ?? 0;
+  const expectedLoad = selectedFacultyObj?.ExpectedLoad ?? 0;
+
+  // Live preview: sum L+T+P of all currently checked rows
+  const checkedMappings = mappings.filter(m => checkedIds.has(rowId(m)));
+  const addedLoad   = checkedMappings.reduce(
+    (sum, m) => sum + (m.l ?? m.L ?? 0) + (m.t ?? m.T ?? 0) + (m.p ?? m.P ?? 0), 0
+  );
+  const previewLoad = currentLoad + addedLoad;
+  const isPreview   = addedLoad > 0;
+
+  // Saved bar fills to currentLoad; preview bar fills to previewLoad
+  const savedPct    = expectedLoad > 0 ? Math.min(100, Math.round((currentLoad  / expectedLoad) * 100)) : 0;
+  const workloadPct = expectedLoad > 0 ? Math.min(100, Math.round((previewLoad  / expectedLoad) * 100)) : 0;
+  const workloadColor =
+    workloadPct >= 90 ? "text-red-500" :
+    workloadPct >= 70 ? "text-amber-500" :
+    "text-tertiary";
 
   // Stat counts
   const totalCount      = mappings.length;
@@ -240,12 +254,38 @@ export default function FacultyMappingAssign() {
       setSaving(false);
       if (res.ok) {
         setResult({ success: true, message: `Assigned ${selected.length} mapping(s) to ${selectedFaculty.FacultyUID}.` });
+        // Update local mapping state immediately
         setMappings(prev => prev.map(m =>
           checkedIds.has(rowId(m))
             ? { ...m, facultyUID: selectedFaculty.FacultyUID, FacultyUID: selectedFaculty.FacultyUID }
             : m
         ));
         setCheckedIds(new Set());
+
+        // ── Persist updated CurrentLoad to DB ──────────────────────────────
+        const newLoad = currentLoad + addedLoad;
+        try {
+          await fetch(`${API_BASE}/faculty/update/${selectedFaculty.FacultyUID}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              FacultyUID:    selectedFaculty.FacultyUID,
+              FacultyName:   selectedFacultyObj?.FacultyName   ?? "",
+              FacultyDomain: selectedFacultyObj?.FacultyDomain ?? "",
+              CurrentLoad:   newLoad,
+              ExpectedLoad:  expectedLoad,
+            }),
+          });
+          // Reflect new CurrentLoad in local faculty list immediately
+          setFaculties(prev => prev.map(f =>
+            f.FacultyUID === selectedFaculty.FacultyUID
+              ? { ...f, CurrentLoad: newLoad }
+              : f
+          ));
+        } catch (e) {
+          console.warn("Could not update faculty workload:", e);
+        }
+
         triggerRefresh("mappings");
       } else {
         const err = await res.text().catch(() => "Unknown error");
@@ -387,12 +427,53 @@ export default function FacultyMappingAssign() {
                     <span className="ml-2 text-xs font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{selectedFaculty.FacultyDomain}</span>
                   )}
                 </p>
+
+                {/* Workload bar — shows live preview when rows are checked */}
                 <div className="flex items-center gap-3 mt-3">
-                  <div className="flex-1 max-w-[180px] h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
-                    <div className={`h-full rounded-full transition-all ${workloadPct >= 90 ? "bg-red-500" : workloadPct >= 70 ? "bg-amber-500" : "bg-tertiary"}`}
-                      style={{ width: `${workloadPct}%` }} />
+                  <div className="flex-1 max-w-[220px]">
+                    {/* Track */}
+                    <div className="relative h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                      {/* Saved portion */}
+                      <div
+                        className={`absolute left-0 top-0 h-full rounded-full transition-all duration-500 ${
+                          savedPct >= 90 ? "bg-red-500" : savedPct >= 70 ? "bg-amber-500" : "bg-tertiary"
+                        }`}
+                        style={{ width: `${savedPct}%` }}
+                      />
+                      {/* Preview excess (semi-transparent, animated) */}
+                      {isPreview && (
+                        <div
+                          className={`absolute top-0 h-full rounded-full transition-all duration-300 opacity-50 animate-pulse ${
+                            workloadPct >= 90 ? "bg-red-500" : workloadPct >= 70 ? "bg-amber-500" : "bg-primary"
+                          }`}
+                          style={{ left: `${savedPct}%`, width: `${Math.min(100 - savedPct, workloadPct - savedPct)}%` }}
+                        />
+                      )}
+                    </div>
                   </div>
-                  <span className={`text-xs font-bold ${workloadColor}`}>Workload: {currentLoad}/{expectedLoad} hrs</span>
+                  <div className="flex flex-col">
+                    <span className={`text-xs font-bold ${workloadColor} leading-none`}>
+                      {isPreview ? (
+                        <>
+                          <span className="text-slate-400 line-through mr-1">{currentLoad}</span>
+                          → {previewLoad}/{expectedLoad} hrs
+                        </>
+                      ) : (
+                        <>{currentLoad}/{expectedLoad} hrs</>
+                      )}
+                    </span>
+                    {isPreview && (
+                      <span className="text-[10px] text-slate-400 leading-none mt-0.5">
+                        +{addedLoad} hrs if assigned
+                      </span>
+                    )}
+                  </div>
+                  {workloadPct >= 90 && (
+                    <span className="text-[10px] font-bold text-red-500 bg-red-50 dark:bg-red-900/20 px-2 py-0.5 rounded border border-red-200 dark:border-red-800 whitespace-nowrap">Overloaded</span>
+                  )}
+                  {workloadPct >= 70 && workloadPct < 90 && (
+                    <span className="text-[10px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-900/20 px-2 py-0.5 rounded border border-amber-200 dark:border-amber-800 whitespace-nowrap">Near limit</span>
+                  )}
                 </div>
               </div>
               <button onClick={clearFaculty}
@@ -588,8 +669,17 @@ export default function FacultyMappingAssign() {
             <div className="bg-slate-900 dark:bg-slate-800 text-white px-4 py-2.5 rounded-xl flex flex-col gap-0.5">
               <p className="text-[9px] uppercase tracking-wider text-slate-400 font-bold leading-none">Faculty Workload</p>
               <p className={`text-xs font-bold leading-none ${workloadColor}`}>
-                {currentLoad}/{expectedLoad} hrs
-                <span className="ml-1.5 text-slate-400 font-normal">({workloadPct}%)</span>
+                {isPreview ? (
+                  <>
+                    <span className="text-slate-400 line-through mr-1">{currentLoad}</span>
+                    → {previewLoad}/{expectedLoad}
+                    <span className="ml-1 text-slate-400 font-normal">hrs (+{addedLoad})</span>
+                  </>
+                ) : (
+                  <>{currentLoad}/{expectedLoad} hrs
+                    <span className="ml-1.5 text-slate-400 font-normal">({savedPct}%)</span>
+                  </>
+                )}
               </p>
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
