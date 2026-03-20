@@ -44,7 +44,7 @@ export default function FacultyMappingAssign() {
   }, []);
 
   // Auto-refresh faculty/section lists when relevant uploads complete
-  const { refreshKey, lastRefreshedEntity } = useDataRefresh();
+  const { refreshKey, lastRefreshedEntity, triggerRefresh } = useDataRefresh();
   useEffect(() => {
     if (refreshKey === 0) return;
     if (!lastRefreshedEntity || lastRefreshedEntity === 'faculty') {
@@ -52,6 +52,21 @@ export default function FacultyMappingAssign() {
     }
     if (!lastRefreshedEntity || lastRefreshedEntity === 'section') {
       fetch(`${API_BASE}/section/all`).then(r => r.ok ? r.json() : []).then(setSections).catch(() => {});
+    }
+    // When BulkAssign saves a mapping, re-fetch the current section's mappings
+    // so the "Current Faculty" column reflects the latest saved value.
+    if (!lastRefreshedEntity || lastRefreshedEntity === 'mappings') {
+      if (selectedSection) {
+        fetch(`${API_BASE}/api/mappings`)
+          .then(r => r.json())
+          .then(data => {
+            const filtered = (Array.isArray(data) ? data : []).filter(
+              m => (m.section || m.Section) === selectedSection
+            );
+            setMappings(filtered);
+          })
+          .catch(() => {});
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey]);
@@ -186,6 +201,8 @@ export default function FacultyMappingAssign() {
           })
         );
         setCheckedIds(new Set());
+        // Notify BulkAssign (and any other subscriber) to re-fetch fresh data
+        triggerRefresh('mappings');
       } else {
         const errText = await response.text().catch(() => "Unknown error");
         setResult({ success: false, message: `Assign failed: ${errText}` });
@@ -380,7 +397,7 @@ export default function FacultyMappingAssign() {
                           className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary"
                         />
                       </th>
-                      {["Course Code","Group","Section","Type","Nature","Attendance","Current Faculty","L","T","P","Merge","Code"].map((h) => (
+                      {["Course Code","Section","Group","Nature","Attendance","L","T","P","Type","Merge","Merge Code","Reserve Slot","Current Faculty"].map((h) => (
                         <th key={h} className="px-4 py-3.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">
                           {h}
                         </th>
@@ -390,14 +407,14 @@ export default function FacultyMappingAssign() {
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {mappingsLoading ? (
                       <tr>
-                        <td colSpan={13} className="px-5 py-12 text-center text-slate-400">
+                        <td colSpan={14} className="px-5 py-12 text-center text-slate-400">
                           <span className="material-symbols-outlined animate-spin text-2xl block mb-2">refresh</span>
                           Loading mappings…
                         </td>
                       </tr>
                     ) : paginated.length === 0 ? (
                       <tr>
-                        <td colSpan={13} className="px-5 py-12 text-center text-slate-400">
+                        <td colSpan={14} className="px-5 py-12 text-center text-slate-400">
                           <span className="material-symbols-outlined text-3xl block mb-2">inbox</span>
                           No mappings found for this section
                         </td>
@@ -424,35 +441,52 @@ export default function FacultyMappingAssign() {
                               className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary"
                             />
                           </td>
+                          {/* CourseCode */}
                           <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">
                             {m.coursecode || m.Coursecode}
                           </td>
+                          {/* Section */}
+                          <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{m.section || m.Section}</td>
+                          {/* Group */}
                           <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">
                             G{m.groupNo ?? m.GroupNo}
                           </td>
-                          <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{m.section || m.Section}</td>
-                          <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{m.mappingType}</td>
+                          {/* Nature */}
                           <td className="px-4 py-3.5">{natureBadge(m.courseNature || m.CourseNature)}</td>
+                          {/* Attendance */}
                           <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{m.attendanceType || m.AttendanceType || "Regular"}</td>
-                          <td className="px-4 py-3.5 whitespace-nowrap">
-                            {currentUID
-                              ? <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{currentUID}</span>
-                              : <span className="text-xs text-slate-400 italic">Unassigned</span>
-                            }
-                          </td>
+                          {/* L T P */}
                           <td className="px-4 py-3.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">{m.l ?? m.L ?? 0}</td>
                           <td className="px-4 py-3.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">{m.t ?? m.T ?? 0}</td>
                           <td className="px-4 py-3.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">{m.p ?? m.P ?? 0}</td>
+                          {/* Mapping Type */}
+                          <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{m.mappingType}</td>
+                          {/* Merge Status */}
                           <td className="px-4 py-3.5 text-center">
                             {(m.mergeStatus || m.MergeStatus)
                               ? <span className="text-[10px] font-bold text-tertiary dark:text-emerald-400 flex items-center gap-1 justify-center"><span className="material-symbols-outlined text-sm">merge</span>Merged</span>
                               : <span className="text-[10px] font-bold text-slate-400">—</span>
                             }
                           </td>
+                          {/* Merge Code */}
                           <td className="px-4 py-3.5 text-center">
                             {(m.mergecode || m.Mergecode)
                               ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.mergecode || m.Mergecode}</span>
                               : <span className="text-xs text-slate-400">—</span>
+                            }
+                          </td>
+                          {/* Reserve Slot */}
+                          <td className="px-4 py-3.5 text-center">
+                            {(m.reserveslot || m.Reserveslot)
+                              ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.reserveslot || m.Reserveslot}</span>
+                              : <span className="text-xs text-slate-400">—</span>
+                            }
+                          </td>
+                          {/* Current Faculty */}
+                          <td className="px-4 py-3.5 whitespace-nowrap">
+                            {currentUID
+                              ? <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{currentUID}</span>
+                              : <span className="text-xs text-slate-400 italic">Unassigned</span>
                             }
                           </td>
                         </tr>

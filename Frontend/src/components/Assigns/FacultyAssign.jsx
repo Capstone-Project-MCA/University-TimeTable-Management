@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import * as XLSX from 'xlsx-js-style';
+import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const API_BASE = "http://localhost:8080";
 
@@ -19,6 +20,10 @@ const FacultyAssignmentWorkspace = () => {
   // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(10);
+
+  // DataRefresh context — trigger refresh after saving so SmartAssign syncs,
+  // and re-fetch when SmartAssign (or anything) fires a 'mappings' refresh.
+  const { refreshKey, lastRefreshedEntity, triggerRefresh } = useDataRefresh();
 
   const fetchRequiredData = async () => {
     try {
@@ -67,8 +72,22 @@ const FacultyAssignmentWorkspace = () => {
     fetchRequiredData();
   }, []);
 
+  // Re-fetch whenever another component (e.g. SmartAssign) saves a mapping
+  useEffect(() => {
+    if (refreshKey === 0) return;
+    if (!lastRefreshedEntity || lastRefreshedEntity === 'mappings') {
+      fetchRequiredData();
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
+
   const handleUidChange = (id, newUid) => {
     setRows(prevRows => prevRows.map(row => row.id === id ? { ...row, uid: newUid, isSaved: false } : row));
+  };
+
+  // Unlock a saved row so the user can override the assigned faculty
+  const handleUnlockRow = (id) => {
+    setRows(prevRows => prevRows.map(row => row.id === id ? { ...row, isSaved: false } : row));
   };
 
   const handleSaveRow = async (row) => {
@@ -107,7 +126,8 @@ const FacultyAssignmentWorkspace = () => {
       
       if (response.ok) {
         setRows(prevRows => prevRows.map(r => r.id === row.id ? { ...r, isSaved: true, originalUid: row.uid } : r));
-        console.log("Saved successfully");
+        // Notify other components (SmartAssign) to re-fetch
+        triggerRefresh('mappings');
       } else {
         console.error("Failed to save");
       }
@@ -168,6 +188,8 @@ const FacultyAssignmentWorkspace = () => {
         setRows(prev => prev.map(r =>
           savedIds.includes(r.id) ? { ...r, isSaved: true, originalUid: r.uid } : r
         ));
+        // Notify other components (SmartAssign) to re-fetch
+        triggerRefresh('mappings');
         alert(`${rowsToSave.length} mapping(s) saved successfully!`);
       } else {
         const errText = await response.text().catch(() => "Unknown error");
@@ -362,32 +384,51 @@ const FacultyAssignmentWorkspace = () => {
               <thead className="bg-[#f8fafc] dark:bg-[#0f172a] text-left text-xs font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider sticky top-0 z-20 shadow-sm border-b border-outline-variant dark:border-[#334155]">
                 <tr>
                   <th className="p-4 w-32">Course Code</th>
-                  <th className="p-4">Group</th>
                   <th className="p-4">Section</th>
-                  <th className="p-4">Type</th>
-                  <th className="p-4">Attendance</th>
+                  <th className="p-4">Group</th>
                   <th className="p-4">Nature</th>
-                  <th className="p-4 min-w-[200px] text-primary dark:text-[#3b82f6] bg-primary/[0.04] dark:bg-[#3b82f6]/10 border-x border-primary/10 dark:border-[#3b82f6]/20">Faculty UID</th>
+                  <th className="p-4">Attendance</th>
                   <th className="p-4 text-center">L</th>
                   <th className="p-4 text-center">T</th>
                   <th className="p-4 text-center">P</th>
+                  <th className="p-4">Type</th>
                   <th className="p-4 text-center">Merge</th>
                   <th className="p-4">Merge Code</th>
                   <th className="p-4">Reserve Slot</th>
+                  <th className="p-4 min-w-[200px] text-primary dark:text-[#3b82f6] bg-primary/[0.04] dark:bg-[#3b82f6]/10 border-x border-primary/10 dark:border-[#3b82f6]/20">Faculty UID</th>
                   <th className="p-4 text-right">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-outline-variant dark:divide-[#334155]">
                 {paginatedRows.map((row) => (
                   <tr key={row.id} className="hover:bg-slate-50/30 dark:hover:bg-slate-800/30 transition-colors group">
+                    {/* Course Code */}
                     <td className="p-4 font-bold text-slate-600 dark:text-slate-300 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.courseCode}</td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.group}</td>
+                    {/* Section */}
                     <td className="p-4 text-slate-600 dark:text-slate-200 text-sm font-semibold bg-slate-50/40 dark:bg-slate-900/40">{row.section}</td>
+                    {/* Group */}
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.group}</td>
+                    {/* Nature */}
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.nature}</td>
+                    {/* Attendance */}
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.attendance}</td>
+                    {/* L T P */}
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.l}</td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.t}</td>
+                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.p}</td>
+                    {/* Mapping Type */}
                     <td className="p-4 bg-slate-50/40 dark:bg-slate-900/40">
                       <span className="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 text-[10px] font-bold rounded uppercase border border-slate-200 dark:border-[#334155] whitespace-nowrap">{row.type}</span>
                     </td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.attendance}</td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 text-sm bg-slate-50/40 dark:bg-slate-900/40">{row.nature}</td>
+                    {/* Merge Status */}
+                    <td className="p-4 bg-slate-50/40 dark:bg-slate-900/40 text-center">
+                      <span className={`material-symbols-outlined text-sm ${row.statusColor}`} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>{row.mergeStatus}</span>
+                    </td>
+                    {/* Merge Code */}
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.mergeCode}</td>
+                    {/* Reserve Slot */}
+                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.reserve}</td>
+                    {/* Faculty UID input */}
                     <td className="p-4 bg-primary/[0.02] dark:bg-[#3b82f6]/5 border-x border-primary/5 dark:border-[#3b82f6]/10 overflow-visible">
                       <div className="relative">
                         <input
@@ -421,7 +462,7 @@ const FacultyAssignmentWorkspace = () => {
                                   key={fUid}
                                   className="px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 border-b border-slate-100 dark:border-slate-800 last:border-0"
                                   onMouseDown={(e) => {
-                                    e.preventDefault(); // Prevent focus loss on the input
+                                    e.preventDefault();
                                     handleUidChange(row.id, fUid);
                                     setFocusedRowId(null);
                                   }}
@@ -450,22 +491,25 @@ const FacultyAssignmentWorkspace = () => {
                         )}
                       </div>
                     </td>
-                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.l}</td>
-                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.t}</td>
-                    <td className="p-2 text-slate-600 dark:text-slate-300 text-sm font-bold bg-slate-50/40 dark:bg-slate-900/40 text-center">{row.p}</td>
-                    <td className="p-4 bg-slate-50/40 dark:bg-slate-900/40 text-center">
-                      <span className={`material-symbols-outlined text-sm ${row.statusColor}`} style={{ fontVariationSettings: "'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>{row.mergeStatus}</span>
-                    </td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.mergeCode}</td>
-                    <td className="p-4 text-slate-500 dark:text-slate-400 text-xs bg-slate-50/40 dark:bg-slate-900/40 whitespace-nowrap">{row.reserve}</td>
+                    {/* Actions */}
                     <td className="p-4 sticky right-0 bg-white dark:bg-[#0f172a] group-hover:bg-slate-50 dark:group-hover:bg-slate-800/30 transition-colors">
-                      <button 
-                        onClick={() => handleSaveRow(row)} 
-                        disabled={row.isSaved}
-                        className={`text-[10px] font-bold px-4 py-1.5 rounded uppercase shadow-sm transition-all ${row.isSaved ? "bg-tertiary/20 text-tertiary cursor-not-allowed shadow-none" : "bg-primary dark:bg-[#3b82f6] text-white shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:bg-on-primary-fixed-variant dark:hover:brightness-110"}`}
-                      >
-                        {row.isSaved ? "Saved" : "Save"}
-                      </button>
+                      {row.isSaved ? (
+                        <button
+                          onClick={() => handleUnlockRow(row.id)}
+                          title="Override / Re-assign faculty for this row"
+                          className="text-[10px] font-bold px-3 py-1.5 rounded uppercase transition-all bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 flex items-center gap-1 whitespace-nowrap"
+                        >
+                          <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20" }}>edit</span>
+                          Override
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleSaveRow(row)}
+                          className="text-[10px] font-bold px-4 py-1.5 rounded uppercase shadow-sm transition-all bg-primary dark:bg-[#3b82f6] text-white shadow-primary/20 dark:shadow-[#3b82f6]/20 hover:bg-on-primary-fixed-variant dark:hover:brightness-110"
+                        >
+                          Save
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ))}
