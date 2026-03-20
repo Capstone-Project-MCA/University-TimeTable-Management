@@ -77,7 +77,7 @@
 		<dependency>
 			<groupId>org.mapstruct</groupId>
 			<artifactId>mapstruct</artifactId>
-			<version>1.6.0.Beta1</version>
+			<version>1.6.3</version>
 		</dependency>
 	</dependencies>
 
@@ -89,18 +89,19 @@
 				<configuration>
 					<annotationProcessorPaths>
 						<path>
-							<groupId>org.mapstruct</groupId>
-							<artifactId>mapstruct-processor</artifactId>
-							<version>1.6.0.Beta1</version>
-						</path>
-						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok</artifactId>
+							<version>1.18.36</version>
 						</path>
 						<path>
 							<groupId>org.projectlombok</groupId>
 							<artifactId>lombok-mapstruct-binding</artifactId>
 							<version>0.2.0</version>
+						</path>
+						<path>
+							<groupId>org.mapstruct</groupId>
+							<artifactId>mapstruct-processor</artifactId>
+							<version>1.6.3</version>
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
@@ -112,7 +113,7 @@
                 <configuration>
                     <url>jdbc:mysql://localhost:3306/capstone?createDatabaseIfNotExist=true</url>
                     <user>root</user>
-                    <password>subhadip9681</password>
+                    <password>divya</password>
                 </configuration>
             </plugin>
 			<plugin>
