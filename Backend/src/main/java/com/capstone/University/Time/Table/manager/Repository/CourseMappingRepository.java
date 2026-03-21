@@ -28,4 +28,11 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
             @Param("groupNo") Short groupNo,
             @Param("mappingType") String mappingType
     );
+
+    // ── Merge Sections queries ───────────────────────────
+
+    List<CourseMapping> findByCoursecodeAndSectionIn(String coursecode, List<String> sections);
+
+    @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c WHERE c.Mergecode IS NOT NULL")
+    Optional<String> findMaxMergecode();
 }

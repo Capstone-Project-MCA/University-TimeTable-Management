@@ -142,8 +142,8 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
 
   return (
     <aside className='w-64 bg-background-light dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-10 relative'>
-      {/* Header */}
-      <div className='p-3 border-b border-slate-200 dark:border-slate-700 bg-surface dark:bg-surface-dark'>
+      {/* Header — same height as DashboardNavbar (h-12 = 48px) so borders align */}
+      <div className='h-12 flex items-center px-4 border-b border-slate-200 dark:border-slate-700 bg-surface dark:bg-surface-dark shrink-0'>
         <h2 className='text-xs font-bold uppercase tracking-wider text-slate-500'>
           Unscheduled
         </h2>

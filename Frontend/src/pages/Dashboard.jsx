@@ -8,12 +8,13 @@ import FacultyAssign from "../components/Assigns/FacultyAssign";
 import SectionCourseAssign from "../components/Assigns/SectionCourseAssign";
 import FacultyMappingAssign from "../components/Assigns/FacultyMappingAssign";
 import CoursesAndSections from "./CoursesAndSections";
+import MergeSections from "../components/Assigns/MergeSections";
 import { DataRefreshProvider } from "../context/DataRefreshContext";
 
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("courses");
 
-  const isAssignView = activeTab === "facultyAssign" || activeTab === "sectionCourseAssign" || activeTab === "smartAssign" || activeTab === "coursesAndSections";
+  const isAssignView = activeTab === "facultyAssign" || activeTab === "sectionCourseAssign" || activeTab === "smartAssign" || activeTab === "coursesAndSections" || activeTab === "mergeSections";
 
   return (
     <DataRefreshProvider>
@@ -28,6 +29,7 @@ export default function Dashboard() {
               {activeTab === "sectionCourseAssign" && <SectionCourseAssign />}
               {activeTab === "smartAssign" && <FacultyMappingAssign />}
               {activeTab === "coursesAndSections" && <CoursesAndSections />}
+              {activeTab === "mergeSections" && <MergeSections />}
             </main>
           ) : (
             <>
