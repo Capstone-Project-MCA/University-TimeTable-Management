@@ -46,13 +46,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleFileProcessing(
             FileProcessingException ex, HttpServletRequest request) {
 
+        HttpStatus status = HttpStatus.valueOf(422);
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.UNPROCESSABLE_ENTITY.value(),
+                status.value(),
                 "File Processing Error",
                 ex.getMessage(),
                 request.getRequestURI());
-        return new ResponseEntity<>(error, HttpStatus.UNPROCESSABLE_ENTITY);
+        return new ResponseEntity<>(error, status);
     }
 
     // ─── 400 Bad Request ─────────────────────────────────────────────
@@ -74,13 +75,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleMaxUploadSize(
             MaxUploadSizeExceededException ex, HttpServletRequest request) {
 
+        HttpStatus status = HttpStatus.valueOf(413);
         ErrorResponse error = new ErrorResponse(
                 LocalDateTime.now(),
-                HttpStatus.PAYLOAD_TOO_LARGE.value(),
+                status.value(),
                 "File Too Large",
                 "The uploaded file exceeds the maximum allowed size. Please upload a smaller file.",
                 request.getRequestURI());
-        return new ResponseEntity<>(error, HttpStatus.PAYLOAD_TOO_LARGE);
+        return new ResponseEntity<>(error, status);
     }
 
     // ─── 500 Internal Server Error (Fallback) ────────────────────────
