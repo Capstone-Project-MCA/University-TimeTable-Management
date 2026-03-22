@@ -2,9 +2,9 @@ spring:
   application:
     name: capstone
   datasource:
-    url: jdbc:mysql://localhost:3306/capstone?createDatabaseIfNotExist=true
+    url: jdbc:mysql://localhost:3306/capstone?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
     username: root
-    password: subhadip9681
+    password: admin
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:

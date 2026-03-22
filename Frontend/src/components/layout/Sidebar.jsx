@@ -182,21 +182,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             </a>
           </li>
 
-        </ul>
-      </div>
-
-      {/* Divider */}
-      <div className="mx-3 my-2 border-t border-slate-200 dark:border-slate-700"></div>
-
-      {/* ── Merge group ─────────────────────────────────── */}
-      <div className="px-3 w-full">
-        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap px-2">
-          Merge
-        </p>
-
-        <ul className="space-y-1 w-full">
-
-          {/* Merge Sections */}
+          {/* Merge Sections — same Assign group as mappings */}
           <li>
             <a
               href="#"
