@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useDataRefresh } from '../../context/DataRefreshContext'
+import { setDraggedTicket, clearDraggedTicket } from '../../utils/dragStore'
 
 import CourseCard from '../common/CourseCard'
 import FacultyCard from '../common/FacultyCard'
@@ -91,7 +92,10 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
     case 'faculties': rawData = faculties; break
     case 'rooms':     rawData = rooms;     break
     case 'sections':  rawData = sections;  break
-    case 'tickets':   rawData = tickets;   break
+    // Only show tickets that haven't been placed in the grid yet
+    case 'tickets':
+      rawData = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
+      break
     default:          rawData = []
   }
 
@@ -248,9 +252,24 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
               const typeColor = type === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
                 : type === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+              const isScheduled = !!(( item.Day || item.day) && (item.Time || item.time))
               return (
                 <div key={tid}
-                  className='p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary/40 dark:hover:border-primary/40 transition-all cursor-default group'
+                  draggable
+                  onDragStart={e => {
+                    e.dataTransfer.effectAllowed = 'move'
+                    // Reliable store — dataTransfer.getData can be empty cross-component
+                    const payload = { ticketId: tid, coursecode: course, type, lectureNo: lno, section, facultyUID: faculty }
+                    setDraggedTicket(payload)
+                    // Also set dataTransfer as backup
+                    try { e.dataTransfer.setData('text/plain', tid) } catch {}
+                  }}
+                  onDragEnd={() => clearDraggedTicket()}
+                  className={`p-2.5 rounded-lg border bg-white dark:bg-slate-800 transition-all cursor-grab active:cursor-grabbing group select-none ${
+                    isScheduled
+                      ? 'border-emerald-200 dark:border-emerald-800 opacity-50'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-sm'
+                  }`}
                 >
                   <div className='flex items-center justify-between mb-1.5'>
                     <span className='text-[10px] font-mono font-bold text-primary dark:text-blue-400 truncate leading-none'>{tid}</span>
@@ -270,11 +289,15 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
                       </>
                     )}
                   </div>
-                  <div className='mt-1.5'>
-                    {faculty
-                      ? <span className='text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded'>{faculty}</span>
-                      : <span className='text-[10px] text-slate-400 italic'>No faculty</span>
-                    }
+                  <div className='mt-1.5 flex items-center justify-between'>
+                    <div>
+                      {faculty
+                        ? <span className='text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded'>{faculty}</span>
+                        : <span className='text-[10px] text-slate-400 italic'>No faculty</span>
+                      }
+                    </div>
+                    {/* drag hint icon */}
+                    <span className='material-symbols-outlined text-[12px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity'>drag_indicator</span>
                   </div>
                 </div>
               )
@@ -288,7 +311,12 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
       {/* Footer */}
       <div className='p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center'>
         <p className='text-[11px] text-slate-400'>
-          {activeTab === 'tickets' ? `${data.length} ticket${data.length !== 1 ? 's' : ''}` : `${data.length} unscheduled`}
+          {activeTab === 'tickets'
+            ? `${data.length} unscheduled ticket${data.length !== 1 ? 's' : ''}`
+            : `${data.length} unscheduled`}
+          {activeTab === 'tickets' && data.length > 0 && (
+            <span className='block text-[9px] text-slate-400 mt-0.5'>← drag to place in grid</span>
+          )}
         </p>
       </div>
     </aside>

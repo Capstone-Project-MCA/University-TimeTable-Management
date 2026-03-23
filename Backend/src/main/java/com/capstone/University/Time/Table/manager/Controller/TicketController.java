@@ -7,10 +7,14 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/ticket")
-@CrossOrigin(origins = "*")
+@CrossOrigin(origins = "*", allowedHeaders = "*", methods = {
+    RequestMethod.GET, RequestMethod.POST, RequestMethod.PUT,
+    RequestMethod.PATCH, RequestMethod.DELETE, RequestMethod.OPTIONS
+})
 public class TicketController {
 
     @Autowired
@@ -36,5 +40,22 @@ public class TicketController {
     @PostMapping("/generate-all")
     public ResponseEntity<List<TicketDto>> generateAllTickets() {
         return ResponseEntity.ok(ticketService.generateAllTickets());
+    }
+
+    /**
+     * PATCH /ticket/{ticketId}/schedule
+     * Body: { "day": "Mon", "time": "09:00" }
+     * Stores the day + time slot chosen by drag-and-drop.
+     */
+    @PatchMapping("/{ticketId}/schedule")
+    public ResponseEntity<TicketDto> scheduleTicket(
+            @PathVariable String ticketId,
+            @RequestBody Map<String, String> body
+    ) {
+        String day  = body.get("day");
+        String time = body.get("time");
+        TicketDto updated = ticketService.scheduleTicket(ticketId, day, time);
+        if (updated == null) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok(updated);
     }
 }

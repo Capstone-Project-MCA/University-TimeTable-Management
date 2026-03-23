@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
+import java.time.LocalTime;
 
 @Service
 public class TicketService {
@@ -144,6 +145,15 @@ public class TicketService {
         });
 
         return ticketDtoList;
+    }
+
+    public TicketDto scheduleTicket(String ticketId, String day, String time) {
+        return ticketRepository.findById(ticketId).map(ticket -> {
+            ticket.setDay(day);
+            ticket.setTime(time != null ? LocalTime.parse(time) : null);
+            ticketRepository.save(ticket);
+            return ticketMapper.toDto(ticket);
+        }).orElse(null);
     }
 
     public void deleteAllTickets(){
