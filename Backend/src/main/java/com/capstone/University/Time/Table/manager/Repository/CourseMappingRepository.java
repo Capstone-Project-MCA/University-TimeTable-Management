@@ -14,10 +14,7 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
 
     List<CourseMapping> findBySection(String section);
 
-    @Query("""
-    SELECT COUNT(c) > 0 FROM CourseMapping c WHERE c.Section = :section AND c.Coursecode = :coursecode
-    """)
-    boolean existsBySectionAndCoursecode(@Param("section") String section, @Param("coursecode") String coursecode);
+    boolean existsBySectionAndCoursecode(String section, String coursecode);
 
     @Query("""
     SELECT c FROM CourseMapping c
@@ -54,8 +51,10 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
             @Param("sections") List<String> sections
     );
 
+    List<CourseMapping> findByMergecode(String mergecode);
+
     // ── Used by CourseMappingService.generateNextMergeCode ──
-    @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c WHERE c.Mergecode IS NOT NULL")
+    @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c")
     Optional<String> findMaxMergecode();
 
     // ── Resets AUTO_INCREMENT to 1 after all rows are deleted ──

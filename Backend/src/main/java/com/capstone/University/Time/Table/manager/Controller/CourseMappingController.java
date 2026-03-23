@@ -38,9 +38,22 @@ public class CourseMappingController {
         try {
             MergeSectionsResponse response = courseMappingService.mergeSections(
                     request.getCourseCode(),
-                    request.getSectionIds()
+                    request.getSectionIds(),
+                    request.getExistingMergeCode()
             );
             return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(
+                    Map.of("error", e.getMessage())
+            );
+        }
+    }
+
+    @DeleteMapping("/unmerge/{mergeCode}")
+    public ResponseEntity<?> unmergeGroup(@PathVariable String mergeCode) {
+        try {
+            courseMappingService.unmergeGroup(mergeCode);
+            return ResponseEntity.ok(Map.of("message", "Group " + mergeCode + " deleted successfully."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(
                     Map.of("error", e.getMessage())

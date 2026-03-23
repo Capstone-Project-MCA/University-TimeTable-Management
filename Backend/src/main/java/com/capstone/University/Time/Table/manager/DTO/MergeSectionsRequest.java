@@ -7,4 +7,5 @@ import java.util.List;
 public class MergeSectionsRequest {
     private String courseCode;
     private List<String> sectionIds;
+    private String existingMergeCode;
 }

@@ -41,6 +41,8 @@ export default function MergeSections() {
   const anchorRef = useRef(null);
   const dropdownPortalRef = useRef(null);
   const [dropdownPos, setDropdownPos] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
+
   const { refreshKey } = useDataRefresh();
 
   const updateDropdownPos = useCallback(() => {
@@ -104,16 +106,35 @@ export default function MergeSections() {
       ).slice(0, 10)
     : [];
 
-  const relatedSectionIds = selectedCourse
-    ? [...new Set(mappings.filter((m) => mappingCourseCode(m) === selectedCourse.CourseCode).map(mappingSection))]
+  // ── Compute Groups and Sections ──
+  const relatedMappings = selectedCourse
+    ? mappings.filter((m) => mappingCourseCode(m) === selectedCourse.CourseCode)
     : [];
-  const relatedSections = sections.filter((s) => relatedSectionIds.includes(sectionRowId(s)));
+
+  const groupMap = {};
+  relatedMappings.forEach(m => {
+    const code = m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode;
+    if (code) {
+        if (!groupMap[code]) groupMap[code] = [];
+        groupMap[code].push(mappingSection(m));
+    }
+  });
+
+  const existingMergeCodes = Object.keys(groupMap);
+  const mergedSectionIds = new Set(Object.values(groupMap).flat());
+
+  const availableSections = sections.filter(s => {
+    const id = sectionRowId(s);
+    // Only show sections that are MAPPED to this course but NOT already in a group
+    return relatedMappings.some(m => mappingSection(m) === id) && !mergedSectionIds.has(id);
+  });
 
   const handlePickCourse = (course) => {
     setSelectedCourse(course);
     setQuery("");
     setShowSuggestions(false);
     setSelectedSections([]);
+    setSelectedGroup(null);
     setSectionError("");
     setLastMerge(null);
   };
@@ -121,6 +142,7 @@ export default function MergeSections() {
   const handleChangeCourse = () => {
     setSelectedCourse(null);
     setSelectedSections([]);
+    setSelectedGroup(null);
     setSectionError("");
     setLastMerge(null);
     setTimeout(() => searchRef.current?.querySelector("input")?.focus(), 100);
@@ -133,24 +155,35 @@ export default function MergeSections() {
     );
   };
 
-  const handleSelectAll = () => {
-    if (selectedSections.length === relatedSections.length) {
-      setSelectedSections([]);
+  const handleToggleGroup = (code) => {
+    setSectionError("");
+    if (selectedGroup === code) {
+        setSelectedGroup(null);
     } else {
-      setSelectedSections(relatedSections.map((s) => sectionRowId(s)));
+        setSelectedGroup(code);
     }
   };
 
-  const canMerge = selectedSections.length >= 2;
+  const handleSelectAll = () => {
+    if (selectedSections.length === availableSections.length) {
+      setSelectedSections([]);
+    } else {
+      setSelectedSections(availableSections.map((s) => sectionRowId(s)));
+    }
+  };
+
+  const canMergeOrExtend = (selectedSections.length >= 2 && !selectedGroup) || (selectedSections.length >= 1 && selectedGroup);
   const [merging, setMerging] = useState(false);
 
   const handleMerge = async () => {
-    if (!canMerge || merging) return;
+    if (!canMergeOrExtend || merging) return;
     setMerging(true);
+    setSectionError("");
     try {
       const res = await axios.post("http://localhost:8080/api/mappings/merge", {
         courseCode: selectedCourse.CourseCode,
         sectionIds: selectedSections,
+        existingMergeCode: selectedGroup
       });
       const { mergeCode } = res.data;
       const entry = {
@@ -158,35 +191,40 @@ export default function MergeSections() {
         mergeCode,
         course: selectedCourse.CourseCode,
         courseTitle: selectedCourse.CourseTitle,
-        sections: [...selectedSections],
+        sections: [...selectedSections, ...(selectedGroup ? groupMap[selectedGroup] : [])],
         timestamp: new Date().toLocaleTimeString(),
       };
       setMergeLog((p) => [entry, ...p]);
       setLastMerge(entry);
       setShowToast(true);
       setSelectedSections([]);
+      setSelectedGroup(null);
       const mRes = await axios.get("http://localhost:8080/api/mappings");
       setMappings(mRes.data);
     } catch (err) {
+      console.error("Merge Error:", err);
       if (!err.response) {
-         const entry = {
-            id: mergeLog.length + 1,
-            mergeCode: "M-" + Math.random().toString(36).substring(2, 7).toUpperCase(),
-            course: selectedCourse.CourseCode,
-            courseTitle: selectedCourse.CourseTitle,
-            sections: [...selectedSections],
-            timestamp: new Date().toLocaleTimeString(),
-          };
-          setMergeLog((p) => [entry, ...p]);
-          setLastMerge(entry);
-          setSelectedSections([]);
-          setSectionError("");
+         // Fallback for demo if backend is down (optional, but keeping it for robustness)
+         setSectionError("Connection Error: Please ensure the backend is running.");
       } else {
-        setSectionError(err.response?.data?.error || "Merge failed.");
+         setSectionError(err.response?.data?.error || err.message || "Merge failed.");
       }
     } finally {
       setMerging(false);
       setTimeout(() => setShowToast(false), 4000);
+    }
+  };
+
+  const handleDeleteGroup = async (code, e) => {
+    e.stopPropagation();
+    if (!window.confirm(`Are you sure you want to delete group ${code}?`)) return;
+    try {
+        await axios.delete(`http://localhost:8080/api/mappings/unmerge/${code}`);
+        const mRes = await axios.get("http://localhost:8080/api/mappings");
+        setMappings(mRes.data);
+        if (selectedGroup === code) setSelectedGroup(null);
+    } catch (err) {
+        setSectionError("Failed to delete group.");
     }
   };
 
@@ -214,8 +252,8 @@ export default function MergeSections() {
               <span className="material-symbols-outlined text-emerald-500">check_circle</span>
             </div>
             <div>
-              <p className="text-sm font-black text-slate-800 dark:text-slate-100">Merge Successful</p>
-              <p className="text-[10px] text-slate-500 font-bold uppercase">Transaction ID: {lastMerge?.mergeCode}</p>
+              <p className="text-sm font-black text-slate-800 dark:text-slate-100">Action Successful</p>
+              <p className="text-[10px] text-slate-500 font-bold uppercase">Merge ID: {lastMerge?.mergeCode}</p>
             </div>
             <button onClick={() => setShowToast(false)} className="ml-4 p-1 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg">
               <span className="material-symbols-outlined text-sm text-slate-400">close</span>
@@ -240,12 +278,12 @@ export default function MergeSections() {
         <header className="mb-10 animate-fade-in-up">
             <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 tracking-tight">
                 <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-xl">
-                    <span className="material-symbols-outlined text-white text-2xl">call_merge</span>
+                    <span className="material-symbols-outlined text-white text-2xl">group_work</span>
                 </div>
                 Course Mapping & Merge
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                Combine multiple sections into a single cohort. Select at least 2 sections.
+                Combine sections into merge groups. Select 2+ sections to merge, or a group + sections to extend.
             </p>
         </header>
 
@@ -312,6 +350,12 @@ export default function MergeSections() {
                 <p className="text-blue-100 font-bold uppercase text-xs">{selectedCourse.CourseCode}</p>
               </div>
             )}
+
+            {sectionError && (
+              <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-rose-600 text-xs font-bold animate-shake">
+                {sectionError}
+              </div>
+            )}
           </div>
 
           {/* ── Right Side: Sections & Persistent Merge Bar ── */}
@@ -319,14 +363,14 @@ export default function MergeSections() {
             <div className="flex-1 relative glass rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Available Sections</h2>
-                {selectedCourse && relatedSections.length > 0 && (
+                {selectedCourse && availableSections.length > 0 && (
                   <button onClick={handleSelectAll} className="text-xs font-black text-primary px-3 py-2 rounded-xl">
-                    {selectedSections.length === relatedSections.length ? "Deselect All" : "Select All"}
+                    {selectedSections.length === availableSections.length ? "Deselect All" : "Select All"}
                   </button>
                 )}
               </div>
 
-              <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-3 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-6 custom-scrollbar">
                 {!selectedCourse ? (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
                     <div className="w-24 h-24 rounded-[40px] bg-slate-100 flex items-center justify-center mb-6">
@@ -335,61 +379,124 @@ export default function MergeSections() {
                     <h3 className="text-lg font-black italic">Search Course First</h3>
                     <p className="text-xs mt-2">Search "CSE" in the sidebar input.</p>
                   </div>
-                ) : relatedSections.length === 0 ? (
+                ) : (availableSections.length === 0 && existingMergeCodes.length === 0) ? (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
                     <h3 className="text-lg font-black">No Sections found</h3>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-24">
-                    {relatedSections.map((s) => {
-                      const id = sectionRowId(s);
-                      const isSelected = selectedSections.includes(id);
-                      return (
-                        <div 
-                          key={id} 
-                          onClick={() => handleToggleSection(id)}
-                          className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${isSelected ? "bg-primary/5 border-primary" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800"}`}
-                        >
-                          <div className="flex items-center gap-4">
-                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center ${isSelected ? "bg-primary border-primary text-white" : "border-slate-200"}`}>
-                              {isSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
+                  <div className="space-y-8 pb-24">
+                    
+                    {/* ── Existing Groups ── */}
+                    {existingMergeCodes.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Merge Groups</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {existingMergeCodes.map(code => {
+                                    const isSelected = selectedGroup === code;
+                                    return (
+                                        <div 
+                                            key={code}
+                                            onClick={() => handleToggleGroup(code)}
+                                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer group relative overflow-hidden ${isSelected ? "bg-amber-500/5 border-amber-500 shadow-lg shadow-amber-500/10" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-amber-200"}`}
+                                        >
+                                            <div className="flex items-center justify-between mb-3">
+                                                <div className="flex items-center gap-3">
+                                                    <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? "bg-amber-500 text-white" : "bg-amber-100 text-amber-600"}`}>
+                                                        <span className="material-symbols-outlined text-sm font-black">auto_awesome_motion</span>
+                                                    </div>
+                                                    <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{code}</h4>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleGroup(code); }}
+                                                        className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-amber-500 text-white" : "hover:bg-amber-100 text-amber-500"}`}
+                                                        title="Extend Group"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">add_circle</span>
+                                                    </button>
+                                                    <button 
+                                                        onClick={(e) => handleDeleteGroup(code, e)}
+                                                        className="p-1.5 rounded-lg hover:bg-rose-100 text-rose-500 transition-colors"
+                                                        title="Delete Group"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">delete</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex flex-wrap gap-1">
+                                                {groupMap[code].map(sId => (
+                                                    <span key={sId} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-500">{sId}</span>
+                                                ))}
+                                            </div>
+                                            {isSelected && (
+                                                <div className="absolute top-0 right-0 p-1">
+                                                    <span className="material-symbols-outlined text-amber-500 text-xs">star</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <h4 className="text-md font-black">{id}</h4>
-                          </div>
                         </div>
-                      );
-                    })}
+                    )}
+
+                    {/* ── Individual Sections ── */}
+                    {availableSections.length > 0 && (
+                        <div className="space-y-4">
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Individual Sections</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {availableSections.map((s) => {
+                                    const id = sectionRowId(s);
+                                    const isSelected = selectedSections.includes(id);
+                                    return (
+                                        <div 
+                                        key={id} 
+                                        onClick={() => handleToggleSection(id)}
+                                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${isSelected ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-primary/20"}`}
+                                        >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-primary border-primary text-white" : "border-slate-200"}`}>
+                                            {isSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
+                                            </div>
+                                            <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{id}</h4>
+                                        </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    )}
                   </div>
                 )}
               </div>
 
               {/* ── PERSISTENT MERGE ACTION BAR ── */}
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="glass px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-white/50 dark:bg-slate-900/50">
+                <div className="glass px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-white/60 dark:bg-slate-900/60">
                   <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${canMerge ? "bg-primary text-white" : "bg-slate-100 text-slate-400"}`}>
-                      <span className="material-symbols-outlined text-xl">call_merge</span>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${canMergeOrExtend ? "bg-primary text-white" : "bg-slate-100 text-slate-400"}`}>
+                      <span className="material-symbols-outlined text-xl">{selectedGroup ? "add_circle" : "call_merge"}</span>
                     </div>
                     <div>
                       <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
-                        {selectedSections.length} Sections Selected
+                        {selectedSections.length} Sections {selectedGroup ? `+ Group ${selectedGroup}` : "Selected"}
                       </p>
                       <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        {!selectedCourse ? "Search course first" : canMerge ? "Ready to Merge" : "Pick 2+ sections"}
+                        {!selectedCourse ? "Search course first" : canMergeOrExtend ? (selectedGroup ? "Ready to Extend" : "Ready to Merge") : "Pick selections"}
                       </p>
                     </div>
                   </div>
                   
                   <button 
                     onClick={handleMerge}
-                    disabled={!canMerge || merging}
+                    disabled={!canMergeOrExtend || merging}
                     className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                        canMerge 
-                        ? "bg-primary text-white shadow-xl hover:scale-105" 
+                        canMergeOrExtend 
+                        ? "bg-primary text-white shadow-xl hover:scale-105 active:scale-95" 
                         : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-50"
                     }`}
                   >
-                    {merging ? "Merging..." : "Merge Now"}
+                    {merging ? "Processing..." : (selectedGroup ? "Extend Group" : "Merge Now")}
                   </button>
                 </div>
               </div>
@@ -397,20 +504,8 @@ export default function MergeSections() {
           </div>
         </div>
 
-        {/* ── HISTORY / SUCCESS FEEDBACK ── */}
+        {/* ── HISTORY ── */}
         <div className="mt-12 space-y-6">
-            {lastMerge && (
-                <div className="bg-emerald-500/10 border border-emerald-500/30 p-5 rounded-3xl flex items-center gap-6 animate-scale-in">
-                    <div className="w-14 h-14 rounded-2xl bg-emerald-500 flex items-center justify-center shadow-lg shadow-emerald-500/20 shrink-0">
-                        <span className="material-symbols-outlined text-white text-3xl">done</span>
-                    </div>
-                    <div className="flex-1">
-                        <h3 className="text-lg font-black text-emerald-800 dark:text-emerald-200 uppercase tracking-tighter">Success! Combined {lastMerge.sections.length} Sections</h3>
-                        <p className="text-xs font-bold text-emerald-700/60 font-mono tracking-widest uppercase">ID: {lastMerge.mergeCode}</p>
-                    </div>
-                </div>
-            )}
-
           {mergeLog.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in-up">
               <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
@@ -425,14 +520,20 @@ export default function MergeSections() {
                     <tr>
                       <th className="px-6 py-4">Merge ID</th>
                       <th className="px-6 py-4">Course</th>
+                      <th className="px-6 py-4">Sections</th>
                       <th className="px-6 py-4">Timestamp</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                    {mergeLog.map((log) => (
+                    {mergeLog.slice(0, 5).map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-5 font-mono text-xs font-black text-primary">{log.mergeCode}</td>
                         <td className="px-6 py-5 text-sm font-black">{log.course}</td>
+                        <td className="px-6 py-5">
+                            <div className="flex flex-wrap gap-1">
+                                {log.sections.map(s => <span key={s} className="px-2 py-0.5 rounded bg-slate-100 text-[8px] font-bold">{s}</span>)}
+                            </div>
+                        </td>
                         <td className="px-6 py-5 text-[10px] font-mono text-slate-400">{log.timestamp}</td>
                       </tr>
                     ))}
