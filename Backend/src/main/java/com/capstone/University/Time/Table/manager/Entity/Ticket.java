@@ -34,8 +34,8 @@ public class Ticket {
     @Column(name = "Time")
     private LocalTime Time;
 
-    @Column(name = "MergedCode", length = 7)
-    private String MergedCode;
+    @Column(name = "MergedCode", length = 7, nullable = false, columnDefinition = "VARCHAR(7) DEFAULT ''")
+    private String MergedCode = "";
 
     @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;

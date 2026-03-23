@@ -99,29 +99,31 @@ const FacultyAssignmentWorkspace = () => {
       if (facultyRes.ok) setFaculties(await facultyRes.json());
       if (mappingRes.ok) {
         const data = await mappingRes.json();
-        const formatted = data.map(item => ({
-          id: item.courseMappingId ??
-            `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
-          courseMappingId: item.courseMappingId,
-          courseCode:  item.coursecode    || item.Coursecode  || "",
-          group:      `G${item.groupNo   || item.GroupNo}`,
-          groupRaw:    item.groupNo       || item.GroupNo,
-          section:     item.section       || item.Section,
-          type:        item.mappingType,
-          attendance:  item.attendanceType || item.AttendanceType || "Regular",
-          nature:      item.courseNature   || item.CourseNature   || "C",
-          uid:         item.facultyUID    || item.FacultyUID  || "",
-          originalUid: item.facultyUID    || item.FacultyUID  || "",
-          isSaved:   !!(item.facultyUID   || item.FacultyUID),
-          l: item.l ?? item.L ?? 0,
-          t: item.t ?? item.T ?? 0,
-          p: item.p ?? item.P ?? 0,
-          mergeStatus: (item.mergeStatus ?? item.MergeStatus) ? "check_circle" : "circle",
-          mergeCode:  item.mergecode   || item.Mergecode   || "---",
-          reserve:    item.reserveslot || item.Reserveslot || "---",
-          statusColor: (item.mergeStatus ?? item.MergeStatus)
-            ? "text-tertiary" : "text-slate-300 dark:text-slate-600",
-        }));
+        const formatted = data.map(item => {
+          const isMerged = item.mergeStatus === true || item.MergeStatus === true;
+          return {
+            id: item.courseMappingId ??
+              `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
+            courseMappingId: item.courseMappingId,
+            courseCode:  item.coursecode    || item.Coursecode  || "",
+            group:      `G${item.groupNo   || item.GroupNo}`,
+            groupRaw:    item.groupNo       || item.GroupNo,
+            section:     item.section       || item.Section,
+            type:        item.mappingType,
+            attendance:  item.attendanceType || item.AttendanceType || "Regular",
+            nature:      item.courseNature   || item.CourseNature   || "C",
+            uid:         item.facultyUID    || item.FacultyUID  || "",
+            originalUid: item.facultyUID    || item.FacultyUID  || "",
+            isSaved:   !!(item.facultyUID   || item.FacultyUID),
+            l: item.l ?? item.L ?? 0,
+            t: item.t ?? item.T ?? 0,
+            p: item.p ?? item.P ?? 0,
+            mergeStatus: isMerged ? "check_circle" : "circle",
+            mergeCode:  item.mergecode   || item.Mergecode   || "---",
+            reserve:    item.reserveslot || item.Reserveslot || "---",
+            statusColor: isMerged ? "text-tertiary" : "text-slate-300 dark:text-slate-600",
+          };
+        });
         setRows(formatted);
       }
     } catch (e) {

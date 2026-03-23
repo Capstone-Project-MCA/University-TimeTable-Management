@@ -242,7 +242,7 @@ export default function FacultyMappingAssign() {
       T: m.t ?? m.T ?? 0,
       P: m.p ?? m.P ?? 0,
       Mergecode:   m.mergecode   || m.Mergecode   || null,
-      MergeStatus: m.mergeStatus ?? m.MergeStatus ?? false,
+      MergeStatus: m.mergeStatus === true || m.MergeStatus === true,
       Reserveslot: m.reserveslot || m.Reserveslot || null,
     }));
     try {
@@ -347,7 +347,7 @@ export default function FacultyMappingAssign() {
         <td className="px-4 py-3.5 text-center text-xs font-medium text-slate-600 dark:text-slate-300">{m.p ?? m.P ?? 0}</td>
         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">{m.mappingType}</td>
         <td className="px-4 py-3.5 text-center">
-          {(m.mergeStatus || m.MergeStatus)
+          {(m.mergeStatus === true || m.MergeStatus === true)
             ? <span className="text-[10px] font-bold text-tertiary dark:text-emerald-400 flex items-center gap-1 justify-center"><span className="material-symbols-outlined text-sm">merge</span>Merged</span>
             : <span className="text-[10px] font-bold text-slate-400">—</span>}
         </td>

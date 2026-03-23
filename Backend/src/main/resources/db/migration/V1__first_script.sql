@@ -99,16 +99,18 @@ CREATE TABLE IF NOT EXISTS coursemapping (
 
 -- 7. TICKET
 --    References coursemapping via single FK on CourseMappingId.
+--    FacultyUID is nullable (may be assigned after ticket generation).
+--    MergedCode defaults to '' for non-merged tickets.
 CREATE TABLE IF NOT EXISTS ticket (
-    TicketId        VARCHAR(7)  PRIMARY KEY,
-    Section         VARCHAR(5)  NOT NULL,
-    Coursecode      VARCHAR(7)  NOT NULL,
+    TicketId        VARCHAR(30)      PRIMARY KEY,
+    Section         VARCHAR(5)       NOT NULL,
+    Coursecode      VARCHAR(7)       NOT NULL,
     GroupNo         TINYINT UNSIGNED NOT NULL,
-    LectureNo       SMALLINT    NOT NULL,
-    Day             VARCHAR(10) NOT NULL,
-    Time            TIME        NOT NULL,
-    MergedCode      VARCHAR(7)  NOT NULL,
-    FacultyUID      VARCHAR(5)  NOT NULL,
+    LectureNo       SMALLINT         NOT NULL,
+    Day             VARCHAR(10),
+    Time            TIME,
+    MergedCode      VARCHAR(7)       NOT NULL DEFAULT '',
+    FacultyUID      VARCHAR(5),
     RoomNo          VARCHAR(10),
     CourseMappingId BIGINT,
 
@@ -116,8 +118,20 @@ CREATE TABLE IF NOT EXISTS ticket (
         REFERENCES coursemapping(CourseMappingId) ON UPDATE CASCADE ON DELETE SET NULL,
 
     FOREIGN KEY (FacultyUID)
-        REFERENCES facultymaster(FacultyUID) ON UPDATE CASCADE ON DELETE RESTRICT,
+        REFERENCES facultymaster(FacultyUID) ON UPDATE CASCADE ON DELETE SET NULL,
 
     FOREIGN KEY (RoomNo)
         REFERENCES roommaster(RoomNo) ON UPDATE CASCADE ON DELETE RESTRICT
 );
+
+
+-- ============================================================
+-- ALTER STATEMENTS — run these on existing databases
+-- (Hibernate ddl-auto:update won't change column constraints)
+-- ============================================================
+
+-- Make FacultyUID nullable in ticket (tickets can be generated before faculty assignment)
+ALTER TABLE ticket MODIFY COLUMN FacultyUID VARCHAR(5) NULL;
+
+-- Ensure MergedCode has a default empty string for non-merged tickets
+ALTER TABLE ticket MODIFY COLUMN MergedCode VARCHAR(7) NOT NULL DEFAULT '';

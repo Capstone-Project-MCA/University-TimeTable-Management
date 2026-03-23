@@ -17,7 +17,7 @@ public class TicketController {
     private TicketService ticketService;
 
     @PostMapping("/generate")
-    public ResponseEntity<List<TicketDto>> generateAllTickets(
+    public ResponseEntity<List<TicketDto>> generateTickets(
             @RequestBody List<CourseMapping> courseMappings
     ) {
         return ResponseEntity.ok(ticketService.generateTicket(courseMappings));

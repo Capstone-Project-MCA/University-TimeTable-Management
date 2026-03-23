@@ -42,12 +42,17 @@ public class TicketService {
         List<TicketDto> ticketDtoList = new ArrayList<>();
 
         for(CourseMapping courseMapping : courseMappings){
+            // Skip mappings where faculty has not been assigned — frontend confirms this is intentional
+            if (courseMapping.getFacultyUID() == null || courseMapping.getFacultyUID().isBlank()) {
+                continue;
+            }
+
             Long courseMappingId = courseMapping.getCourseMappingId();
             String courseCode = courseMapping.getCoursecode();
             String sectionId = courseMapping.getSection();
             Short groupNo = courseMapping.getGroupNo();
             String mappingType = courseMapping.getMappingType();
-            String facultyUID = (courseMapping.getFacultyUID() != null) ? courseMapping.getFacultyUID() : null;
+            String facultyUID = courseMapping.getFacultyUID();
             Short L = courseMapping.getL();
             Short T = courseMapping.getT();
             Short P = courseMapping.getP();
@@ -64,9 +69,8 @@ public class TicketService {
                     ticket.setLectureNo((short)i);
                     ticket.setFacultyUID(facultyUID);
                     ticket.setCourseMappingId(courseMappingId);
-                    if(MergeStatus == true){
-                        ticket.setMergedCode(courseMapping.getMergecode());
-                    }
+                    ticket.setMergedCode(Boolean.TRUE.equals(MergeStatus) && courseMapping.getMergecode() != null
+                        ? courseMapping.getMergecode() : "");
                     ticketList.add(ticket);
                 }
             }
@@ -81,9 +85,8 @@ public class TicketService {
                     ticket.setLectureNo((short)i);
                     ticket.setFacultyUID(facultyUID);
                     ticket.setCourseMappingId(courseMappingId);
-                    if(MergeStatus == true){
-                        ticket.setMergedCode(courseMapping.getMergecode());
-                    }
+                    ticket.setMergedCode(Boolean.TRUE.equals(MergeStatus) && courseMapping.getMergecode() != null
+                        ? courseMapping.getMergecode() : "");
                     ticketList.add(ticket);
                 }
             }
@@ -98,9 +101,8 @@ public class TicketService {
                     ticket.setLectureNo((short)i);
                     ticket.setFacultyUID(facultyUID);
                     ticket.setCourseMappingId(courseMappingId);
-                    if(MergeStatus == true){
-                        ticket.setMergedCode(courseMapping.getMergecode());
-                    }
+                    ticket.setMergedCode(Boolean.TRUE.equals(MergeStatus) && courseMapping.getMergecode() != null
+                        ? courseMapping.getMergecode() : "");
                     ticketList.add(ticket);
                 }
             }
