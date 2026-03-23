@@ -10,7 +10,7 @@ import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceExc
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
 import com.capstone.University.Time.Table.manager.Mapper.SectionMapper;
-import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
+
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
 import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
 import com.capstone.University.Time.Table.manager.Repository.TicketRepository;
@@ -26,22 +26,22 @@ public class SectionService {
     private final SectionMapper sectionMapper;
     private final SectionRepository sectionRepository;
     private final CourseRepository courseRepository;
-    private final CourseMappingRepository courseMappingRepository;
     private final TicketRepository ticketRepository;
+    private final CourseMappingService courseMappingService;
 
     @Autowired
     public SectionService(
             SectionMapper sectionMapper,
             SectionRepository sectionRepository,
             CourseRepository courseRepository,
-            CourseMappingRepository courseMappingRepository,
-            TicketRepository ticketRepository
+            TicketRepository ticketRepository,
+            CourseMappingService courseMappingService
     ) {
         this.sectionMapper = sectionMapper;
         this.sectionRepository = sectionRepository;
         this.courseRepository = courseRepository;
-        this.courseMappingRepository = courseMappingRepository;
         this.ticketRepository = ticketRepository;
+        this.courseMappingService = courseMappingService;
     }
 
 //    @Autowired
@@ -115,7 +115,7 @@ public class SectionService {
 
     public void deleteAllSections() {
         ticketRepository.deleteAll();
-        courseMappingRepository.deleteAll();
+        courseMappingService.deleteAllMappings();
         courseRepository.findAll().forEach(course -> {
             course.getSections().clear();
         });

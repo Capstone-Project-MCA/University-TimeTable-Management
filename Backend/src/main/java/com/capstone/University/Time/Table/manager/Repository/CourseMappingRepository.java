@@ -2,8 +2,10 @@ package com.capstone.University.Time.Table.manager.Repository;
 
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -55,4 +57,10 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
     // ── Used by CourseMappingService.generateNextMergeCode ──
     @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c WHERE c.Mergecode IS NOT NULL")
     Optional<String> findMaxMergecode();
+
+    // ── Resets AUTO_INCREMENT to 1 after all rows are deleted ──
+    @Modifying
+    @Transactional
+    @Query(value = "ALTER TABLE coursemapping AUTO_INCREMENT = 1", nativeQuery = true)
+    void resetAutoIncrement();
 }

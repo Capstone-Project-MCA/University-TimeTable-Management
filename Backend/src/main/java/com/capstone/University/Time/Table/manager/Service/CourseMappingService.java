@@ -24,6 +24,12 @@ public class CourseMappingService {
         this.courseMappingMapper = courseMappingMapper;
     }
 
+    @Transactional
+    public void deleteAllMappings() {
+        courseMappingRepository.deleteAll();
+        courseMappingRepository.resetAutoIncrement();
+    }
+
     public List<CourseMappingDto> getAllCourseMappings() {
         List<CourseMapping> courseMappings = courseMappingRepository.findAll();
         List<CourseMappingDto> courseMappingDTOs = new ArrayList<>();

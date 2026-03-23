@@ -5,7 +5,6 @@ import com.capstone.University.Time.Table.manager.Entity.Course;
 import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
-import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
 import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
 import com.capstone.University.Time.Table.manager.Repository.TicketRepository;
@@ -19,23 +18,23 @@ public class CourseService {
 
     private final CourseRepository courseRepository;
     private final SectionRepository sectionRepository;
-    private final CourseMappingRepository courseMappingRepository;
     private final TicketRepository ticketRepository;
     private final CourseMapper courseMapper;
+    private final CourseMappingService courseMappingService;
 
     @Autowired
     public CourseService(
             CourseRepository courseRepository,
             SectionRepository sectionRepository,
-            CourseMappingRepository courseMappingRepository,
             TicketRepository ticketRepository,
-            CourseMapper courseMapper
+            CourseMapper courseMapper,
+            CourseMappingService courseMappingService
     ) {
         this.courseRepository = courseRepository;
         this.sectionRepository = sectionRepository;
-        this.courseMappingRepository = courseMappingRepository;
         this.ticketRepository = ticketRepository;
         this.courseMapper = courseMapper;
+        this.courseMappingService = courseMappingService;
     }
 
 //    @Autowired
@@ -126,7 +125,7 @@ public class CourseService {
 
     public void deleteAllCourses() {
         ticketRepository.deleteAll();
-        courseMappingRepository.deleteAll();
+        courseMappingService.deleteAllMappings();
         sectionRepository.findAll().forEach(section -> {
             section.getCourses().clear();
         });

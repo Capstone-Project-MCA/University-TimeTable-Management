@@ -25,6 +25,12 @@ public class CourseMappingController {
         return ResponseEntity.ok(courseMappingService.getAllCourseMappings());
     }
 
+    @DeleteMapping
+    public ResponseEntity<Void> deleteAllMappings() {
+        courseMappingService.deleteAllMappings();
+        return ResponseEntity.noContent().build();
+    }
+
     // ── Merge Sections endpoint ─────────────────────────────
 
     @PostMapping("/merge")
