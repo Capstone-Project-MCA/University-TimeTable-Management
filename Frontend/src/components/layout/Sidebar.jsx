@@ -29,6 +29,18 @@ export default function Sidebar({ activeTab, setActiveTab }) {
 
         <ul className="space-y-1 w-full">
 
+          {/* Tickets — first entry */}
+          <li>
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); setActiveTab("tickets"); }}
+              className={`${baseClasses} ${activeTab === "tickets" ? activeClasses : inactiveClasses}`}
+            >
+              <span className="material-symbols-outlined text-[20px] min-w-[20px]">confirmation_number</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Tickets</span>
+            </a>
+          </li>
+
           {/* Courses */}
           <li>
             <a
@@ -74,18 +86,6 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             >
               <span className="material-symbols-outlined text-[20px] min-w-[20px]">apartment</span>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Rooms</span>
-            </a>
-          </li>
-
-          {/* Courses & Sections */}
-          <li>
-            <a
-              href="#"
-              onClick={(e) => { e.preventDefault(); setActiveTab("coursesAndSections"); }}
-              className={`${baseClasses} ${activeTab === "coursesAndSections" ? activeClasses : inactiveClasses}`}
-            >
-              <span className="material-symbols-outlined text-[20px] min-w-[20px]">dashboard</span>
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Courses & Sections</span>
             </a>
           </li>
 

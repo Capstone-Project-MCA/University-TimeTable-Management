@@ -305,38 +305,55 @@ export default function FacultyMappingAssign() {
   }
 
   // ── shared table head ──────────────────────────────────────────────────────
-  function TableHead({ pageRows, allChecked }) {
+  function TableHead({ pageRows, allChecked, showOverride = false }) {
     return (
       <thead>
         <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
-          <th className="px-5 py-3.5 w-12">
-            <input type="checkbox" checked={allChecked}
-              onChange={() => togglePageAll(pageRows, allChecked)}
-              className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" />
-          </th>
+          {/* Checkbox column — hidden in override (assigned) group */}
+          {!showOverride && (
+            <th className="px-5 py-3.5 w-12">
+              <input type="checkbox" checked={allChecked}
+                onChange={() => togglePageAll(pageRows, allChecked)}
+                className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" />
+            </th>
+          )}
           {["Course Code","Section","Group","Nature","Attendance","L","T","P","Type","Merge","Merge Code","Reserve Slot","Current Faculty"].map(h => (
             <th key={h} className="px-4 py-3.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
           ))}
+          {showOverride && (
+            <th className="px-4 py-3.5 text-[10px] font-bold text-amber-500 dark:text-amber-400 uppercase tracking-wider whitespace-nowrap">Override</th>
+          )}
         </tr>
       </thead>
     );
   }
 
   // ── shared row renderer ────────────────────────────────────────────────────
-  function renderRow(m) {
-    const id         = rowId(m);
-    const checked    = checkedIds.has(id);
-    const currentUID = m.facultyUID || m.FacultyUID || "";
+  function renderRow(m, showOverride = false) {
+    const id           = rowId(m);
+    const checked      = checkedIds.has(id);
+    const currentUID   = m.facultyUID || m.FacultyUID || "";
+    const isOverriding = showOverride && checked;
     return (
-      <tr key={id} onClick={() => toggleRow(id)}
-        className={`transition-colors cursor-pointer ${
-          checked ? "bg-primary/5 dark:bg-primary/10" : "hover:bg-slate-50/60 dark:hover:bg-slate-800/40"
+      <tr key={id}
+        onClick={!showOverride ? () => toggleRow(id) : undefined}
+        className={`transition-colors ${
+          !showOverride ? "cursor-pointer" : ""
+        } ${
+          isOverriding
+            ? "bg-amber-50/60 dark:bg-amber-900/10 ring-1 ring-inset ring-amber-300 dark:ring-amber-700"
+            : checked
+            ? "bg-primary/5 dark:bg-primary/10"
+            : "hover:bg-slate-50/60 dark:hover:bg-slate-800/40"
         }`}
       >
-        <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
-          <input type="checkbox" checked={checked} onChange={() => toggleRow(id)}
-            className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" />
-        </td>
+        {/* Checkbox — only in pending group */}
+        {!showOverride && (
+          <td className="px-5 py-3.5" onClick={e => e.stopPropagation()}>
+            <input type="checkbox" checked={checked} onChange={() => toggleRow(id)}
+              className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" />
+          </td>
+        )}
         <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{m.coursecode || m.Coursecode}</td>
         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{m.section || m.Section}</td>
         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">G{m.groupNo ?? m.GroupNo}</td>
@@ -366,6 +383,29 @@ export default function FacultyMappingAssign() {
             ? <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{currentUID}</span>
             : <span className="text-xs text-slate-400 italic">Unassigned</span>}
         </td>
+
+        {/* Override button — only in assigned group, no checkbox */}
+        {showOverride && (
+          <td className="px-4 py-3.5 text-center">
+            {isOverriding ? (
+              <button
+                onClick={() => toggleRow(id)}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 border border-amber-400 dark:border-amber-600 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-sm">close</span>
+                Cancel
+              </button>
+            ) : (
+              <button
+                onClick={() => toggleRow(id)}
+                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+              >
+                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20" }}>swap_horiz</span>
+                Override
+              </button>
+            )}
+          </td>
+        )}
       </tr>
     );
   }
@@ -624,12 +664,12 @@ export default function FacultyMappingAssign() {
               {!assignedCollapsed && (
                 <>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse min-w-[1100px]">
-                      <TableHead pageRows={assignedPageRows} allChecked={allAssignedChecked} />
+                    <table className="w-full text-left border-collapse min-w-[1200px]">
+                      <TableHead pageRows={assignedPageRows} allChecked={allAssignedChecked} showOverride={true} />
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {assignedAll.length === 0 ? (
-                          <tr><td colSpan={14} className="px-5 py-10 text-center text-slate-400 text-sm">No assigned rows yet.</td></tr>
-                        ) : assignedPageRows.map(renderRow)}
+                          <tr><td colSpan={15} className="px-5 py-10 text-center text-slate-400 text-sm">No assigned rows yet.</td></tr>
+                        ) : assignedPageRows.map(m => renderRow(m, true))}
                       </tbody>
                     </table>
                   </div>

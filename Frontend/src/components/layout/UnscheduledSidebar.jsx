@@ -10,10 +10,11 @@ import SectionCard from '../common/SectionCard'
 const ROOM_TYPE_MAP = { 0: 'Lecture Hall', 1: 'Lab', 2: 'Seminar Hall' }
 
 export default function UnscheduledSidebar({ activeTab = 'courses' }) {
-  const [courses, setCourses] = useState([])
+  const [courses,   setCourses]   = useState([])
   const [faculties, setFaculties] = useState([])
-  const [rooms, setRooms] = useState([])
-  const [sections, setSections] = useState([])
+  const [rooms,     setRooms]     = useState([])
+  const [sections,  setSections]  = useState([])
+  const [tickets,   setTickets]   = useState([])
   const [searchQuery, setSearchQuery] = useState('')
 
   const { refreshKey, lastRefreshedEntity } = useDataRefresh()
@@ -53,6 +54,13 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
           .catch((err) => console.error('Error fetching sections:', err))
         break
 
+      case 'tickets':
+        axios
+          .get('http://localhost:8080/ticket/get-all')
+          .then((res) => setTickets(res.data))
+          .catch((err) => console.error('Error fetching tickets:', err))
+        break
+
       default:
         break
     }
@@ -66,10 +74,11 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
     if (affectedTab && affectedTab !== activeTab) return;
 
     const fetchers = {
-      courses:   () => axios.get('http://localhost:8080/course/all').then(r => setCourses(r.data)),
+      courses:   () => axios.get('http://localhost:8080/course/all').then(r   => setCourses(r.data)),
       faculties: () => axios.get('http://localhost:8080/faculty/all').then(r => setFaculties(r.data)),
-      rooms:     () => axios.get('http://localhost:8080/room/all').then(r => setRooms(r.data)),
+      rooms:     () => axios.get('http://localhost:8080/room/all').then(r   => setRooms(r.data)),
       sections:  () => axios.get('http://localhost:8080/section/all').then(r => setSections(r.data)),
+      tickets:   () => axios.get('http://localhost:8080/ticket/get-all').then(r => setTickets(r.data)),
     };
     fetchers[activeTab]?.().catch(err => console.error('Auto-refresh failed:', err));
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -78,20 +87,12 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
   // ---------- pick raw list ----------
   let rawData = []
   switch (activeTab) {
-    case 'courses':
-      rawData = courses
-      break
-    case 'faculties':
-      rawData = faculties
-      break
-    case 'rooms':
-      rawData = rooms
-      break
-    case 'sections':
-      rawData = sections
-      break
-    default:
-      rawData = []
+    case 'courses':   rawData = courses;   break
+    case 'faculties': rawData = faculties; break
+    case 'rooms':     rawData = rooms;     break
+    case 'sections':  rawData = sections;  break
+    case 'tickets':   rawData = tickets;   break
+    default:          rawData = []
   }
 
   // ---------- search filter ----------
@@ -118,6 +119,13 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
             return (
               (item.SectionId || '').toLowerCase().includes(q) ||
               (item.ProgramName || '').toLowerCase().includes(q)
+            )
+          case 'tickets':
+            return (
+              (item.ticketId   || item.TicketId   || '').toLowerCase().includes(q) ||
+              (item.Coursecode || item.coursecode || '').toLowerCase().includes(q) ||
+              (item.Section    || item.section    || '').toLowerCase().includes(q) ||
+              (item.FacultyUID || item.facultyUID || '').toLowerCase().includes(q)
             )
           default:
             return true
@@ -228,6 +236,49 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
                   onDelete={() => handleDelete(item)}
                 />
               )
+            case 'tickets': {
+              const tid      = item.ticketId   || item.TicketId   || '?'
+              const course   = item.Coursecode || item.coursecode || '—'
+              const section  = item.Section    || item.section    || '—'
+              const group    = item.GroupNo    ?? item.groupNo    ?? '?'
+              const type     = item.mappingType || item.MappingType || ''
+              const lno      = item.LectureNo  ?? item.lectureNo  ?? ''
+              const faculty  = item.FacultyUID || item.facultyUID || null
+              const merged   = !!(item.MergedCode || item.mergedCode)
+              const typeColor = type === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
+                : type === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
+                : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+              return (
+                <div key={tid}
+                  className='p-2.5 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 hover:border-primary/40 dark:hover:border-primary/40 transition-all cursor-default group'
+                >
+                  <div className='flex items-center justify-between mb-1.5'>
+                    <span className='text-[10px] font-mono font-bold text-primary dark:text-blue-400 truncate leading-none'>{tid}</span>
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${typeColor} shrink-0 ml-1`}>{type}{lno}</span>
+                  </div>
+                  <p className='text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight'>{course}</p>
+                  <div className='flex items-center gap-1.5 mt-1'>
+                    <span className='text-[10px] text-slate-400 dark:text-slate-500'>§{section}</span>
+                    <span className='text-[10px] text-slate-300 dark:text-slate-600'>·</span>
+                    <span className='text-[10px] text-slate-400 dark:text-slate-500'>G{group}</span>
+                    {merged && (
+                      <>
+                        <span className='text-[10px] text-slate-300 dark:text-slate-600'>·</span>
+                        <span className='text-[10px] font-bold text-purple-500 dark:text-purple-400 flex items-center gap-0.5'>
+                          <span className='material-symbols-outlined text-[10px]'>merge</span>merged
+                        </span>
+                      </>
+                    )}
+                  </div>
+                  <div className='mt-1.5'>
+                    {faculty
+                      ? <span className='text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded'>{faculty}</span>
+                      : <span className='text-[10px] text-slate-400 italic'>No faculty</span>
+                    }
+                  </div>
+                </div>
+              )
+            }
             default:
               return null
           }
@@ -236,7 +287,9 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
 
       {/* Footer */}
       <div className='p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center'>
-        <p className='text-[11px] text-slate-400'>{data.length} unscheduled</p>
+        <p className='text-[11px] text-slate-400'>
+          {activeTab === 'tickets' ? `${data.length} ticket${data.length !== 1 ? 's' : ''}` : `${data.length} unscheduled`}
+        </p>
       </div>
     </aside>
   )
