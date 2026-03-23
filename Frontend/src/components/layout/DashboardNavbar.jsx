@@ -127,6 +127,7 @@ export default function DashboardNavbar({ activeTab }) {
       }
       const tickets = await response.json();
       alert(`✅ Successfully generated ${tickets.length} ticket(s).\n${expectedCount - tickets.length > 0 ? `⚠️  ${expectedCount - tickets.length} mapping(s) were skipped (no faculty).` : ''}`);
+      triggerRefresh('ticket'); // auto-refresh the Tickets panel
     } catch (error) {
       alert(`Error: ${error.message}`);
     } finally {

@@ -19,8 +19,8 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
 
   const { refreshKey, lastRefreshedEntity } = useDataRefresh()
 
-  // Map upload entity type → tab name
-  const entityToTab = { course: 'courses', faculty: 'faculties', room: 'rooms', section: 'sections' }
+  // Map entity type → tab name (used to scope auto-refresh to the right tab)
+  const entityToTab = { course: 'courses', faculty: 'faculties', room: 'rooms', section: 'sections', ticket: 'tickets' }
 
   useEffect(() => {
     setSearchQuery('')

@@ -87,6 +87,78 @@ export default function FacultyMappingAssign() {
 
   const searchRef = useRef(null);
 
+  // Inline override state for the assigned group
+  const [overrideRowId,  setOverrideRowId]  = useState(null);  // which row is being overridden
+  const [overrideSearch, setOverrideSearch] = useState("");     // typed value in inline input
+  const [overrideFocused,setOverrideFocused]= useState(false);  // dropdown visible?
+  const [overrideSaving, setOverrideSaving] = useState(false);  // save-in-progress
+
+  // Open inline override for a row
+  const openOverride = (id, currentUid) => {
+    setOverrideRowId(id);
+    setOverrideSearch(currentUid || "");
+    setOverrideFocused(true);
+  };
+
+  // Cancel inline override
+  const cancelOverride = () => {
+    setOverrideRowId(null);
+    setOverrideSearch("");
+    setOverrideFocused(false);
+  };
+
+  // Save the inline override for one specific mapping
+  const handleSaveOverride = async (m) => {
+    const uid = overrideSearch.trim();
+    if (!uid) { alert("Faculty UID cannot be empty."); return; }
+    if (!faculties.some(f => (f.FacultyUID || f.facultyUID || "") === uid)) {
+      alert(`Invalid Faculty UID: "${uid}"\nSelect a valid UID from the dropdown.`);
+      return;
+    }
+    setOverrideSaving(true);
+    const payload = [{
+      courseMappingId: m.courseMappingId ?? m.CourseMappingId ?? null,
+      Section:        m.section       || m.Section,
+      Coursecode:     m.coursecode    || m.Coursecode,
+      GroupNo:        m.groupNo       ?? m.GroupNo,
+      mappingType:    m.mappingType,
+      AttendanceType: m.attendanceType || m.AttendanceType || "Regular",
+      CourseNature:   String(m.courseNature || m.CourseNature || "C"),
+      FacultyUID:     uid,
+      L: m.l ?? m.L ?? 0,
+      T: m.t ?? m.T ?? 0,
+      P: m.p ?? m.P ?? 0,
+      Mergecode:   m.mergecode   || m.Mergecode   || null,
+      MergeStatus: m.mergeStatus === true || m.MergeStatus === true,
+      Reserveslot: m.reserveslot || m.Reserveslot || null,
+    }];
+    try {
+      const res = await fetch(`${API_BASE}/assign/save-all-faculty`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (res.ok) {
+        // Update local mapping immediately
+        setMappings(prev => prev.map(mp =>
+          rowId(mp) === overrideRowId
+            ? { ...mp, facultyUID: uid, FacultyUID: uid }
+            : mp
+        ));
+        setResult({ success: true, message: `Override saved — ${m.coursecode || m.Coursecode} reassigned to ${uid}.` });
+        triggerRefresh("mappings");
+        cancelOverride();
+      } else {
+        const txt = await res.text().catch(() => "Unknown error");
+        setResult({ success: false, message: `Override failed: ${txt}` });
+      }
+    } catch (e) {
+      setResult({ success: false, message: `Network error: ${e.message}` });
+    } finally {
+      setOverrideSaving(false);
+    }
+  };
+
   // ── DataRefresh context ────────────────────────────────────────────────────
   const { refreshKey, lastRefreshedEntity, triggerRefresh } = useDataRefresh();
 
@@ -378,29 +450,92 @@ export default function FacultyMappingAssign() {
             ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.reserveslot || m.Reserveslot}</span>
             : <span className="text-xs text-slate-400">—</span>}
         </td>
-        <td className="px-4 py-3.5 whitespace-nowrap">
-          {currentUID
-            ? <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{currentUID}</span>
-            : <span className="text-xs text-slate-400 italic">Unassigned</span>}
+        {/* Current Faculty column OR inline override input */}
+        <td className="px-4 py-2 whitespace-nowrap overflow-visible" style={{ minWidth: showOverride ? 240 : undefined }}>
+          {showOverride && overrideRowId === id ? (
+            // ── Inline override input with autocomplete ──────────────
+            <div className="relative">
+              <input
+                autoFocus
+                type="text"
+                value={overrideSearch}
+                onChange={e => { setOverrideSearch(e.target.value); setOverrideFocused(true); }}
+                onFocus={() => setOverrideFocused(true)}
+                onBlur={() => setTimeout(() => setOverrideFocused(false), 200)}
+                placeholder="Search UID or Name…"
+                className={`w-full text-xs rounded-lg py-1.5 px-3 border shadow-sm focus:ring-2 transition-all ${
+                  overrideSearch.trim() && !faculties.some(f => (f.FacultyUID || f.facultyUID || "") === overrideSearch.trim())
+                    ? "border-red-400 dark:border-red-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-red-300/40"
+                    : "border-primary/40 dark:border-primary/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-primary/20"
+                }`}
+              />
+              {/* Autocomplete dropdown */}
+              {overrideFocused && (
+                <div className="absolute top-9 left-0 w-56 z-[200] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg shadow-2xl max-h-44 overflow-y-auto">
+                  {(() => {
+                    const q = overrideSearch.toLowerCase();
+                    const matches = faculties.filter(f => {
+                      const uid  = (f.FacultyUID  || f.facultyUID  || "");
+                      const name = (f.FacultyName || f.facultyName || "");
+                      return uid.toLowerCase().includes(q) || name.toLowerCase().includes(q);
+                    });
+                    return matches.length === 0
+                      ? <div className="px-3 py-2 text-xs text-slate-400 italic">No match found.</div>
+                      : matches.map(f => {
+                          const uid  = f.FacultyUID  || f.facultyUID  || "";
+                          const name = f.FacultyName || f.facultyName || "";
+                          return (
+                            <div key={uid}
+                              className="px-3 py-2 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800 border-b border-slate-100 dark:border-slate-800 last:border-0"
+                              onMouseDown={e => { e.preventDefault(); setOverrideSearch(uid); setOverrideFocused(false); }}
+                            >
+                              <span className="font-bold text-primary block">{uid}</span>
+                              <span className="text-slate-500 dark:text-slate-400 truncate block opacity-80">{name}</span>
+                            </div>
+                          );
+                        });
+                  })()}
+                </div>
+              )}
+            </div>
+          ) : (
+            // ── Normal display ────────────────────────────────────────
+            currentUID
+              ? <span className="text-xs font-mono font-semibold text-slate-700 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{currentUID}</span>
+              : <span className="text-xs text-slate-400 italic">Unassigned</span>
+          )}
         </td>
 
-        {/* Override button — only in assigned group, no checkbox */}
+        {/* Override / Save / Cancel actions */}
         {showOverride && (
           <td className="px-4 py-3.5 text-center">
-            {isOverriding ? (
-              <button
-                onClick={() => toggleRow(id)}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/30 border border-amber-400 dark:border-amber-600 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
-              >
-                <span className="material-symbols-outlined text-sm">close</span>
-                Cancel
-              </button>
+            {overrideRowId === id ? (
+              <div className="flex items-center gap-1.5 justify-center">
+                <button
+                  disabled={overrideSaving}
+                  onClick={() => handleSaveOverride(m)}
+                  className="text-[10px] font-bold px-3 py-1.5 rounded uppercase bg-primary text-white hover:bg-blue-600 disabled:opacity-50 flex items-center gap-1 whitespace-nowrap transition-all"
+                >
+                  {overrideSaving
+                    ? <span className="material-symbols-outlined text-xs animate-spin">refresh</span>
+                    : <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>save</span>}
+                  {overrideSaving ? "Saving…" : "Save"}
+                </button>
+                <button
+                  onClick={cancelOverride}
+                  className="text-[10px] font-bold px-3 py-1.5 rounded uppercase bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-600 hover:bg-slate-200 flex items-center gap-1 whitespace-nowrap transition-all"
+                >
+                  <span className="material-symbols-outlined text-xs">close</span>
+                  Cancel
+                </button>
+              </div>
             ) : (
               <button
-                onClick={() => toggleRow(id)}
-                className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/40 px-2.5 py-1.5 rounded-lg transition-colors whitespace-nowrap"
+                onClick={() => openOverride(id, currentUID)}
+                title="Override / Re-assign faculty"
+                className="text-[10px] font-bold px-3 py-1.5 rounded uppercase transition-all bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-700 hover:bg-amber-100 dark:hover:bg-amber-900/40 flex items-center gap-1 whitespace-nowrap"
               >
-                <span className="material-symbols-outlined text-sm" style={{ fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20" }}>swap_horiz</span>
+                <span className="material-symbols-outlined text-xs" style={{ fontVariationSettings: "'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 20" }}>edit</span>
                 Override
               </button>
             )}
@@ -626,7 +761,7 @@ export default function FacultyMappingAssign() {
                             <span className="material-symbols-outlined text-3xl block mb-2 text-emerald-400">task_alt</span>
                             <span className="text-sm font-semibold text-emerald-600 dark:text-emerald-400">All rows assigned — great work!</span>
                           </td></tr>
-                        ) : pendingPageRows.map(renderRow)}
+                        ) : pendingPageRows.map(m => renderRow(m))}
                       </tbody>
                     </table>
                   </div>
