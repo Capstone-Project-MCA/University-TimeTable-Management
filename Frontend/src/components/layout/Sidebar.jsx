@@ -89,6 +89,18 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             </a>
           </li>
 
+          {/* Courses & Sections */}
+          <li>
+            <a
+              href="#"
+              onClick={(e) => { e.preventDefault(); setActiveTab("coursesAndSections"); }}
+              className={`${baseClasses} ${activeTab === "coursesAndSections" ? activeClasses : inactiveClasses}`}
+            >
+              <span className="material-symbols-outlined text-[20px] min-w-[20px]">dashboard</span>
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Courses & Sections</span>
+            </a>
+          </li>
+
         </ul>
       </div>
 

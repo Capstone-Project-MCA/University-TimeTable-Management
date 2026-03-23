@@ -23,6 +23,11 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.generateTicket(courseMappings));
     }
 
+    @GetMapping("/get/{sectionId}")
+    public ResponseEntity<List<TicketDto>> getAllTicketsBySectionId(@PathVariable String sectionId) {
+        return ResponseEntity.ok(ticketService.getAllTicketsBySectionId(sectionId));
+    }
+
     @GetMapping("/get-all")
     public ResponseEntity<List<TicketDto>> getAllTickets(){
         return ResponseEntity.ok(ticketService.getAllTickers());
