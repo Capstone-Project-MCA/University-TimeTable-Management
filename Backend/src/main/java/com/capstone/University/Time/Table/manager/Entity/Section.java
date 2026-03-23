@@ -51,7 +51,6 @@ public class Section {
     private Set<Course> courses = new HashSet<>();
 
     @OneToMany(mappedBy = "sectionEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-
     @JsonIgnoreProperties({"sectionEntity", "courseEntity"})
     private List<CourseMapping> courseMappings = new ArrayList<>();
 }

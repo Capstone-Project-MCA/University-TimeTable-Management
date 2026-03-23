@@ -13,6 +13,7 @@ import com.capstone.University.Time.Table.manager.Mapper.SectionMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
 import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
 import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
+import com.capstone.University.Time.Table.manager.Repository.TicketRepository;
 import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -25,16 +26,22 @@ public class SectionService {
     private final SectionMapper sectionMapper;
     private final SectionRepository sectionRepository;
     private final CourseRepository courseRepository;
+    private final CourseMappingRepository courseMappingRepository;
+    private final TicketRepository ticketRepository;
 
     @Autowired
     public SectionService(
             SectionMapper sectionMapper,
             SectionRepository sectionRepository,
-            CourseRepository courseRepository
+            CourseRepository courseRepository,
+            CourseMappingRepository courseMappingRepository,
+            TicketRepository ticketRepository
     ) {
         this.sectionMapper = sectionMapper;
         this.sectionRepository = sectionRepository;
         this.courseRepository = courseRepository;
+        this.courseMappingRepository = courseMappingRepository;
+        this.ticketRepository = ticketRepository;
     }
 
 //    @Autowired
@@ -107,6 +114,8 @@ public class SectionService {
     }
 
     public void deleteAllSections() {
+        ticketRepository.deleteAll();
+        courseMappingRepository.deleteAll();
         courseRepository.findAll().forEach(course -> {
             course.getSections().clear();
         });

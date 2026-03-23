@@ -1,25 +1,21 @@
 package com.capstone.University.Time.Table.manager.Controller;
 
-import com.capstone.University.Time.Table.manager.DTO.CourseDto;
-import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
 import com.capstone.University.Time.Table.manager.DTO.SectionDto;
 import com.capstone.University.Time.Table.manager.DTO.UploadResponse;
 import com.capstone.University.Time.Table.manager.Entity.Section;
 import com.capstone.University.Time.Table.manager.Service.SectionService;
 import com.capstone.University.Time.Table.manager.Service.UploadSectionFileService;
-import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/section")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class SectionController {
 
     @Autowired
@@ -28,9 +24,7 @@ public class SectionController {
     @Autowired
     private UploadSectionFileService uploadSectionFileService;
 
-    // ========================================= File Upload Endpoints
-    // ================================================
-
+// ========================================= File Upload Endpoints ================================================
     @GetMapping("/read")
     public ResponseEntity<List<Section>> readSectionExcelFile(@RequestParam("file") MultipartFile file) {
         List<Section> sections = uploadSectionFileService.readSectionExcelFile(file);
@@ -45,9 +39,7 @@ public class SectionController {
         return ResponseEntity.ok(response);
     }
 
-    // ========================================= CRUD Endpoints
-    // =======================================================
-
+// ========================================= CRUD Endpoints =======================================================
     @GetMapping("/all")
     public ResponseEntity<List<SectionDto>> getAllSections() {
         List<SectionDto> sections = sectionService.getAllSections();

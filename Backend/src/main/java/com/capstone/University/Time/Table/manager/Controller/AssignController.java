@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/assign")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class AssignController {
 
     @Autowired

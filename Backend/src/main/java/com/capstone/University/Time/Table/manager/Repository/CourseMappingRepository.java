@@ -29,10 +29,30 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
             @Param("mappingType") String mappingType
     );
 
-    // ── Merge Sections queries ───────────────────────────
+    // ── Used by AssignService.saveAllFacultyAssign & assignFacultyToCoursesAndSection ──
+    @Query("""
+    SELECT c FROM CourseMapping c
+    WHERE c.Section = :section AND c.Coursecode = :coursecode
+    AND c.GroupNo = :groupNo AND c.mappingType = :mappingType
+    """)
+    Optional<CourseMapping> findBySectionAndCoursecodeAndGroupNoAndMappingType(
+            @Param("section") String section,
+            @Param("coursecode") String coursecode,
+            @Param("groupNo") Short groupNo,
+            @Param("mappingType") String mappingType
+    );
 
-    List<CourseMapping> findByCoursecodeAndSectionIn(String coursecode, List<String> sections);
+    // ── Used by CourseMappingService.mergeSections ──
+    @Query("""
+    SELECT c FROM CourseMapping c
+    WHERE c.Coursecode = :coursecode AND c.Section IN :sections
+    """)
+    List<CourseMapping> findByCoursecodeAndSectionIn(
+            @Param("coursecode") String coursecode,
+            @Param("sections") List<String> sections
+    );
 
+    // ── Used by CourseMappingService.generateNextMergeCode ──
     @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c WHERE c.Mergecode IS NOT NULL")
     Optional<String> findMaxMergecode();
 }

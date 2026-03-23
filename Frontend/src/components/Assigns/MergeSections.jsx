@@ -21,35 +21,12 @@ const mappingCourseCode = (m) => m.Coursecode ?? m.coursecode ?? "";
 const mappingSection = (m) => m.Section ?? m.section ?? "";
 const sectionRowId = (s) => s.SectionId ?? s.sectionId ?? "";
 
-// ─── Sample Data ────────────────────────────────────────────────────
-const SAMPLE_COURSES = [
-  { CourseCode: "CSE101", CourseTitle: "Introduction to Computer Science", Credit: 3 },
-  { CourseCode: "DAT202", CourseTitle: "Data Structures & Algorithms", Credit: 4 },
-  { CourseCode: "MAT301", CourseTitle: "Advanced Mathematics", Credit: 3 },
-  { CourseCode: "ENG105", CourseTitle: "Professional Communication", Credit: 2 },
-];
-
-const SAMPLE_SECTIONS = [
-  { SectionId: "S1-A", ProgramName: "Computer Science", Semester: 1, Strength: 45 },
-  { SectionId: "S1-B", ProgramName: "Computer Science", Semester: 1, Strength: 42 },
-  { SectionId: "S1-C", ProgramName: "Software Engineering", Semester: 1, Strength: 38 },
-  { SectionId: "S2-D", ProgramName: "Information Tech", Semester: 2, Strength: 40 },
-];
-
-const SAMPLE_MAPPINGS = [
-  { Coursecode: "CSE101", Section: "S1-A" },
-  { Coursecode: "CSE101", Section: "S1-B" },
-  { Coursecode: "CSE101", Section: "S1-C" },
-  { Coursecode: "DAT202", Section: "S1-A" },
-  { Coursecode: "DAT202", Section: "S2-D" },
-];
-
 export default function MergeSections() {
-  const [courses, setCourses] = useState(SAMPLE_COURSES);
-  const [sections, setSections] = useState(SAMPLE_SECTIONS);
-  const [mappings, setMappings] = useState(SAMPLE_MAPPINGS);
+  const [courses, setCourses] = useState([]);
+  const [sections, setSections] = useState([]);
+  const [mappings, setMappings] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [usingSamples, setUsingSamples] = useState(true);
+  const [fetchError, setFetchError] = useState("");
 
   const [query, setQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
@@ -90,6 +67,7 @@ export default function MergeSections() {
 
   const fetchAll = useCallback(() => {
     setLoading(true);
+    setFetchError("");
     Promise.all([
       axios.get("http://localhost:8080/course/all"),
       axios.get("http://localhost:8080/section/all"),
@@ -99,9 +77,8 @@ export default function MergeSections() {
         setCourses(c.data);
         setSections(s.data);
         setMappings(m.data);
-        setUsingSamples(false);
       })
-      .catch(() => setUsingSamples(true))
+      .catch(() => setFetchError("Could not connect to the server. Please make sure the backend is running."))
       .finally(() => setLoading(false));
   }, []);
 
@@ -189,30 +166,37 @@ export default function MergeSections() {
       const mRes = await axios.get("http://localhost:8080/api/mappings");
       setMappings(mRes.data);
     } catch (err) {
-      if (!err.response) {
-         const entry = {
-            id: mergeLog.length + 1,
-            mergeCode: "M-" + Math.random().toString(36).substring(2, 7).toUpperCase(),
-            course: selectedCourse.CourseCode,
-            courseTitle: selectedCourse.CourseTitle,
-            sections: [...selectedSections],
-            timestamp: new Date().toLocaleTimeString(),
-          };
-          setMergeLog((p) => [entry, ...p]);
-          setLastMerge(entry);
-          setSelectedSections([]);
-          setSectionError("");
-      } else {
-        setSectionError(err.response?.data?.error || "Merge failed.");
-      }
+      setSectionError(err.response?.data?.error || err.message || "Merge failed.");
     } finally {
       setMerging(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div className="flex-1 flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="flex flex-col items-center gap-4 animate-pulse">
+          <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center">
+            <span className="material-symbols-outlined text-3xl text-primary animate-spin">progress_activity</span>
+          </div>
+          <p className="text-sm font-bold text-slate-400">Loading data…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-auto bg-slate-50 dark:bg-slate-950 font-sans">
       <div className="max-w-5xl mx-auto px-6 py-8">
+
+        {/* ── Error Banner ── */}
+        {fetchError && (
+          <div className="mb-6 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 p-4 rounded-2xl flex items-center gap-3 animate-fade-in-up">
+            <span className="material-symbols-outlined text-xl">error</span>
+            <p className="text-sm font-medium flex-1">{fetchError}</p>
+            <button onClick={fetchAll} className="px-4 py-1.5 bg-red-100 dark:bg-red-800/40 rounded-xl text-xs font-bold hover:bg-red-200 dark:hover:bg-red-800/60 transition-colors">Retry</button>
+          </div>
+        )}
         
         {/* ── Header Area ── */}
         <header className="mb-10 flex flex-col md:flex-row md:items-center justify-between gap-4 animate-fade-in-up">

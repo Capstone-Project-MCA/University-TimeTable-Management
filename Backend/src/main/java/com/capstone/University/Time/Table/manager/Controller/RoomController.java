@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/room")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class RoomController {
 
     @Autowired
@@ -24,9 +24,7 @@ public class RoomController {
     @Autowired
     private UploadRoomFileService uploadRoomFileService;
 
-    // ========================================= File Upload Endpoints
-    // ================================================
-
+// ========================================= File Upload Endpoints ================================================
     @GetMapping("/read")
     public ResponseEntity<List<Room>> readRoomExcelFile(@RequestParam("file") MultipartFile file) {
         List<Room> rooms = uploadRoomFileService.readRoomExcelFile(file);
@@ -41,9 +39,7 @@ public class RoomController {
         return ResponseEntity.ok(response);
     }
 
-    // ========================================= CRUD Endpoints
-    // =======================================================
-
+// ========================================= CRUD Endpoints =======================================================
     @GetMapping("/all")
     public ResponseEntity<List<RoomDto>> getAllRooms() {
         List<RoomDto> rooms = roomService.getAllRooms();

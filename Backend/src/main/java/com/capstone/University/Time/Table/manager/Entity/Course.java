@@ -49,7 +49,6 @@ public class Course {
     private Set<Section> sections = new HashSet<>();
 
     @OneToMany(mappedBy = "courseEntity", cascade = CascadeType.ALL, orphanRemoval = true)
-
     @JsonIgnoreProperties({"courseEntity", "sectionEntity"})
     private List<CourseMapping> courseMappings = new ArrayList<>();
 }

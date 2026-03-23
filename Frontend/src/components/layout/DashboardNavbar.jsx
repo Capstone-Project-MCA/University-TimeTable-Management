@@ -75,6 +75,34 @@ export default function DashboardNavbar({ activeTab }) {
     }
   };
 
+  const [isGenerating, setIsGenerating] = useState(false);
+
+  const handleGenerateTickets = async () => {
+    const confirmGenerate = window.confirm(
+      "Generate tickets for all course mappings? This will create scheduling tickets based on current assignments."
+    );
+    if (!confirmGenerate) return;
+
+    setIsGenerating(true);
+    try {
+      const response = await fetch(`${API_BASE}/ticket/generate-all`, {
+        method: 'POST',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || `Failed to generate tickets (${response.status})`);
+      }
+
+      const tickets = await response.json();
+      alert(`Successfully generated ${tickets.length} ticket(s).`);
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   // Determine if Delete All button should be visible (only for the main 4 entity tabs)
   const canDeleteAll = ['courses', 'sections', 'faculties', 'rooms'].includes(activeTab);
 
@@ -93,6 +121,18 @@ export default function DashboardNavbar({ activeTab }) {
           {isDeleting ? "Deleting..." : `Delete All ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
         </button>
       )}
+
+      {/* Generate Ticket button */}
+      <button
+        onClick={handleGenerateTickets}
+        disabled={isGenerating}
+        className="flex items-center gap-2 px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-md shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className={`material-symbols-outlined text-[18px] ${isGenerating ? 'animate-spin' : ''}`}>
+          {isGenerating ? "progress_activity" : "confirmation_number"}
+        </span>
+        {isGenerating ? "Generating..." : "Generate Tickets"}
+      </button>
 
       <div className="ml-auto flex items-center gap-4">
         <div>

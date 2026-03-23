@@ -13,7 +13,7 @@ import java.time.LocalTime;
 @Table(name = "ticket")
 public class Ticket {
     @Id
-    @Column(name = "TicketId", length = 7)
+    @Column(name = "TicketId", length = 30)
     private String TicketId;
 
     @Column(name = "Section", length = 5, nullable = false)
@@ -28,16 +28,16 @@ public class Ticket {
     @Column(name = "LectureNo", nullable = false)
     private Short LectureNo;
 
-    @Column(name = "Day", length = 10, nullable = false)
+    @Column(name = "Day", length = 10)
     private String Day;
 
-    @Column(name = "Time", nullable = false)
+    @Column(name = "Time")
     private LocalTime Time;
 
-    @Column(name = "MergedCode", length = 7, nullable = false)
+    @Column(name = "MergedCode", length = 7)
     private String MergedCode;
 
-    @Column(name = "FacultyUID", length = 5, nullable = false)
+    @Column(name = "FacultyUID", length = 5)
     private String FacultyUID;
 
     @Column(name = "RoomNo", length = 10)

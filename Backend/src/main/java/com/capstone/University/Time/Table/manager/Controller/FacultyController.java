@@ -15,7 +15,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/faculty")
-@CrossOrigin(origins = "http://localhost:5173")
+@CrossOrigin(origins = "*")
 public class FacultyController {
 
     @Autowired
@@ -24,9 +24,7 @@ public class FacultyController {
     @Autowired
     private UploadFacultyFileService uploadFacultyFileService;
 
-    // ========================================= File Upload Endpoints
-    // ================================================
-
+// ========================================= File Upload Endpoints ================================================
     @GetMapping("/read")
     public ResponseEntity<List<Faculty>> readFacultyFromFile(@RequestParam("file") MultipartFile file) {
         List<Faculty> faculties = uploadFacultyFileService.readFacultyExcelFile(file);
@@ -41,9 +39,7 @@ public class FacultyController {
         return ResponseEntity.ok(uploadResponse);
     }
 
-    // ========================================= CRUD Endpoints
-    // =======================================================
-
+// ========================================= CRUD Endpoints =======================================================
     @GetMapping("/all")
     public ResponseEntity<List<FacultyDto>> getAllFaculties() {
         List<FacultyDto> faculties = facultyService.getAllFaculties();

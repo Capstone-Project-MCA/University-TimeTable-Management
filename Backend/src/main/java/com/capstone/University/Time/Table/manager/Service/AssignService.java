@@ -1,31 +1,16 @@
 package com.capstone.University.Time.Table.manager.Service;
 
-import com.capstone.University.Time.Table.manager.DTO.CourseDto;
-import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
-import com.capstone.University.Time.Table.manager.DTO.CourseSectionAssignmentDto;
-import com.capstone.University.Time.Table.manager.DTO.SectionDto;
-import com.capstone.University.Time.Table.manager.Entity.Course;
-import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
-import com.capstone.University.Time.Table.manager.Entity.Faculty;
-import com.capstone.University.Time.Table.manager.Entity.Section;
-import com.capstone.University.Time.Table.manager.Exception.DuplicateResourceException;
-import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
-import com.capstone.University.Time.Table.manager.Mapper.CourseMapper;
-import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
-import com.capstone.University.Time.Table.manager.Mapper.FacultyMapper;
-import com.capstone.University.Time.Table.manager.Mapper.SectionMapper;
-import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
-import com.capstone.University.Time.Table.manager.Repository.CourseRepository;
-import com.capstone.University.Time.Table.manager.Repository.FacultyRepository;
-import com.capstone.University.Time.Table.manager.Repository.SectionRepository;
+import com.capstone.University.Time.Table.manager.DTO.*;
+import com.capstone.University.Time.Table.manager.Entity.*;
+import com.capstone.University.Time.Table.manager.Exception.*;
+import com.capstone.University.Time.Table.manager.Mapper.*;
+import com.capstone.University.Time.Table.manager.Repository.*;
 import org.apache.commons.lang3.tuple.Pair;
 import org.jspecify.annotations.NonNull;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 @Service
 public class AssignService {
@@ -60,19 +45,69 @@ public class AssignService {
         this.facultyMapper = facultyMapper;
     }
 
+//    public List<CourseMappingDto> generateMergeCode(MergeDTO mergeDTO) {
+//        String courseCode = mergeDTO.getCourseCode();
+//        List<String> sections = mergeDTO.getSectionIds();
+//        String mappingType = mergeDTO.getMappingType();
+//        Short groupNo = mergeDTO.getGroupNo();
+//
+//        List<String> mergeCodes = new ArrayList<>();
+//
+//        // Collect existing merge codes
+//        List<CourseMapping> courseMappings = courseMappingRepository.findAllMergeCodes();
+//        courseMappings.forEach(courseMapping -> {
+//            if (Boolean.TRUE.equals(courseMapping.getMergeStatus())) {
+//                mergeCodes.add(courseMapping.getMergecode());
+//            }
+//        });
+//
+//        // Convert to integer list
+//        List<Integer> mergeCodesList = new ArrayList<>();
+//        for (String mergeCode : mergeCodes) {
+//            int num = Integer.parseInt(mergeCode.substring(1));
+//            mergeCodesList.add(num);
+//        }
+//
+//        Collections.sort(mergeCodesList);
+//
+//        // Find next merge number
+//        int nextMergeNumber = mergeCodesList.isEmpty() ? 1 :
+//                mergeCodesList.get(mergeCodesList.size() - 1) + 1;
+//
+//        String newMergeCode = "M" + nextMergeNumber;
+//
+//        List<CourseMappingDto> courseMappingDTOs = new ArrayList<>();
+//
+//        for (String section : sections) {
+//            Optional<CourseMapping> courseMapping = courseMappingRepository
+//                    .findBySectionAndCoursecodeAndGroupNoAndMappingType(
+//                            section, courseCode, groupNo, mappingType);
+//
+//            if (courseMapping.isPresent()) {
+//
+//                CourseMapping cm = courseMapping.get();
+//
+//                cm.setMergeStatus(true);
+//                cm.setMergecode(newMergeCode);
+//
+//                courseMappingDTOs.add(courseMappingMapper.toDto(cm));
+//            }
+//        }
+//        return courseMappingDTOs;
+//    }
+
     @Transactional
     public List<CourseMappingDto> saveAllFacultyAssign(List<CourseMapping> courseMappings) {
         List<CourseMappingDto> results = new ArrayList<>();
 
         for (CourseMapping incoming : courseMappings) {
-            // Find the existing record — by ID if available, otherwise by natural key
             CourseMapping existing;
             if (incoming.getCourseMappingId() != null) {
                 existing = courseMappingRepository.findById(incoming.getCourseMappingId())
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "CourseMapping not found with id=" + incoming.getCourseMappingId()));
             } else {
-                existing = courseMappingRepository.findByNaturalKey(
+                existing = courseMappingRepository.findBySectionAndCoursecodeAndGroupNoAndMappingType(
                         incoming.getSection(), incoming.getCoursecode(),
                         incoming.getGroupNo(), incoming.getMappingType()
                 ).orElseThrow(() -> new ResourceNotFoundException(
@@ -82,7 +117,6 @@ public class AssignService {
                         + ", MappingType=" + incoming.getMappingType()));
             }
 
-            // Only update the faculty-related fields on the existing record
             if (incoming.getFacultyUID() != null) existing.setFacultyUID(incoming.getFacultyUID());
             if (incoming.getMergecode() != null) existing.setMergecode(incoming.getMergecode());
             if (incoming.getReserveslot() != null) existing.setReserveslot(incoming.getReserveslot());
@@ -97,7 +131,7 @@ public class AssignService {
     @Transactional
     public CourseMappingDto assignFacultyToCoursesAndSection(CourseMapping courseMapping) {
         CourseMapping existMapping = courseMappingRepository
-                .findByNaturalKey(
+                .findBySectionAndCoursecodeAndGroupNoAndMappingType(
                         courseMapping.getSection(),
                         courseMapping.getCoursecode(),
                         courseMapping.getGroupNo(),
@@ -155,7 +189,6 @@ public class AssignService {
 
         return pairs;
     }
-
 
     @Transactional
     public List<Pair<SectionDto, List<CourseDto>>> assignCoursesToSection(CourseSectionAssignmentDto courseSectionAssignmentDto) {
