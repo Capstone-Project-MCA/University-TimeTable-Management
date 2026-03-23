@@ -77,7 +77,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
             </a>
           </li>
 
-          {/* Courses & Sections */}
+          {/* Courses & Sections
           <li>
             <a
               href="#"
@@ -87,7 +87,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
               <span className="material-symbols-outlined text-[20px] min-w-[20px]">dashboard</span>
               <span className="opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">Courses & Sections</span>
             </a>
-          </li>
+          </li> */}
 
         </ul>
       </div>
