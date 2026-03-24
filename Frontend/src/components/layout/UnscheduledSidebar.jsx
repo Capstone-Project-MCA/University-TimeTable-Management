@@ -17,11 +17,23 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
   const [sections,  setSections]  = useState([])
   const [tickets,   setTickets]   = useState([])
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSection, setSelectedSection] = useState('All')
+  // Filter panel state (tickets tab)
+  const [filterOpen,    setFilterOpen]    = useState(false)
+  const [filterSection, setFilterSection] = useState('All')
+  const [filterFaculty, setFilterFaculty] = useState('All')
+  const [filterCourse,  setFilterCourse]  = useState('All')
 
   const { refreshKey, lastRefreshedEntity } = useDataRefresh()
 
   // Map entity type → tab name (used to scope auto-refresh to the right tab)
   const entityToTab = { course: 'courses', faculty: 'faculties', room: 'rooms', section: 'sections', ticket: 'tickets' }
+
+  // Reset all filters when switching tabs
+  useEffect(() => {
+    setSelectedSection('All'); setSearchQuery('')
+    setFilterOpen(false); setFilterSection('All'); setFilterFaculty('All'); setFilterCourse('All')
+  }, [activeTab])
 
   useEffect(() => {
     setSearchQuery('')
@@ -92,12 +104,23 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
     case 'faculties': rawData = faculties; break
     case 'rooms':     rawData = rooms;     break
     case 'sections':  rawData = sections;  break
-    // Only show tickets that haven't been placed in the grid yet
-    case 'tickets':
+    case 'tickets': {
+      // Only unscheduled — then apply dropdown filters
       rawData = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
+      if (filterSection !== 'All') rawData = rawData.filter(t => (t.Section || t.section) === filterSection)
+      if (filterFaculty !== 'All') rawData = rawData.filter(t => (t.FacultyUID || t.facultyUID) === filterFaculty)
+      if (filterCourse  !== 'All') rawData = rawData.filter(t => (t.Coursecode || t.coursecode) === filterCourse)
       break
-    default:          rawData = []
+    }
+    default: rawData = []
   }
+
+  // Derive filter options from ALL unscheduled tickets (irrespective of other filters)
+  const unscheduledTickets = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
+  const sectionOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Section  || t.section  || '').filter(Boolean))).sort()]
+  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.FacultyUID || t.facultyUID || '').filter(Boolean))).sort()]
+  const courseOptions   = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Coursecode || t.coursecode || '').filter(Boolean))).sort()]
+  const activeFilterCount = [filterSection, filterFaculty, filterCourse].filter(v => v !== 'All').length
 
   // ---------- search filter ----------
   const q = searchQuery.toLowerCase().trim()
@@ -161,12 +184,12 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
         </h2>
       </div>
 
-      {/* Search + Create */}
+      {/* Section dropdown REMOVED — now in filter panel below */}
+
+      {/* Search + Filter toggle */}
       <div className='px-3 pt-3 pb-1 flex items-center gap-1.5'>
         <div className='flex-1 relative'>
-          <span className='material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[16px] pointer-events-none'>
-            search
-          </span>
+          <span className='material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-[16px] pointer-events-none'>search</span>
           <input
             type='text'
             value={searchQuery}
@@ -175,14 +198,60 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
             className='w-full pl-7 pr-2 py-1.5 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 placeholder:text-slate-400 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all'
           />
         </div>
-        <button
-          onClick={handleCreate}
-          title={`Add new ${activeTab.slice(0, -1)}`}
-          className='w-7 h-7 flex items-center justify-center rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-primary hover:bg-primary/10 hover:border-primary/30 transition-all shrink-0'
-        >
-          <span className='material-symbols-outlined text-[16px]'>add</span>
-        </button>
+        {/* Filter toggle button — only for tickets tab */}
+        {activeTab === 'tickets' && (
+          <button
+            onClick={() => setFilterOpen(p => !p)}
+            title='Filter tickets'
+            className={`relative w-7 h-7 flex items-center justify-center rounded border transition-all shrink-0 ${
+              filterOpen || activeFilterCount > 0
+                ? 'border-primary/50 bg-primary/10 text-primary dark:text-blue-400'
+                : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-500 hover:bg-primary/10 hover:border-primary/30'
+            }`}
+          >
+            <span className='material-symbols-outlined text-[16px]'>tune</span>
+            {activeFilterCount > 0 && (
+              <span className='absolute -top-1.5 -right-1.5 w-3.5 h-3.5 rounded-full bg-primary text-white text-[8px] font-bold flex items-center justify-center'>
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        )}
       </div>
+
+      {/* Collapsible filter panel — tickets tab only */}
+      {activeTab === 'tickets' && filterOpen && (
+        <div className='px-3 pb-2 space-y-1.5'>
+          {/* Section */}
+          {[{ label: 'Section', opts: sectionOptions, val: filterSection, set: setFilterSection },
+            { label: 'Faculty', opts: facultyOptions,  val: filterFaculty, set: setFilterFaculty },
+            { label: 'Course',  opts: courseOptions,   val: filterCourse,  set: setFilterCourse  }
+          ].map(({ label, opts, val, set }) => (
+            <div key={label} className='relative'>
+              <label className='block text-[9px] font-bold uppercase tracking-wider text-slate-400 mb-0.5 ml-0.5'>{label}</label>
+              <select
+                value={val}
+                onChange={e => set(e.target.value)}
+                className='w-full pl-2.5 pr-6 py-1.5 text-[11px] rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-primary/50 focus:ring-1 focus:ring-primary/20 transition-all appearance-none cursor-pointer'
+              >
+                {opts.map(o => <option key={o} value={o}>{o === 'All' ? `All ${label}s` : o}</option>)}
+              </select>
+              <span className='material-symbols-outlined absolute right-1.5 bottom-[5px] text-slate-400 text-[13px] pointer-events-none'>expand_more</span>
+            </div>
+          ))}
+          {/* Clear all */}
+          {activeFilterCount > 0 && (
+            <button
+              onClick={() => { setFilterSection('All'); setFilterFaculty('All'); setFilterCourse('All') }}
+              className='w-full text-[10px] font-bold text-red-500 dark:text-red-400 py-1 rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all flex items-center justify-center gap-1'
+            >
+              <span className='material-symbols-outlined text-[12px]'>filter_list_off</span>
+              Clear all filters
+            </button>
+          )}
+        </div>
+      )}
+
 
       {/* Content */}
       <div className='flex-1 overflow-y-auto px-3 pb-3 pt-1 space-y-2 scrollbar-hide'>
@@ -244,60 +313,84 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
               const tid      = item.ticketId   || item.TicketId   || '?'
               const course   = item.Coursecode || item.coursecode || '—'
               const section  = item.Section    || item.section    || '—'
-              const group    = item.GroupNo    ?? item.groupNo    ?? '?'
-              const type     = item.mappingType || item.MappingType || ''
-              const lno      = item.LectureNo  ?? item.lectureNo  ?? ''
+              const group    = item.GroupNo    ?? item.groupNo    ?? ''
               const faculty  = item.FacultyUID || item.facultyUID || null
               const merged   = !!(item.MergedCode || item.mergedCode)
-              const typeColor = type === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300'
-                : type === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300'
-                : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300'
+              const lno      = item.LectureNo  ?? item.lectureNo  ?? ''
+              // mappingType not in TicketDto — extract from TicketId pattern: ...{type}{lno}$
+              const typeMatch = String(tid).match(/([LTP])(\d+)$/)
+              const typeCode  = item.mappingType || item.MappingType || (typeMatch ? typeMatch[1] : '')
+              const typeLabel = { L: 'Lecture', T: 'Tutorial', P: 'Practical' }[typeCode] || typeCode
+              const typePill  =
+                typeCode === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
+                : typeCode === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
+                : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
               const isScheduled = !!(( item.Day || item.day) && (item.Time || item.time))
               return (
                 <div key={tid}
                   draggable
                   onDragStart={e => {
                     e.dataTransfer.effectAllowed = 'move'
-                    // Reliable store — dataTransfer.getData can be empty cross-component
-                    const payload = { ticketId: tid, coursecode: course, type, lectureNo: lno, section, facultyUID: faculty }
-                    setDraggedTicket(payload)
-                    // Also set dataTransfer as backup
+                    setDraggedTicket({ ticketId: tid, coursecode: course, type: typeCode, lectureNo: lno, section, facultyUID: faculty })
                     try { e.dataTransfer.setData('text/plain', tid) } catch {}
                   }}
                   onDragEnd={() => clearDraggedTicket()}
-                  className={`p-2.5 rounded-lg border bg-white dark:bg-slate-800 transition-all cursor-grab active:cursor-grabbing group select-none ${
+                  className={`rounded-xl border bg-white dark:bg-slate-800 transition-all cursor-grab active:cursor-grabbing group select-none overflow-hidden ${
                     isScheduled
-                      ? 'border-emerald-200 dark:border-emerald-800 opacity-50'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-sm'
+                      ? 'border-emerald-200 dark:border-emerald-800 opacity-40'
+                      : 'border-slate-200 dark:border-slate-700 hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-md'
                   }`}
                 >
-                  <div className='flex items-center justify-between mb-1.5'>
-                    <span className='text-[10px] font-mono font-bold text-primary dark:text-blue-400 truncate leading-none'>{tid}</span>
-                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded uppercase ${typeColor} shrink-0 ml-1`}>{type}{lno}</span>
-                  </div>
-                  <p className='text-[11px] font-bold text-slate-800 dark:text-slate-100 leading-tight'>{course}</p>
-                  <div className='flex items-center gap-1.5 mt-1'>
-                    <span className='text-[10px] text-slate-400 dark:text-slate-500'>§{section}</span>
-                    <span className='text-[10px] text-slate-300 dark:text-slate-600'>·</span>
-                    <span className='text-[10px] text-slate-400 dark:text-slate-500'>G{group}</span>
-                    {merged && (
-                      <>
-                        <span className='text-[10px] text-slate-300 dark:text-slate-600'>·</span>
-                        <span className='text-[10px] font-bold text-purple-500 dark:text-purple-400 flex items-center gap-0.5'>
-                          <span className='material-symbols-outlined text-[10px]'>merge</span>merged
-                        </span>
-                      </>
-                    )}
-                  </div>
-                  <div className='mt-1.5 flex items-center justify-between'>
-                    <div>
+                  {/* Coloured top stripe */}
+                  <div className={`h-1 w-full ${
+                    typeCode === 'L' ? 'bg-blue-400' : typeCode === 'T' ? 'bg-purple-400' : 'bg-emerald-400'
+                  }`} />
+
+                  <div className='p-2.5'>
+                    {/* Row 1: Course + type pill */}
+                    <div className='flex items-start justify-between gap-1 mb-2'>
+                      <p className='text-[12px] font-extrabold text-slate-800 dark:text-slate-100 leading-tight'>{course}</p>
+                      <span className={`text-[8px] font-bold px-1.5 py-0.5 rounded-full border uppercase shrink-0 ${typePill}`}>
+                        {typeLabel || '—'}
+                      </span>
+                    </div>
+
+                    {/* Row 2: Section · Group */}
+                    <div className='flex items-center gap-2 text-[10px] text-slate-500 dark:text-slate-400 mb-1.5'>
+                      <span className='flex items-center gap-0.5'>
+                        <span className='material-symbols-outlined text-[11px] text-slate-400'>class</span>
+                        <span>Section <b className='text-slate-700 dark:text-slate-200 font-semibold'>{section}</b></span>
+                      </span>
+                      <span className='text-slate-300 dark:text-slate-600'>·</span>
+                      <span className='flex items-center gap-0.5'>
+                        <span className='material-symbols-outlined text-[11px] text-slate-400'>group</span>
+                        <span>Group <b className='text-slate-700 dark:text-slate-200 font-semibold'>{group}</b></span>
+                      </span>
+                    </div>
+
+                    {/* Row 3: Lecture number */}
+                    <div className='flex items-center justify-between'>
+                      <span className='text-[10px] text-slate-500 dark:text-slate-400 flex items-center gap-0.5'>
+                        <span className='material-symbols-outlined text-[11px] text-slate-400'>numbers</span>
+                        <span>{typeLabel || 'Slot'} <b className='text-slate-700 dark:text-slate-200 font-semibold'>#{lno}</b></span>
+                        {merged && (
+                          <span className='ml-1.5 flex items-center gap-0.5 text-[9px] font-bold text-purple-500 dark:text-purple-400 border border-purple-200 dark:border-purple-800 px-1 rounded-full'>
+                            <span className='material-symbols-outlined text-[9px]'>merge</span>Merged
+                          </span>
+                        )}
+                      </span>
+                      {/* Drag hint */}
+                      <span className='material-symbols-outlined text-[13px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity'>drag_indicator</span>
+                    </div>
+
+                    {/* Row 4: Faculty */}
+                    <div className='mt-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-700/60 flex items-center gap-1'>
+                      <span className='material-symbols-outlined text-[11px] text-slate-400'>person</span>
                       {faculty
-                        ? <span className='text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 px-1.5 py-0.5 rounded'>{faculty}</span>
-                        : <span className='text-[10px] text-slate-400 italic'>No faculty</span>
+                        ? <span className='text-[10px] font-mono font-semibold text-emerald-700 dark:text-emerald-400'>{faculty}</span>
+                        : <span className='text-[10px] text-slate-400 italic'>No faculty assigned</span>
                       }
                     </div>
-                    {/* drag hint icon */}
-                    <span className='material-symbols-outlined text-[12px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity'>drag_indicator</span>
                   </div>
                 </div>
               )

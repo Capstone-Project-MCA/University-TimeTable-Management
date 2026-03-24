@@ -49,37 +49,72 @@ function typeBg(type) {
 
 /* ── mini ticket card displayed inside a grid cell ─────────────────────── */
 function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
-  const type = ticket.mappingType || ticket.MappingType || '';
-  const tid  = ticket.TicketId || ticket.ticketId;
+  // mappingType not in TicketDto — extract from TicketId
+  const tid  = ticket.TicketId || ticket.ticketId || '';
+  const typeMatch = String(tid).match(/([LTP])(\d+)$/);
+  const type = ticket.mappingType || ticket.MappingType || (typeMatch ? typeMatch[1] : '');
+  const typeShort = { L: 'Lec', T: 'Tut', P: 'Prac' }[type] || type;
+  const accentBar = type === 'L' ? 'bg-blue-400' : type === 'T' ? 'bg-purple-400' : 'bg-emerald-400';
+  const bgCard    = type === 'L'
+    ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-800'
+    : type === 'T'
+    ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
+    : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
+  const course    = ticket.Coursecode  || ticket.coursecode  || '—';
+  const section   = ticket.Section     || ticket.section     || '—';
+  const group     = ticket.GroupNo     ?? ticket.groupNo     ?? '';
+  const lno       = ticket.LectureNo   ?? ticket.lectureNo   ?? '';
+  const faculty   = ticket.FacultyUID  || ticket.facultyUID  || null;
+
   return (
     <div
       draggable
       onDragStart={e => onDragStart(e, ticket)}
       onDragEnd={() => clearDraggedTicket()}
-      className={`group relative rounded border text-[9px] font-bold px-1.5 py-1 cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] ${typeBg(type)}`}
-      title={`${ticket.Coursecode || ticket.coursecode} · ${ticket.Section || ticket.section} · ${ticket.FacultyUID || ticket.facultyUID || 'No faculty'}`}
+      className={`group relative rounded border text-[9px] font-bold cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-hidden ${bgCard}`}
+      title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}`}
     >
-      {/* × remove button — shown on hover, top-right */}
+      {/* Coloured left accent */}
+      <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentBar}`} />
+
+      {/* × remove button — larger, always slightly visible */}
       <button
         onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
         onClick={e => { e.stopPropagation(); onUnschedule(tid); }}
-        title="Remove from grid (return to panel)"
-        className="absolute -top-1.5 -right-1.5 z-10 w-4 h-4 rounded-full bg-slate-600 dark:bg-slate-500 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500 dark:hover:bg-red-500 shadow"
+        title="Remove from grid"
+        className="absolute -top-1.5 -right-1.5 z-10 w-5 h-5 rounded-full bg-slate-500 dark:bg-slate-400 text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-110 shadow"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 9, fontVariationSettings: "'FILL' 1, 'wght' 700" }}>close</span>
+        <span className="material-symbols-outlined" style={{ fontSize: 12, fontVariationSettings: "'FILL' 1,'wght' 700" }}>close</span>
       </button>
 
-      {/* drag handle hint */}
-      <span className="material-symbols-outlined text-[8px] absolute bottom-0.5 right-0.5 opacity-0 group-hover:opacity-40 transition-opacity">drag_indicator</span>
+      <div className="pl-2.5 pr-1.5 py-1.5">
+        {/* Course + type badge */}
+        <div className="flex items-center gap-1 mb-1">
+          <span className="font-extrabold text-slate-800 dark:text-slate-100 truncate text-[10px] leading-tight">{course}</span>
+          <span className={`ml-auto shrink-0 text-[8px] font-bold px-1 rounded ${
+            type === 'L' ? 'bg-blue-400 text-white' : type === 'T' ? 'bg-purple-400 text-white' : 'bg-emerald-400 text-white'
+          }`}>{typeShort}</span>
+        </div>
 
-      <p className="font-extrabold text-slate-800 dark:text-slate-100 truncate leading-tight pr-2">{ticket.Coursecode || ticket.coursecode}</p>
-      <div className="flex items-center gap-1 mt-0.5 opacity-70">
-        <span className={`px-1 rounded text-white text-[8px] font-bold ${typeColor(type)}`}>{type}{ticket.LectureNo || ticket.lectureNo}</span>
-        <span className="text-slate-500 dark:text-slate-400 truncate">{ticket.Section || ticket.section}</span>
+        {/* Section · Group */}
+        <div className="flex items-center gap-1 text-[8px] text-slate-500 dark:text-slate-400 leading-tight mb-0.5">
+          <span className="material-symbols-outlined text-[9px]">class</span>
+          <span>Sec {section}</span>
+          <span className="opacity-40">·</span>
+          <span className="material-symbols-outlined text-[9px]">group</span>
+          <span>G{group}</span>
+          <span className="opacity-40">·</span>
+          <span className="font-semibold text-slate-600 dark:text-slate-300">#{lno}</span>
+        </div>
+
+        {/* Faculty */}
+        {faculty && (
+          <div className="flex items-center gap-0.5 text-[8px] text-slate-400 truncate leading-tight">
+            <span className="material-symbols-outlined text-[9px]">person</span>
+            <span className="font-mono">{faculty}</span>
+          </div>
+        )}
       </div>
-      {(ticket.FacultyUID || ticket.facultyUID) && (
-        <p className="text-slate-400 dark:text-slate-500 truncate mt-0.5">{ticket.FacultyUID || ticket.facultyUID}</p>
-      )}
     </div>
   );
 }
