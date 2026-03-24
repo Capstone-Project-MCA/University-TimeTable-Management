@@ -1,0 +1,32 @@
+﻿diff --cc Frontend/src/components/Assigns/MergeSections.jsx
+index bc9162e,4286881..0000000
+--- a/Frontend/src/components/Assigns/MergeSections.jsx
++++ b/Frontend/src/components/Assigns/MergeSections.jsx
+@@@ -310,12 -313,18 +312,27 @@@ export default function MergeSections(
+          existingMergeCode: selectedGroup,
+          groupNo: selectedGroupNo
+        });
+++<<<<<<< HEAD
+ +      // Backend returns a List<CourseMappingDto>, so res.data is an array
+ +      const mappingsReturned = res.data;
+ +      const mergeCode = mappingsReturned.length > 0 
+ +        ? (mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].mergeCode || mappingsReturned[0].MergeCode || "UNKNOWN") 
+ +        : "UNKNOWN";
+ +      setLastMerge({ mergeCode });
+++=======
++       const { mergeCode } = res.data;
++       const entry = {
++         id: mergeLog.length + 1,
++         mergeCode,
++         course: getCourseCode(selectedCourse),
++         courseTitle: getCourseTitle(selectedCourse),
++         sections: [...selectedSections, ...(selectedGroup ? groupMap[selectedGroup] : [])],
++         groupNo: selectedGroupNo,
++         timestamp: new Date().toLocaleTimeString(),
++       };
++       setMergeLog((p) => [entry, ...p]);
++       setLastMerge(entry);
+++>>>>>>> f4b4447 (Fixed Course Mapping visibility casing bug)
+        setShowToast(true);
+        setSelectedSections([]);
+        setSelectedGroup(null);

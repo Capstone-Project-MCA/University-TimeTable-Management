@@ -17,10 +17,12 @@ const colorBg = {
 };
 const getColor = (s) => COLORS[[...(s || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
 
-const mappingCourseCode = (m) => m.Coursecode ?? m.coursecode ?? "";
-const mappingSection = (m) => m.Section ?? m.section ?? "";
-const mappingGroupNo = (m) => m.GroupNo ?? m.groupNo ?? m.groupno ?? null;
-const sectionRowId = (s) => s.SectionId ?? s.sectionId ?? "";
+const mappingCourseCode = (m) => m?.Coursecode ?? m?.coursecode ?? m?.CourseCode ?? m?.courseCode ?? "";
+const mappingSection = (m) => m?.Section ?? m?.section ?? m?.SectionId ?? m?.sectionId ?? "";
+const mappingGroupNo = (m) => m?.GroupNo ?? m?.groupNo ?? m?.groupno ?? null;
+const sectionRowId = (s) => s?.SectionId ?? s?.sectionId ?? s?.Section ?? s?.section ?? "";
+const getCourseCode = (c) => c?.CourseCode ?? c?.courseCode ?? c?.coursecode ?? "";
+const getCourseTitle = (c) => c?.CourseTitle ?? c?.courseTitle ?? c?.coursetitle ?? "";
 
 export default function MergeSections() {
   const [courses, setCourses] = useState([]);
@@ -107,14 +109,14 @@ export default function MergeSections() {
   const q = query.toLowerCase().trim();
   const suggestions = q.length > 0
     ? courses.filter((c) =>
-        (c.CourseCode || "").toLowerCase().includes(q) ||
-        (c.CourseTitle || "").toLowerCase().includes(q)
+        getCourseCode(c).toLowerCase().includes(q) ||
+        getCourseTitle(c).toLowerCase().includes(q)
       ).slice(0, 10)
     : [];
 
   // ── Compute Groups and Sections ──
   const relatedMappings = selectedCourse
-    ? mappings.filter((m) => mappingCourseCode(m) === selectedCourse.CourseCode)
+    ? mappings.filter((m) => mappingCourseCode(m) === getCourseCode(selectedCourse))
     : [];
 
   // Extract distinct group numbers available for this course
@@ -147,7 +149,7 @@ export default function MergeSections() {
     : relatedMappings;
 
   // When editing, also include sections that belong to the group being edited as "available"
-  const editingGroupSections = editingGroup ? new Set(groupMap[editingGroup] || []) : new Set();
+  const editingGroupSections = editingGroup && groupMap[editingGroup] ? new Set(groupMap[editingGroup]) : new Set();
 
   // Build L/T/P info map per section from mappings
   const sectionLTPMap = {};
@@ -218,8 +220,8 @@ export default function MergeSections() {
     
     if (groupMapping) {
        // Set the correct course
-       const mappedCourseCode = groupMapping.Coursecode ?? groupMapping.coursecode;
-       const crs = courses.find(c => c.CourseCode === mappedCourseCode);
+       const mappedCourseCode = mappingCourseCode(groupMapping);
+       const crs = courses.find(c => getCourseCode(c) === mappedCourseCode);
        if (crs) {
            setSelectedCourse(crs);
            setQuery("");
@@ -265,7 +267,7 @@ export default function MergeSections() {
     setSectionError("");
     try {
       await axios.put(`http://localhost:8080/merge/update-merge/${editingGroup}`, {
-        courseCode: selectedCourse.CourseCode,
+        courseCode: getCourseCode(selectedCourse),
         sectionIds: editSections,
         groupNo: selectedGroupNo
       });
@@ -305,7 +307,7 @@ export default function MergeSections() {
     setSectionError("");
     try {
       const res = await axios.post("http://localhost:8080/merge/merge-section", {
-        courseCode: selectedCourse.CourseCode,
+        courseCode: getCourseCode(selectedCourse),
         sectionIds: selectedSections,
         existingMergeCode: selectedGroup,
         groupNo: selectedGroupNo
@@ -447,8 +449,8 @@ export default function MergeSections() {
                             className="w-full px-5 py-3 text-left hover:bg-primary/5 flex items-center gap-3 transition-colors group"
                           >
                             <div className="flex-1 truncate">
-                                <span className="text-sm font-black text-slate-800 dark:text-slate-100">{c.CourseCode}</span>
-                                <span className="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{c.CourseTitle}</span>
+                                <span className="text-sm font-black text-slate-800 dark:text-slate-100">{getCourseCode(c)}</span>
+                                <span className="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{getCourseTitle(c)}</span>
                             </div>
                           </button>
                         ))
@@ -468,8 +470,8 @@ export default function MergeSections() {
                       <span className="material-symbols-outlined text-sm">close</span>
                     </button>
                 </div>
-                <h3 className="text-xl font-black">{selectedCourse.CourseTitle}</h3>
-                <p className="text-blue-100 font-bold uppercase text-xs">{selectedCourse.CourseCode}</p>
+                <h3 className="text-xl font-black">{getCourseTitle(selectedCourse)}</h3>
+                <p className="text-blue-100 font-bold uppercase text-xs">{getCourseCode(selectedCourse)}</p>
               </div>
             )}
 
