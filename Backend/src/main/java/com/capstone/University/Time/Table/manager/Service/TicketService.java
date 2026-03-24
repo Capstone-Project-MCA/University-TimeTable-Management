@@ -38,6 +38,85 @@ public class TicketService {
         this.ticketMapper = ticketMapper;
     }
 
+    public List<TicketDto> generateMergedSectionsTicket(List<CourseMapping> courseMappings){
+        List<Ticket> ticketList = new ArrayList<>();
+        List<TicketDto> ticketDtoList = new ArrayList<>();
+
+        for (CourseMapping courseMapping : courseMappings) {
+            Long courseMappingId = courseMapping.getCourseMappingId();
+            String courseCode = courseMapping.getCoursecode();
+            String sectionId = courseMapping.getSection();
+            Short groupNo = courseMapping.getGroupNo();
+            String mappingType = courseMapping.getMappingType();
+
+            if(courseMapping.getFacultyUID() == null) continue;
+
+            String facultyUID = courseMapping.getFacultyUID();
+            Short L = courseMapping.getL();
+            Short T = courseMapping.getT();
+            Short P = courseMapping.getP();
+            String mergeCode = courseMapping.getMergecode();
+            Boolean MergeStatus = courseMapping.getMergeStatus();
+
+            if(MergeStatus == true){
+                switch (mappingType) {
+                    case "L" -> {
+                        for (int i = 1; i <= L; i++) {
+                            Ticket ticket = new Ticket();
+                            String TicketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            ticket.setTicketId(TicketId);
+                            ticket.setGroupNo(groupNo);
+                            ticket.setCoursecode(courseCode);
+                            ticket.setSection(sectionId);
+                            ticket.setLectureNo((short) i);
+                            ticket.setFacultyUID(facultyUID);
+                            ticket.setCourseMappingId(courseMappingId);
+                            ticket.setMergedCode(courseMapping.getMergecode());
+                            ticketList.add(ticket);
+                        }
+                    }
+                    case "T" -> {
+                        for (int i = 1; i <= T; i++) {
+                            Ticket ticket = new Ticket();
+                            String TicketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            ticket.setTicketId(TicketId);
+                            ticket.setGroupNo(groupNo);
+                            ticket.setCoursecode(courseCode);
+                            ticket.setSection(sectionId);
+                            ticket.setLectureNo((short) i);
+                            ticket.setFacultyUID(facultyUID);
+                            ticket.setCourseMappingId(courseMappingId);
+                            ticket.setMergedCode(courseMapping.getMergecode());
+                            ticketList.add(ticket);
+                        }
+                    }
+                    case "P" -> {
+                        for (int i = 1; i <= P; i++) {
+                            Ticket ticket = new Ticket();
+                            String TicketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            ticket.setTicketId(TicketId);
+                            ticket.setGroupNo(groupNo);
+                            ticket.setCoursecode(courseCode);
+                            ticket.setSection(sectionId);
+                            ticket.setLectureNo((short) i);
+                            ticket.setFacultyUID(facultyUID);
+                            ticket.setCourseMappingId(courseMappingId);
+                            ticket.setMergedCode(courseMapping.getMergecode());
+                            ticketList.add(ticket);
+                        }
+                    }
+                }
+            }
+        }
+        ticketRepository.saveAll(ticketList);
+        ticketList.forEach(ticket -> {
+            TicketDto tickerDto = ticketMapper.toDto(ticket);
+            ticketDtoList.add(tickerDto);
+        });
+
+        return ticketDtoList;
+    }
+
     public List<TicketDto> generateTicket(List<CourseMapping> courseMappings) {
         List<Ticket> ticketList = new ArrayList<>();
         List<TicketDto> ticketDtoList = new ArrayList<>();
@@ -57,6 +136,10 @@ public class TicketService {
             Short P = courseMapping.getP();
             Boolean MergeStatus = courseMapping.getMergeStatus();
 
+            if(MergeStatus == true){
+                continue;
+            }
+
             switch (mappingType) {
                 case "L" -> {
                     for (int i = 1; i <= L; i++) {
@@ -69,9 +152,6 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUID(facultyUID);
                         ticket.setCourseMappingId(courseMappingId);
-                        if (MergeStatus == true) {
-                            ticket.setMergedCode(courseMapping.getMergecode());
-                        }
                         ticketList.add(ticket);
                     }
                 }
@@ -86,9 +166,6 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUID(facultyUID);
                         ticket.setCourseMappingId(courseMappingId);
-                        if (MergeStatus == true) {
-                            ticket.setMergedCode(courseMapping.getMergecode());
-                        }
                         ticketList.add(ticket);
                     }
                 }
@@ -103,9 +180,6 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUID(facultyUID);
                         ticket.setCourseMappingId(courseMappingId);
-                        if (MergeStatus == true) {
-                            ticket.setMergedCode(courseMapping.getMergecode());
-                        }
                         ticketList.add(ticket);
                     }
                 }
@@ -126,7 +200,7 @@ public class TicketService {
         return generateTicket(allMappings);
     }
 
-    public List<TicketDto> getAllTickers(){
+    public List<TicketDto> getAllTickets(){
         List<TicketDto> ticketDtoList = new ArrayList<>();
         List<Ticket> ticketList = ticketRepository.findAll();
 

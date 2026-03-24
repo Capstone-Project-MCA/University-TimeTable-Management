@@ -1,15 +1,17 @@
 package com.capstone.University.Time.Table.manager.Service;
 
-import com.capstone.University.Time.Table.manager.DTO.MergeSectionsResponse;
+import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
+import com.capstone.University.Time.Table.manager.DTO.MergeDTO;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
+import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class MergeService {
@@ -27,108 +29,128 @@ public class MergeService {
     }
 
     @Transactional
-    public MergeSectionsResponse mergeSections(String courseCode, List<String> sectionIds, String existingMergeCode, Short groupNo) {
-        if (courseCode == null || courseCode.isBlank()) {
-            throw new IllegalArgumentException("Course code is required");
-        }
+    public List<CourseMappingDto> mergeSection(MergeDTO mergeDTO) {
+
+        String courseCode = mergeDTO.getCourseCode();
+        List<String> sectionIds = mergeDTO.getSectionIds();
+        Short groupNo = mergeDTO.getGroupNo();
+        String mappingType = mergeDTO.getMappingType();
+        String existingMergeCode = mergeDTO.getExistingMergeCode();
+
         if (sectionIds == null || sectionIds.isEmpty()) {
-            throw new IllegalArgumentException("At least one section is required");
+            throw new IllegalArgumentException("At least one section ID is required.");
         }
 
-        // 1. Find CourseMapping rows matching the course + sections (+ optional groupNo)
-        List<CourseMapping> mappingsToMerge;
-        if (groupNo != null) {
-            mappingsToMerge = courseMappingRepository
-                    .findByCoursecodeAndSectionInAndGroupNo(courseCode, sectionIds, groupNo);
+        for (String sectionId : sectionIds) {
+            if (!courseMappingRepository.existsBySection(sectionId)) {
+                throw new ResourceNotFoundException("Section " + sectionId + " not found in mapping");
+            }
+        }
+
+        List<CourseMapping> existingGroupMappings = new ArrayList<>();
+        if (existingMergeCode != null && !existingMergeCode.isEmpty()) {
+            existingGroupMappings = courseMappingRepository.findByMergecode(existingMergeCode);
+            if (existingGroupMappings.isEmpty()) {
+                throw new ResourceNotFoundException("Existing merge group " + existingMergeCode + " not found.");
+            }
+        }
+
+        List<CourseMapping> newMappings =
+                courseMappingRepository.findFlexibleMappings(
+                        courseCode,
+                        sectionIds,
+                        groupNo,
+                        mappingType
+                );
+
+        if (newMappings.isEmpty()) {
+            throw new ResourceNotFoundException("No matching course mappings found for the given sections.");
+        }
+
+        String mergeCode;
+        if (existingMergeCode != null && !existingMergeCode.isEmpty()) {
+            mergeCode = existingMergeCode;
         } else {
-            mappingsToMerge = courseMappingRepository
-                    .findByCoursecodeAndSectionIn(courseCode, sectionIds);
+            int mergeCodeInt = 101;
+            String maximumMergeCode = courseMappingRepository.findMaxMergecode();
+
+            if (maximumMergeCode != null && maximumMergeCode.startsWith("M")) {
+                try {
+                    int last = Integer.parseInt(maximumMergeCode.substring(1));
+                    mergeCodeInt = Math.max(mergeCodeInt, last + 1);
+                } catch (NumberFormatException ignored) {}
+            }
+            mergeCode = "M" + mergeCodeInt;
         }
 
-        if (mappingsToMerge.isEmpty()) {
-            throw new IllegalArgumentException(
-                    "No course mappings found for course " + courseCode +
-                            " with the given sections: " + sectionIds);
+        for (CourseMapping courseMapping : newMappings) {
+            courseMapping.setMergecode(mergeCode);
+            courseMapping.setMergeStatus(true);
         }
 
-        // 2. Rule 2: Validation - No section should be already merged for this course
-        // (If extending, ignore sections already in the existing group)
-        for (CourseMapping m : mappingsToMerge) {
-            String mCode = m.getMergecode();
-            Boolean mStatus = m.getMergeStatus();
-            if (mStatus != null && mStatus && mCode != null) {
-                if (existingMergeCode == null || !existingMergeCode.equalsIgnoreCase(mCode)) {
-                    throw new IllegalArgumentException(
-                            "Section '" + m.getSection() + "' is already merged with code '" + mCode +
-                                    "' for course '" + courseCode + "'.");
-                }
-            }
+        courseMappingRepository.saveAll(newMappings);
+
+        List<CourseMapping> allGroupMappings = courseMappingRepository.findByMergecode(mergeCode);
+
+        return allGroupMappings.stream()
+                .map(courseMappingMapper::toDto)
+                .toList();
+    }
+
+    @Transactional
+    public List<CourseMappingDto> updateMergeSection(String mergeCode, MergeDTO mergeDTO) {
+        List<CourseMapping> existingMappings = courseMappingRepository.findByMergecode(mergeCode);
+
+        if (existingMappings.isEmpty()) {
+            throw new ResourceNotFoundException("Merge group " + mergeCode + " not found.");
         }
 
-        // 3. Determine Merge Code
-        String targetMergeCode;
-        if (existingMergeCode != null && !existingMergeCode.isBlank()) {
-            // Verify existing merge code exists for this course
-            List<CourseMapping> existingGroup = courseMappingRepository.findByMergecode(existingMergeCode);
-            if (existingGroup.isEmpty()) {
-                throw new IllegalArgumentException("Existing merge group " + existingMergeCode + " not found.");
-            }
-            if (!existingGroup.get(0).getCoursecode().equals(courseCode)) {
-                throw new IllegalArgumentException("Merge group " + existingMergeCode + " belongs to a different course.");
-            }
-            targetMergeCode = existingMergeCode;
-        } else {
-            if (sectionIds.size() < 2) {
-                throw new IllegalArgumentException("At least 2 sections are required for a NEW merge.");
-            }
-            targetMergeCode = generateNextMergeCode();
+        for (CourseMapping courseMapping : existingMappings) {
+            courseMapping.setMergecode(null);
+            courseMapping.setMergeStatus(false);
+        }
+        courseMappingRepository.saveAll(existingMappings);
+
+        String courseCode = mergeDTO.getCourseCode();
+        List<String> sectionIds = mergeDTO.getSectionIds();
+        Short groupNo = mergeDTO.getGroupNo();
+        String mappingType = mergeDTO.getMappingType();
+
+        List<CourseMapping> newMappings =
+                courseMappingRepository.findFlexibleMappings(
+                        courseCode,
+                        sectionIds,
+                        groupNo,
+                        mappingType
+                );
+
+        if (newMappings.isEmpty()) {
+            throw new ResourceNotFoundException("No matching course mappings found for the given sections.");
         }
 
-        // 4. Update Mergecode and MergeStatus on each row
-        mappingsToMerge.forEach(m -> {
-            m.setMergecode(targetMergeCode);
-            m.setMergeStatus(true);
-        });
-        courseMappingRepository.saveAll(mappingsToMerge);
+        for (CourseMapping cm : newMappings) {
+            cm.setMergecode(mergeCode);
+            cm.setMergeStatus(true);
+        }
+        courseMappingRepository.saveAll(newMappings);
 
-        return new MergeSectionsResponse(
-                targetMergeCode,
-                courseCode,
-                sectionIds,
-                mappingsToMerge.size(),
-                "Successfully " + (existingMergeCode != null ? "extended" : "merged") + " Sections with code " + targetMergeCode
-        );
+        return newMappings.stream()
+                .map(courseMappingMapper::toDto)
+                .toList();
     }
 
     @Transactional
     public void unmergeGroup(String mergeCode) {
         List<CourseMapping> mappings = courseMappingRepository.findByMergecode(mergeCode);
+
         if (mappings.isEmpty()) {
             throw new IllegalArgumentException("Merge group " + mergeCode + " not found.");
         }
+
         mappings.forEach(m -> {
             m.setMergecode(null);
             m.setMergeStatus(false);
         });
         courseMappingRepository.saveAll(mappings);
-    }
-
-    private String generateNextMergeCode() {
-        Optional<String> maxCode = courseMappingRepository.findMaxMergecode();
-        int nextNumber = 101; // default start
-
-        if (maxCode.isPresent() && maxCode.get().startsWith("M")) {
-            try {
-                String numericPart = maxCode.get().replaceAll("[^0-9]", "");
-                if (!numericPart.isEmpty()) {
-                    int current = Integer.parseInt(numericPart);
-                    nextNumber = current + 1;
-                }
-            } catch (NumberFormatException ignored) {
-                // keep default
-            }
-        }
-
-        return "M" + nextNumber;
     }
 }

@@ -24,7 +24,7 @@ public class CourseMapping {
     private Long courseMappingId;
 
     @Column(name = "Section", length = 5, nullable = false)
-    private String Section;
+    private String section;
 
     @Column(name = "Coursecode", length = 7, nullable = false)
     private String Coursecode;

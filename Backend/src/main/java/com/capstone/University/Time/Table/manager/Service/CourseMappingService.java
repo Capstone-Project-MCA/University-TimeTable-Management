@@ -1,7 +1,6 @@
 package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
-import com.capstone.University.Time.Table.manager.DTO.MergeSectionsResponse;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;

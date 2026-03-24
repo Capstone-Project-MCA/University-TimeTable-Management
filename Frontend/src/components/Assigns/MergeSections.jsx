@@ -45,6 +45,11 @@ export default function MergeSections() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedGroupNo, setSelectedGroupNo] = useState(null);
 
+  // ── Edit mode state ──
+  const [editingGroup, setEditingGroup] = useState(null);
+  const [editSections, setEditSections] = useState([]);
+  const [updating, setUpdating] = useState(false);
+
   const { refreshKey } = useDataRefresh();
 
   const updateDropdownPos = useCallback(() => {
@@ -119,11 +124,18 @@ export default function MergeSections() {
   )].sort((a, b) => a - b);
 
   const groupMap = {};
+  const groupFacultyMap = {};
   relatedMappings.forEach(m => {
     const code = m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode;
     if (code) {
         if (!groupMap[code]) groupMap[code] = [];
         groupMap[code].push(mappingSection(m));
+        // Collect faculty UIDs per merge group
+        const fuid = m.FacultyUID ?? m.facultyUID ?? null;
+        if (fuid) {
+          if (!groupFacultyMap[code]) groupFacultyMap[code] = new Set();
+          groupFacultyMap[code].add(fuid);
+        }
     }
   });
 
@@ -135,10 +147,28 @@ export default function MergeSections() {
     ? relatedMappings.filter(m => mappingGroupNo(m) === selectedGroupNo)
     : relatedMappings;
 
+  // When editing, also include sections that belong to the group being edited as "available"
+  const editingGroupSections = editingGroup ? new Set(groupMap[editingGroup] || []) : new Set();
+
+  // Build L/T/P info map per section from mappings
+  const sectionLTPMap = {};
+  filteredMappings.forEach(m => {
+    const sec = mappingSection(m);
+    if (!sectionLTPMap[sec]) {
+      sectionLTPMap[sec] = {
+        L: m.L ?? m.l ?? 0,
+        T: m.T ?? m.t ?? 0,
+        P: m.P ?? m.p ?? 0,
+        groupNo: mappingGroupNo(m),
+        mappingType: m.mappingType ?? m.MappingType ?? ""
+      };
+    }
+  });
+
   const availableSections = sections.filter(s => {
     const id = sectionRowId(s);
-    // Only show sections that are MAPPED to this course (and group) but NOT already in a merge group
-    return filteredMappings.some(m => mappingSection(m) === id) && !mergedSectionIds.has(id);
+    // Only show sections that are MAPPED to this course (and group)
+    return filteredMappings.some(m => mappingSection(m) === id);
   });
 
   const handlePickCourse = (course) => {
@@ -170,11 +200,92 @@ export default function MergeSections() {
   };
 
   const handleToggleGroup = (code) => {
+    if (editingGroup) return; // disable group toggling while editing
     setSectionError("");
     if (selectedGroup === code) {
         setSelectedGroup(null);
     } else {
         setSelectedGroup(code);
+    }
+  };
+
+  // ── Edit Group Handlers ──
+  const handleEditGroup = (code, e) => {
+    e.stopPropagation();
+    setSectionError("");
+    
+    // Find the mapping for this merge code
+    const groupMapping = mappings.find(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code);
+    
+    if (groupMapping) {
+       // Set the correct course
+       const mappedCourseCode = groupMapping.Coursecode ?? groupMapping.coursecode;
+       const crs = courses.find(c => c.CourseCode === mappedCourseCode);
+       if (crs) {
+           setSelectedCourse(crs);
+           setQuery("");
+           setShowSuggestions(false);
+       }
+       
+       // Set the correct group No
+       const gn = groupMapping.GroupNo ?? groupMapping.groupno ?? groupMapping.groupNo;
+       setSelectedGroupNo(gn !== undefined && gn !== null ? gn : null);
+    }
+
+    setSelectedGroup(null);
+    setSelectedSections([]);
+    setEditingGroup(code);
+    
+    // Calculate edit sections from global mappings to avoid timing issues with state updates
+    const sectionsInGroup = mappings
+        .filter(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code)
+        .map(m => mappingSection(m));
+    
+    setEditSections([...sectionsInGroup]);
+    
+    // Scroll to top to see sections
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingGroup(null);
+    setEditSections([]);
+    setSectionError("");
+  };
+
+  const handleToggleEditSection = (id) => {
+    setSectionError("");
+    setEditSections((prev) =>
+      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
+    );
+  };
+
+  const handleUpdateGroup = async () => {
+    if (!editingGroup || editSections.length < 2 || updating) return;
+    setUpdating(true);
+    setSectionError("");
+    try {
+      await axios.put(`http://localhost:8080/merge/update-merge/${editingGroup}`, {
+        courseCode: selectedCourse.CourseCode,
+        sectionIds: editSections,
+        groupNo: selectedGroupNo
+      });
+      setShowToast(true);
+      setLastMerge({ mergeCode: editingGroup });
+      setEditingGroup(null);
+      setEditSections([]);
+      const mRes = await axios.get("http://localhost:8080/mappings");
+      setMappings(mRes.data);
+    } catch (err) {
+      console.error("Update Error:", err);
+      if (!err.response) {
+        setSectionError("Connection Error: Please ensure the backend is running.");
+      } else {
+        setSectionError(err.response?.data?.error || err.message || "Update failed.");
+      }
+    } finally {
+      setUpdating(false);
+      setTimeout(() => setShowToast(false), 4000);
     }
   };
 
@@ -207,6 +318,7 @@ export default function MergeSections() {
         course: selectedCourse.CourseCode,
         courseTitle: selectedCourse.CourseTitle,
         sections: [...selectedSections, ...(selectedGroup ? groupMap[selectedGroup] : [])],
+        groupNo: selectedGroupNo,
         timestamp: new Date().toLocaleTimeString(),
       };
       setMergeLog((p) => [entry, ...p]);
@@ -438,11 +550,16 @@ export default function MergeSections() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {existingMergeCodes.map(code => {
                                     const isSelected = selectedGroup === code;
+                                    const facultyIds = groupFacultyMap[code] ? [...groupFacultyMap[code]] : [];
                                     return (
                                         <div 
                                             key={code}
                                             onClick={() => handleToggleGroup(code)}
-                                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer group relative overflow-hidden ${isSelected ? "bg-amber-500/5 border-amber-500 shadow-lg shadow-amber-500/10" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-amber-200"}`}
+                                            className={`p-5 rounded-2xl border-2 transition-all cursor-pointer group relative overflow-hidden ${
+                                                isSelected
+                                                    ? "bg-amber-500/5 border-amber-500 shadow-lg shadow-amber-500/10"
+                                                    : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-amber-200"
+                                            }`}
                                         >
                                             <div className="flex items-center justify-between mb-3">
                                                 <div className="flex items-center gap-3">
@@ -451,7 +568,15 @@ export default function MergeSections() {
                                                     </div>
                                                     <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{code}</h4>
                                                 </div>
+                                                {!editingGroup && (
                                                 <div className="flex items-center gap-2">
+                                                    <button 
+                                                        onClick={(e) => handleEditGroup(code, e)}
+                                                        className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-500 transition-colors"
+                                                        title="Update Group"
+                                                    >
+                                                        <span className="material-symbols-outlined text-sm">edit</span>
+                                                    </button>
                                                     <button 
                                                         onClick={(e) => { e.stopPropagation(); handleToggleGroup(code); }}
                                                         className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-amber-500 text-white" : "hover:bg-amber-100 text-amber-500"}`}
@@ -467,15 +592,23 @@ export default function MergeSections() {
                                                         <span className="material-symbols-outlined text-sm">delete</span>
                                                     </button>
                                                 </div>
+                                                )}
                                             </div>
-                                            <div className="flex flex-wrap gap-1">
+                                            <div className="flex flex-wrap gap-1.5">
                                                 {groupMap[code].map(sId => (
                                                     <span key={sId} className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-[9px] font-black text-slate-500">{sId}</span>
                                                 ))}
                                             </div>
-                                            {isSelected && (
-                                                <div className="absolute top-0 right-0 p-1">
-                                                    <span className="material-symbols-outlined text-amber-500 text-xs">star</span>
+                                            {/* Faculty IDs */}
+                                            {facultyIds.length > 0 && (
+                                                <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className="flex items-center gap-2 flex-wrap">
+                                                        <span className="material-symbols-outlined text-[12px] text-indigo-400">person</span>
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Faculty:</span>
+                                                        {facultyIds.map(fid => (
+                                                            <span key={fid} className="px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 text-[9px] font-black text-indigo-600 dark:text-indigo-300">{fid}</span>
+                                                        ))}
+                                                    </div>
                                                 </div>
                                             )}
                                         </div>
@@ -488,22 +621,58 @@ export default function MergeSections() {
                     {/* ── Individual Sections ── */}
                     {availableSections.length > 0 && (
                         <div className="space-y-4">
-                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">Individual Sections</h3>
+                            <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
+                                {editingGroup ? "Available Sections (click to add to group)" : "Individual Sections"}
+                            </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {availableSections.map((s) => {
                                     const id = sectionRowId(s);
-                                    const isSelected = selectedSections.includes(id);
+                                    // In edit mode, use editSections; otherwise use selectedSections
+                                    const isSelected = editingGroup
+                                      ? editSections.includes(id)
+                                      : selectedSections.includes(id);
+                                    // Skip rendering sections already in the editing group's chip list
+                                    if (editingGroup && editingGroupSections.has(id)) return null;
+                                    const ltp = sectionLTPMap[id];
+                                    
+                                    // Find if section belongs to another group
+                                    const sectionMergeCode = Object.keys(groupMap).find(code => groupMap[code].includes(id));
+                                    const isInOtherGroup = sectionMergeCode && sectionMergeCode !== editingGroup;
+
                                     return (
                                         <div 
                                         key={id} 
-                                        onClick={() => handleToggleSection(id)}
-                                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${isSelected ? "bg-primary/5 border-primary shadow-lg shadow-primary/10" : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-primary/20"}`}
+                                        onClick={() => editingGroup ? handleToggleEditSection(id) : handleToggleSection(id)}
+                                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
+                                            editingGroup
+                                              ? isSelected
+                                                ? "bg-blue-500/5 border-blue-500 shadow-lg shadow-blue-500/10"
+                                                : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-blue-200"
+                                              : isSelected
+                                                ? "bg-primary/5 border-primary shadow-lg shadow-primary/10"
+                                                : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-primary/20"
+                                        }`}
                                         >
                                         <div className="flex items-center gap-4">
-                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${isSelected ? "bg-primary border-primary text-white" : "border-slate-200"}`}>
+                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
+                                                editingGroup
+                                                  ? isSelected ? "bg-blue-500 border-blue-500 text-white" : "border-slate-200"
+                                                  : isSelected ? "bg-primary border-primary text-white" : "border-slate-200"
+                                            }`}>
                                             {isSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
                                             </div>
-                                            <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{id}</h4>
+                                            <div className="flex-1">
+                                                <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{id}</h4>
+                                                {ltp && (
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        {ltp.L > 0 && <span className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-[8px] font-black text-sky-600 dark:text-sky-300">L:{ltp.L}</span>}
+                                                        {ltp.T > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-600 dark:text-amber-300">T:{ltp.T}</span>}
+                                                        {ltp.P > 0 && <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-[8px] font-black text-emerald-600 dark:text-emerald-300">P:{ltp.P}</span>}
+                                                        {ltp.groupNo != null && <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[8px] font-black text-purple-600 dark:text-purple-300">G:{ltp.groupNo}</span>}
+                                                        {isInOtherGroup && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-700 dark:text-amber-400">In {sectionMergeCode}</span>}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         </div>
                                     );
@@ -511,39 +680,80 @@ export default function MergeSections() {
                             </div>
                         </div>
                     )}
+
+
                   </div>
                 )}
               </div>
 
               {/* ── PERSISTENT MERGE ACTION BAR ── */}
               <div className="absolute bottom-0 left-0 right-0 p-4">
-                <div className="glass px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-white/60 dark:bg-slate-900/60">
-                  <div className="flex items-center gap-4">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${canMergeOrExtend ? "bg-primary text-white" : "bg-slate-100 text-slate-400"}`}>
-                      <span className="material-symbols-outlined text-xl">{selectedGroup ? "add_circle" : "call_merge"}</span>
+                {editingGroup ? (
+                  /* ── Edit Mode Action Bar ── */
+                  <div className="glass px-6 py-4 rounded-3xl border border-blue-200 dark:border-blue-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-blue-50/60 dark:bg-slate-900/60">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${editSections.length >= 2 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400"}`}>
+                        <span className="material-symbols-outlined text-xl">edit</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
+                          Editing {editingGroup} — {editSections.length} Sections
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          {editSections.length >= 2 ? "Ready to update" : "Select at least 2 sections"}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
-                        {selectedSections.length} Sections {selectedGroup ? `+ Group ${selectedGroup}` : "Selected"}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">
-                        {!selectedCourse ? "Search course first" : canMergeOrExtend ? (selectedGroup ? "Ready to Extend" : "Ready to Merge") : "Pick selections"}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      <button 
+                        onClick={handleCancelEdit}
+                        className="px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all border-2 border-slate-200 dark:border-slate-700 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800"
+                      >
+                        Cancel
+                      </button>
+                      <button 
+                        onClick={handleUpdateGroup}
+                        disabled={editSections.length < 2 || updating}
+                        className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                          editSections.length >= 2
+                            ? "bg-blue-500 text-white shadow-xl hover:scale-105 active:scale-95"
+                            : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-50"
+                        }`}
+                      >
+                        {updating ? "Updating..." : "Update Group"}
+                      </button>
                     </div>
                   </div>
-                  
-                  <button 
-                    onClick={handleMerge}
-                    disabled={!canMergeOrExtend || merging}
-                    className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                        canMergeOrExtend 
-                        ? "bg-primary text-white shadow-xl hover:scale-105 active:scale-95" 
-                        : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-50"
-                    }`}
-                  >
-                    {merging ? "Processing..." : (selectedGroup ? "Extend Group" : "Merge Now")}
-                  </button>
-                </div>
+                ) : (
+                  /* ── Normal Merge/Extend Action Bar ── */
+                  <div className="glass px-6 py-4 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-white/60 dark:bg-slate-900/60">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${canMergeOrExtend ? "bg-primary text-white" : "bg-slate-100 text-slate-400"}`}>
+                        <span className="material-symbols-outlined text-xl">{selectedGroup ? "add_circle" : "call_merge"}</span>
+                      </div>
+                      <div>
+                        <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
+                          {selectedSections.length} Sections {selectedGroup ? `+ Group ${selectedGroup}` : "Selected"}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">
+                          {!selectedCourse ? "Search course first" : canMergeOrExtend ? (selectedGroup ? "Ready to Extend" : "Ready to Merge") : "Pick selections"}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <button 
+                      onClick={handleMerge}
+                      disabled={!canMergeOrExtend || merging}
+                      className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
+                          canMergeOrExtend 
+                          ? "bg-primary text-white shadow-xl hover:scale-105 active:scale-95" 
+                          : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-50"
+                      }`}
+                    >
+                      {merging ? "Processing..." : (selectedGroup ? "Extend Group" : "Merge Now")}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -565,8 +775,10 @@ export default function MergeSections() {
                     <tr>
                       <th className="px-6 py-4">Merge ID</th>
                       <th className="px-6 py-4">Course</th>
+                      <th className="px-6 py-4">Group</th>
                       <th className="px-6 py-4">Sections</th>
                       <th className="px-6 py-4">Timestamp</th>
+                      <th className="px-6 py-4">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
@@ -574,12 +786,22 @@ export default function MergeSections() {
                       <tr key={log.id} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-5 font-mono text-xs font-black text-primary">{log.mergeCode}</td>
                         <td className="px-6 py-5 text-sm font-black">{log.course}</td>
+                        <td className="px-6 py-5 text-xs font-bold text-slate-500">{log.groupNo != null ? `G${log.groupNo}` : "All"}</td>
                         <td className="px-6 py-5">
                             <div className="flex flex-wrap gap-1">
                                 {log.sections.map(s => <span key={s} className="px-2 py-0.5 rounded bg-slate-100 text-[8px] font-bold">{s}</span>)}
                             </div>
                         </td>
                         <td className="px-6 py-5 text-[10px] font-mono text-slate-400">{log.timestamp}</td>
+                        <td className="px-6 py-5">
+                            <button
+                              onClick={(e) => handleEditGroup(log.mergeCode, e)}
+                              className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[9px] font-black uppercase tracking-wider hover:bg-blue-600 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1"
+                            >
+                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                              Update
+                            </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
