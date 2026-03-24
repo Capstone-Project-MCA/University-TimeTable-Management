@@ -48,7 +48,10 @@ public class TicketService {
             String sectionId = courseMapping.getSection();
             Short groupNo = courseMapping.getGroupNo();
             String mappingType = courseMapping.getMappingType();
-            String facultyUID = (courseMapping.getFacultyUID() != null) ? courseMapping.getFacultyUID() : null;
+
+            if(courseMapping.getFacultyUID() == null) continue;
+
+            String facultyUID = courseMapping.getFacultyUID();
             Short L = courseMapping.getL();
             Short T = courseMapping.getT();
             Short P = courseMapping.getP();

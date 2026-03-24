@@ -4,6 +4,7 @@ import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
 import com.capstone.University.Time.Table.manager.DTO.MergeSectionsRequest;
 import com.capstone.University.Time.Table.manager.DTO.MergeSectionsResponse;
 import com.capstone.University.Time.Table.manager.Service.CourseMappingService;
+import com.capstone.University.Time.Table.manager.Service.MergeService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -14,7 +15,7 @@ import java.util.Map;
 
 @CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/mappings")
+@RequestMapping("/mappings")
 public class CourseMappingController {
 
     @Autowired
@@ -29,35 +30,5 @@ public class CourseMappingController {
     public ResponseEntity<Void> deleteAllMappings() {
         courseMappingService.deleteAllMappings();
         return ResponseEntity.noContent().build();
-    }
-
-    // ── Merge Sections endpoint ─────────────────────────────
-
-    @PostMapping("/merge")
-    public ResponseEntity<?> mergeSections(@RequestBody MergeSectionsRequest request) {
-        try {
-            MergeSectionsResponse response = courseMappingService.mergeSections(
-                    request.getCourseCode(),
-                    request.getSectionIds(),
-                    request.getExistingMergeCode()
-            );
-            return ResponseEntity.ok(response);
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", e.getMessage())
-            );
-        }
-    }
-
-    @DeleteMapping("/unmerge/{mergeCode}")
-    public ResponseEntity<?> unmergeGroup(@PathVariable String mergeCode) {
-        try {
-            courseMappingService.unmergeGroup(mergeCode);
-            return ResponseEntity.ok(Map.of("message", "Group " + mergeCode + " deleted successfully."));
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", e.getMessage())
-            );
-        }
     }
 }

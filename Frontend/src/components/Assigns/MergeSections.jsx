@@ -19,6 +19,7 @@ const getColor = (s) => COLORS[[...(s || "")].reduce((a, c) => a + c.charCodeAt(
 
 const mappingCourseCode = (m) => m.Coursecode ?? m.coursecode ?? "";
 const mappingSection = (m) => m.Section ?? m.section ?? "";
+const mappingGroupNo = (m) => m.GroupNo ?? m.groupNo ?? m.groupno ?? null;
 const sectionRowId = (s) => s.SectionId ?? s.sectionId ?? "";
 
 export default function MergeSections() {
@@ -42,6 +43,7 @@ export default function MergeSections() {
   const dropdownPortalRef = useRef(null);
   const [dropdownPos, setDropdownPos] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedGroupNo, setSelectedGroupNo] = useState(null);
 
   const { refreshKey } = useDataRefresh();
 
@@ -74,7 +76,7 @@ export default function MergeSections() {
     Promise.all([
       axios.get("http://localhost:8080/course/all"),
       axios.get("http://localhost:8080/section/all"),
-      axios.get("http://localhost:8080/api/mappings"),
+      axios.get("http://localhost:8080/mappings"),
     ])
       .then(([c, s, m]) => {
         setCourses(c.data);
@@ -111,6 +113,11 @@ export default function MergeSections() {
     ? mappings.filter((m) => mappingCourseCode(m) === selectedCourse.CourseCode)
     : [];
 
+  // Extract distinct group numbers available for this course
+  const availableGroupNos = [...new Set(
+    relatedMappings.map(m => mappingGroupNo(m)).filter(g => g !== null && g !== undefined)
+  )].sort((a, b) => a - b);
+
   const groupMap = {};
   relatedMappings.forEach(m => {
     const code = m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode;
@@ -123,10 +130,15 @@ export default function MergeSections() {
   const existingMergeCodes = Object.keys(groupMap);
   const mergedSectionIds = new Set(Object.values(groupMap).flat());
 
+  // Filter mappings by selected group number
+  const filteredMappings = selectedGroupNo !== null
+    ? relatedMappings.filter(m => mappingGroupNo(m) === selectedGroupNo)
+    : relatedMappings;
+
   const availableSections = sections.filter(s => {
     const id = sectionRowId(s);
-    // Only show sections that are MAPPED to this course but NOT already in a group
-    return relatedMappings.some(m => mappingSection(m) === id) && !mergedSectionIds.has(id);
+    // Only show sections that are MAPPED to this course (and group) but NOT already in a merge group
+    return filteredMappings.some(m => mappingSection(m) === id) && !mergedSectionIds.has(id);
   });
 
   const handlePickCourse = (course) => {
@@ -135,6 +147,7 @@ export default function MergeSections() {
     setShowSuggestions(false);
     setSelectedSections([]);
     setSelectedGroup(null);
+    setSelectedGroupNo(null);
     setSectionError("");
     setLastMerge(null);
   };
@@ -143,6 +156,7 @@ export default function MergeSections() {
     setSelectedCourse(null);
     setSelectedSections([]);
     setSelectedGroup(null);
+    setSelectedGroupNo(null);
     setSectionError("");
     setLastMerge(null);
     setTimeout(() => searchRef.current?.querySelector("input")?.focus(), 100);
@@ -180,10 +194,11 @@ export default function MergeSections() {
     setMerging(true);
     setSectionError("");
     try {
-      const res = await axios.post("http://localhost:8080/api/mappings/merge", {
+      const res = await axios.post("http://localhost:8080/merge/merge-section", {
         courseCode: selectedCourse.CourseCode,
         sectionIds: selectedSections,
-        existingMergeCode: selectedGroup
+        existingMergeCode: selectedGroup,
+        groupNo: selectedGroupNo
       });
       const { mergeCode } = res.data;
       const entry = {
@@ -199,7 +214,8 @@ export default function MergeSections() {
       setShowToast(true);
       setSelectedSections([]);
       setSelectedGroup(null);
-      const mRes = await axios.get("http://localhost:8080/api/mappings");
+      setSelectedGroupNo(null);
+      const mRes = await axios.get("http://localhost:8080/mappings");
       setMappings(mRes.data);
     } catch (err) {
       console.error("Merge Error:", err);
@@ -219,8 +235,8 @@ export default function MergeSections() {
     e.stopPropagation();
     if (!window.confirm(`Are you sure you want to delete group ${code}?`)) return;
     try {
-        await axios.delete(`http://localhost:8080/api/mappings/unmerge/${code}`);
-        const mRes = await axios.get("http://localhost:8080/api/mappings");
+        await axios.delete(`http://localhost:8080/merge/unmerge/${code}`);
+        const mRes = await axios.get("http://localhost:8080/mappings");
         setMappings(mRes.data);
         if (selectedGroup === code) setSelectedGroup(null);
     } catch (err) {
@@ -325,8 +341,9 @@ export default function MergeSections() {
                             onClick={() => handlePickCourse(c)}
                             className="w-full px-5 py-3 text-left hover:bg-primary/5 flex items-center gap-3 transition-colors group"
                           >
-                            <div className="flex-1 truncate text-sm font-bold text-slate-700 dark:text-slate-200">
-                                {c.CourseTitle}
+                            <div className="flex-1 truncate">
+                                <span className="text-sm font-black text-slate-800 dark:text-slate-100">{c.CourseCode}</span>
+                                <span className="ml-2 text-xs font-medium text-slate-400 dark:text-slate-500">{c.CourseTitle}</span>
                             </div>
                           </button>
                         ))
@@ -361,7 +378,7 @@ export default function MergeSections() {
           {/* ── Right Side: Sections & Persistent Merge Bar ── */}
           <div className="lg:col-span-8 flex flex-col min-h-[500px]">
             <div className="flex-1 relative glass rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6 flex flex-col overflow-hidden">
-              <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Available Sections</h2>
                 {selectedCourse && availableSections.length > 0 && (
                   <button onClick={handleSelectAll} className="text-xs font-black text-primary px-3 py-2 rounded-xl">
@@ -369,6 +386,34 @@ export default function MergeSections() {
                   </button>
                 )}
               </div>
+
+              {/* ── Group Number Selector ── */}
+              {selectedCourse && availableGroupNos.length > 0 && (
+                <div className="mb-6 flex items-center gap-3 flex-wrap">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Group</span>
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => { setSelectedGroupNo(null); setSelectedSections([]); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                        selectedGroupNo === null
+                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                      }`}
+                    >All Groups</button>
+                    {availableGroupNos.map(gn => (
+                      <button
+                        key={gn}
+                        onClick={() => { setSelectedGroupNo(gn); setSelectedSections([]); }}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                          selectedGroupNo === gn
+                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                            : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                        }`}
+                      >Group {gn}</button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-6 custom-scrollbar">
                 {!selectedCourse ? (

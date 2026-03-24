@@ -93,7 +93,7 @@ const FacultyAssignmentWorkspace = () => {
   const fetchRequiredData = async () => {
     try {
       const [mappingRes, facultyRes] = await Promise.all([
-        fetch(`${API_BASE}/api/mappings`),
+        fetch(`${API_BASE}/mappings`),
         fetch(`${API_BASE}/faculty/all`),
       ]);
       if (facultyRes.ok) setFaculties(await facultyRes.json());

@@ -87,7 +87,7 @@ export default function DashboardNavbar({ activeTab }) {
     setIsGenerating(true);
     try {
       // ── Step 1: fetch all mappings and split into assigned / unassigned ──
-      const mappingRes = await fetch(`${API_BASE}/api/mappings`);
+      const mappingRes = await fetch(`${API_BASE}/mappings`);
       if (!mappingRes.ok) throw new Error("Failed to load mappings.");
       const mappings = await mappingRes.json();
 

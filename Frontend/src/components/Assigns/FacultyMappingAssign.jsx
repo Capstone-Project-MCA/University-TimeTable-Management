@@ -188,7 +188,7 @@ export default function FacultyMappingAssign() {
     }
     // BulkAssign saved — re-fetch current section so Current Faculty column updates
     if ((!lastRefreshedEntity || lastRefreshedEntity === "mappings") && selectedSection) {
-      fetch(`${API_BASE}/api/mappings`)
+      fetch(`${API_BASE}/mappings`)
         .then(r => r.json())
         .then(data => {
           const filtered = (Array.isArray(data) ? data : []).filter(
@@ -217,7 +217,7 @@ export default function FacultyMappingAssign() {
   useEffect(() => {
     if (!selectedSection) { setMappings([]); setCheckedIds(new Set()); return; }
     setMappingsLoading(true);
-    fetch(`${API_BASE}/api/mappings`)
+    fetch(`${API_BASE}/mappings`)
       .then(r => r.json())
       .then(data => {
         const filtered = (Array.isArray(data) ? data : []).filter(

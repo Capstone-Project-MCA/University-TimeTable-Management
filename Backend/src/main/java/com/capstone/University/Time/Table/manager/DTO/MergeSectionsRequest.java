@@ -8,4 +8,5 @@ public class MergeSectionsRequest {
     private String courseCode;
     private List<String> sectionIds;
     private String existingMergeCode;
+    private Short groupNo;
 }

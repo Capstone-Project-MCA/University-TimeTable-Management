@@ -12,9 +12,11 @@ import java.util.Optional;
 
 public interface CourseMappingRepository extends JpaRepository<CourseMapping, Long> {
 
-    List<CourseMapping> findBySection(String section);
+    @Query("SELECT c FROM CourseMapping c WHERE c.Section = :section")
+    List<CourseMapping> findBySection(@Param("section") String section);
 
-    boolean existsBySectionAndCoursecode(String section, String coursecode);
+    @Query("SELECT CASE WHEN COUNT(c) > 0 THEN true ELSE false END FROM CourseMapping c WHERE c.Section = :section AND c.Coursecode = :coursecode")
+    boolean existsBySectionAndCoursecode(@Param("section") String section, @Param("coursecode") String coursecode);
 
     @Query("""
     SELECT c FROM CourseMapping c
@@ -51,7 +53,19 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
             @Param("sections") List<String> sections
     );
 
-    List<CourseMapping> findByMergecode(String mergecode);
+    // ── Used by MergeService.mergeSections (group-filtered) ──
+    @Query("""
+    SELECT c FROM CourseMapping c
+    WHERE c.Coursecode = :coursecode AND c.Section IN :sections AND c.GroupNo = :groupNo
+    """)
+    List<CourseMapping> findByCoursecodeAndSectionInAndGroupNo(
+            @Param("coursecode") String coursecode,
+            @Param("sections") List<String> sections,
+            @Param("groupNo") Short groupNo
+    );
+
+    @Query("SELECT c FROM CourseMapping c WHERE c.Mergecode = :mergecode")
+    List<CourseMapping> findByMergecode(@Param("mergecode") String mergecode);
 
     // ── Used by CourseMappingService.generateNextMergeCode ──
     @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c")
