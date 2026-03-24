@@ -19,20 +19,8 @@ public class MergeController {
     private MergeService mergeService;
 
     @PostMapping("/merge-section")
-    public ResponseEntity<?> mergeSections(@RequestBody MergeDTO mergeDTO) {
-        try {
-            List<CourseMappingDto> result = mergeService.mergeSection(mergeDTO);
-            // Extract the merge code from the first result to return to the frontend
-            String mergeCode = result.isEmpty() ? null : result.get(0).getMergecode();
-            return ResponseEntity.ok(Map.of(
-                    "mergeCode", mergeCode != null ? mergeCode : "",
-                    "mappings", result
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", e.getMessage())
-            );
-        }
+    public ResponseEntity<List<CourseMappingDto>> mergeSections(@RequestBody MergeDTO mergeDTO) {
+        return ResponseEntity.ok(mergeService.mergeSection(mergeDTO));
     }
 
     @DeleteMapping("/unmerge/{mergeCode}")
@@ -48,20 +36,10 @@ public class MergeController {
     }
 
     @PutMapping("/update-merge/{mergeCode}")
-    public ResponseEntity<?> updateMergeGroup(
+    public ResponseEntity<List<CourseMappingDto>> updateMergeGroup(
             @PathVariable String mergeCode,
             @RequestBody MergeDTO mergeDTO)
     {
-        try {
-            List<CourseMappingDto> result = mergeService.updateMergeSection(mergeCode, mergeDTO);
-            return ResponseEntity.ok(Map.of(
-                    "mergeCode", mergeCode,
-                    "mappings", result
-            ));
-        } catch (Exception e) {
-            return ResponseEntity.badRequest().body(
-                    Map.of("error", e.getMessage())
-            );
-        }
+        return ResponseEntity.ok(mergeService.updateMergeSection(mergeCode, mergeDTO));
     }
 }

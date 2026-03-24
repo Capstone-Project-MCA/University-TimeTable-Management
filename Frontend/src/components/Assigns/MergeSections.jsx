@@ -34,7 +34,6 @@ export default function MergeSections() {
   const [selectedCourse, setSelectedCourse] = useState(null);
   const [selectedSections, setSelectedSections] = useState([]);
   const [sectionError, setSectionError] = useState("");
-  const [mergeLog, setMergeLog] = useState([]);
   const [lastMerge, setLastMerge] = useState(null);
   const [showToast, setShowToast] = useState(false);
 
@@ -311,18 +310,12 @@ export default function MergeSections() {
         existingMergeCode: selectedGroup,
         groupNo: selectedGroupNo
       });
-      const { mergeCode } = res.data;
-      const entry = {
-        id: mergeLog.length + 1,
-        mergeCode,
-        course: selectedCourse.CourseCode,
-        courseTitle: selectedCourse.CourseTitle,
-        sections: [...selectedSections, ...(selectedGroup ? groupMap[selectedGroup] : [])],
-        groupNo: selectedGroupNo,
-        timestamp: new Date().toLocaleTimeString(),
-      };
-      setMergeLog((p) => [entry, ...p]);
-      setLastMerge(entry);
+      // Backend returns a List<CourseMappingDto>, so res.data is an array
+      const mappingsReturned = res.data;
+      const mergeCode = mappingsReturned.length > 0 
+        ? (mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].mergeCode || mappingsReturned[0].MergeCode || "UNKNOWN") 
+        : "UNKNOWN";
+      setLastMerge({ mergeCode });
       setShowToast(true);
       setSelectedSections([]);
       setSelectedGroup(null);
@@ -571,13 +564,6 @@ export default function MergeSections() {
                                                 {!editingGroup && (
                                                 <div className="flex items-center gap-2">
                                                     <button 
-                                                        onClick={(e) => handleEditGroup(code, e)}
-                                                        className="p-1.5 rounded-lg hover:bg-blue-100 text-blue-500 transition-colors"
-                                                        title="Update Group"
-                                                    >
-                                                        <span className="material-symbols-outlined text-sm">edit</span>
-                                                    </button>
-                                                    <button 
                                                         onClick={(e) => { e.stopPropagation(); handleToggleGroup(code); }}
                                                         className={`p-1.5 rounded-lg transition-colors ${isSelected ? "bg-amber-500 text-white" : "hover:bg-amber-100 text-amber-500"}`}
                                                         title="Extend Group"
@@ -759,14 +745,14 @@ export default function MergeSections() {
           </div>
         </div>
 
-        {/* ── HISTORY ── */}
+        {/* ── COMPLETED MERGE GROUPS DASHBOARD ── */}
         <div className="mt-12 space-y-6">
-          {mergeLog.length > 0 && (
+          {existingMergeCodes.length > 0 && (
             <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden animate-fade-in-up">
               <div className="px-6 py-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
                 <h3 className="font-black text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                  <span className="material-symbols-outlined text-primary">history</span>
-                  Recent Activity
+                  <span className="material-symbols-outlined text-primary">dashboard</span>
+                  Dashboard: Merged Sections
                 </h3>
               </div>
               <div className="overflow-x-auto">
@@ -774,36 +760,49 @@ export default function MergeSections() {
                   <thead className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50 dark:border-slate-800">
                     <tr>
                       <th className="px-6 py-4">Merge ID</th>
-                      <th className="px-6 py-4">Course</th>
-                      <th className="px-6 py-4">Group</th>
-                      <th className="px-6 py-4">Sections</th>
-                      <th className="px-6 py-4">Timestamp</th>
-                      <th className="px-6 py-4">Action</th>
+                      <th className="px-6 py-4">Sections Details</th>
+                      <th className="px-6 py-4">Faculty</th>
+                      <th className="px-6 py-4 text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
-                    {mergeLog.slice(0, 5).map((log) => (
-                      <tr key={log.id} className="hover:bg-slate-50 transition-colors">
-                        <td className="px-6 py-5 font-mono text-xs font-black text-primary">{log.mergeCode}</td>
-                        <td className="px-6 py-5 text-sm font-black">{log.course}</td>
-                        <td className="px-6 py-5 text-xs font-bold text-slate-500">{log.groupNo != null ? `G${log.groupNo}` : "All"}</td>
+                    {existingMergeCodes.map((code) => {
+                      const facultyIds = groupFacultyMap[code] ? [...groupFacultyMap[code]] : [];
+                      return (
+                      <tr key={code} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-5 font-mono text-xs font-black text-primary">{code}</td>
                         <td className="px-6 py-5">
                             <div className="flex flex-wrap gap-1">
-                                {log.sections.map(s => <span key={s} className="px-2 py-0.5 rounded bg-slate-100 text-[8px] font-bold">{s}</span>)}
+                                {groupMap[code].map(sId => {
+                                  // Find LTP info for display
+                                  const ltp = sectionLTPMap[sId];
+                                  return (
+                                    <span key={sId} className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold text-slate-700 flex items-center gap-1 border border-slate-200">
+                                        {sId}
+                                        {ltp && <span className="text-[8px] text-slate-400 font-mono">(L{ltp.L} T{ltp.T} P{ltp.P})</span>}
+                                    </span>
+                                )})}
                             </div>
                         </td>
-                        <td className="px-6 py-5 text-[10px] font-mono text-slate-400">{log.timestamp}</td>
                         <td className="px-6 py-5">
+                            <div className="flex flex-wrap gap-1">
+                                {facultyIds.map(fid => (
+                                    <span key={fid} className="px-2 py-0.5 rounded bg-indigo-50 text-[10px] font-bold text-indigo-600">{fid}</span>
+                                ))}
+                                {facultyIds.length === 0 && <span className="text-[10px] italic text-slate-400">Unassigned</span>}
+                            </div>
+                        </td>
+                        <td className="px-6 py-5 text-right">
                             <button
-                              onClick={(e) => handleEditGroup(log.mergeCode, e)}
-                              className="px-3 py-1.5 rounded-lg bg-blue-500 text-white text-[9px] font-black uppercase tracking-wider hover:bg-blue-600 transition-all hover:scale-105 active:scale-95 shadow-sm flex items-center gap-1"
+                              onClick={(e) => handleEditGroup(code, e)}
+                              className="inline-flex items-center gap-1 px-4 py-2 rounded-xl bg-blue-500 text-white text-[10px] font-black uppercase tracking-wider hover:bg-blue-600 transition-all shadow-sm active:scale-95"
                             >
-                              <span className="material-symbols-outlined text-[13px]">edit</span>
+                              <span className="material-symbols-outlined text-[14px]">edit</span>
                               Update
                             </button>
                         </td>
                       </tr>
-                    ))}
+                    )})}
                   </tbody>
                 </table>
               </div>

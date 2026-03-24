@@ -71,16 +71,33 @@ public class MergeService {
         if (existingMergeCode != null && !existingMergeCode.isEmpty()) {
             mergeCode = existingMergeCode;
         } else {
-            int mergeCodeInt = 101;
-            String maximumMergeCode = courseMappingRepository.findMaxMergecode();
-
-            if (maximumMergeCode != null && maximumMergeCode.startsWith("M")) {
-                try {
-                    int last = Integer.parseInt(maximumMergeCode.substring(1));
-                    mergeCodeInt = Math.max(mergeCodeInt, last + 1);
-                } catch (NumberFormatException ignored) {}
+            // Check if all selected mappings already share the same mergeCode
+            String existingCode = newMappings.get(0).getMergecode();
+            boolean allShareSameCode = existingCode != null && !existingCode.isEmpty();
+            
+            if (allShareSameCode) {
+                for (CourseMapping mapping : newMappings) {
+                    if (mapping.getMergecode() == null || !mapping.getMergecode().equals(existingCode)) {
+                        allShareSameCode = false;
+                        break;
+                    }
+                }
             }
-            mergeCode = "M" + mergeCodeInt;
+            
+            if (allShareSameCode) {
+                mergeCode = existingCode;
+            } else {
+                int mergeCodeInt = 101;
+                String maximumMergeCode = courseMappingRepository.findMaxMergecode();
+
+                if (maximumMergeCode != null && maximumMergeCode.startsWith("M")) {
+                    try {
+                        int last = Integer.parseInt(maximumMergeCode.substring(1));
+                        mergeCodeInt = Math.max(mergeCodeInt, last + 1);
+                    } catch (NumberFormatException ignored) {}
+                }
+                mergeCode = "M" + mergeCodeInt;
+            }
         }
 
         for (CourseMapping courseMapping : newMappings) {
