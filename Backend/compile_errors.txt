@@ -1,0 +1,25 @@
+[INFO] Scanning for projects...
+[INFO] 
+[INFO] -------------< com.capstone:University-Time-Table-manager >-------------
+[INFO] Building University-Time-Table-manager 0.0.1-SNAPSHOT
+[INFO]   from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO] 
+[INFO] --- clean:3.4.0:clean (default-clean) @ University-Time-Table-manager ---
+[INFO] Deleting C:\Users\Suhana Raj\OneDrive\Desktop\UniversityProject\University-TimeTable-Management\Backend\target
+[INFO] 
+[INFO] --- resources:3.3.1:resources (default-resources) @ University-Time-Table-manager ---
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] Copying 1 resource from src\main\resources to target\classes
+[INFO] 
+[INFO] --- compiler:3.13.0:compile (default-compile) @ University-Time-Table-manager ---
+[INFO] Recompiling the module because of changed source code.
+[INFO] Compiling 57 source files with javac [debug parameters release 17] to target\classes
+[WARNING] /C:/Users/Suhana Raj/OneDrive/Desktop/UniversityProject/University-TimeTable-Management/Backend/src/main/java/com/capstone/University/Time/Table/manager/Mapper/FacultyMapper.java:[10,16] Unmapped target property: "facultyUID".
+[WARNING] /C:/Users/Suhana Raj/OneDrive/Desktop/UniversityProject/University-TimeTable-Management/Backend/src/main/java/com/capstone/University/Time/Table/manager/Mapper/FacultyMapper.java:[14,13] Unmapped target property: "facultyUid".
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time:  10.209 s
+[INFO] Finished at: 2026-03-24T12:46:11+05:30
+[INFO] ------------------------------------------------------------------------

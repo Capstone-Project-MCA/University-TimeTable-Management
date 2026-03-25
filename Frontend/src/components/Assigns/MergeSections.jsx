@@ -494,10 +494,10 @@ export default function MergeSections() {
                 )}
               </div>
 
-              {/* ── Group Number Selector ── */}
-              {selectedCourse && availableGroupNos.length > 0 && (
+              {/* ── Type Selector ── */}
+              {selectedCourse && (
                 <div className="mb-6 flex items-center gap-3 flex-wrap">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Group</span>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</span>
                   <div className="flex gap-2 flex-wrap">
                     <button
                       onClick={() => { setSelectedGroupNo(null); setSelectedSections([]); }}
@@ -506,18 +506,23 @@ export default function MergeSections() {
                           ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
                           : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
                       }`}
-                    >All Groups</button>
-                    {availableGroupNos.map(gn => (
-                      <button
-                        key={gn}
-                        onClick={() => { setSelectedGroupNo(gn); setSelectedSections([]); }}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                          selectedGroupNo === gn
-                            ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                            : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                        }`}
-                      >Group {gn}</button>
-                    ))}
+                    >Lecture (L)</button>
+                    <button
+                      onClick={() => { setSelectedGroupNo(1); setSelectedSections([]); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                        selectedGroupNo === 1
+                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                      }`}
+                    >Tutorial (T)</button>
+                    <button
+                      onClick={() => { setSelectedGroupNo(2); setSelectedSections([]); }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                        selectedGroupNo === 2
+                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                      }`}
+                    >Practical (P)</button>
                   </div>
                 </div>
               )}
@@ -656,7 +661,7 @@ export default function MergeSections() {
                                                         {ltp.L > 0 && <span className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-[8px] font-black text-sky-600 dark:text-sky-300">L:{ltp.L}</span>}
                                                         {ltp.T > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-600 dark:text-amber-300">T:{ltp.T}</span>}
                                                         {ltp.P > 0 && <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-[8px] font-black text-emerald-600 dark:text-emerald-300">P:{ltp.P}</span>}
-                                                        {ltp.groupNo != null && <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[8px] font-black text-purple-600 dark:text-purple-300">G:{ltp.groupNo}</span>}
+                                                        {ltp.groupNo != null && <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[8px] font-black text-purple-600 dark:text-purple-300">Type: {ltp.groupNo === 1 ? 'T' : ltp.groupNo === 2 ? 'P' : 'L'}</span>}
                                                         {isInOtherGroup && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-700 dark:text-amber-400">In {sectionMergeCode}</span>}
                                                     </div>
                                                 )}
