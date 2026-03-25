@@ -494,35 +494,78 @@ export default function MergeSections() {
                 )}
               </div>
 
-              {/* ── Type Selector ── */}
-              {selectedCourse && (
-                <div className="mb-6 flex items-center gap-3 flex-wrap">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Type</span>
-                  <div className="flex gap-2 flex-wrap">
-                    <button
-                      onClick={() => { setSelectedGroupNo(null); setSelectedSections([]); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                        selectedGroupNo === null
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                      }`}
-                    >Lecture (L)</button>
-                    <button
-                      onClick={() => { setSelectedGroupNo(1); setSelectedSections([]); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                        selectedGroupNo === 1
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                      }`}
-                    >Tutorial (T)</button>
-                    <button
-                      onClick={() => { setSelectedGroupNo(2); setSelectedSections([]); }}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                        selectedGroupNo === 2
-                          ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                          : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                      }`}
-                    >Practical (P)</button>
+              {/* ── Type Selector & Related Groups ── */}
+              {selectedCourse && (selectedSections.length > 0 || editingGroup) && (
+                <div className="mb-6 flex flex-col gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 animate-fade-in-up">
+                  
+                  {/* Related Groups Display */}
+                  {selectedSections.length > 0 && (
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Related Groups for Selection</span>
+                       <div className="flex gap-2 flex-wrap">
+                          {(() => {
+                             const relGroups = [...new Set(
+                               relatedMappings
+                                 .filter(m => selectedSections.includes(mappingSection(m)))
+                                 .map(m => mappingGroupNo(m))
+                                 .filter(g => g !== null && g !== undefined)
+                             )].sort((a,b) => a - b);
+                             if (relGroups.length === 0) return <span className="text-xs font-bold text-slate-500 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">None mapped</span>;
+                             return relGroups.map(g => (
+                               <button 
+                                 key={g}
+                                 onClick={() => setSelectedGroupNo(g)}
+                                 className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border-2 ${
+                                   selectedGroupNo === g
+                                     ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
+                                     : "bg-indigo-50 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:border-indigo-400"
+                                 }`}
+                               >
+                                 Group {g}
+                               </button>
+                             ));
+                          })()}
+                       </div>
+                    </div>
+                  )}
+
+                  {/* L/T/P Type Merge Option */}
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Merge As Type</span>
+                      <div className="flex gap-2 flex-wrap">
+                        <button
+                          onClick={() => { setSelectedGroupNo(null); }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                            selectedGroupNo === null
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                          }`}
+                        >Lecture (L)</button>
+                        <button
+                          onClick={() => { setSelectedGroupNo(1); }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                            selectedGroupNo === 1
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                          }`}
+                        >Tutorial (T)</button>
+                        <button
+                          onClick={() => { setSelectedGroupNo(2); }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                            selectedGroupNo === 2
+                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                          }`}
+                        >Practical (P)</button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-950 shadow-sm border border-slate-200 dark:border-slate-700">
+                       <span className="material-symbols-outlined text-[16px] text-primary">groups</span>
+                       <span className="text-xs font-black text-slate-700 dark:text-slate-200">
+                         {availableSections.length} <span className="text-slate-400 font-bold">Groups Available</span>
+                       </span>
+                    </div>
                   </div>
                 </div>
               )}
