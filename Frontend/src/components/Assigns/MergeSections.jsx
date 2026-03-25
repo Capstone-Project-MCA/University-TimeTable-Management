@@ -34,7 +34,8 @@ export default function MergeSections() {
   const [query, setQuery] = useState("");
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [selectedSections, setSelectedSections] = useState([]);
+  const [selectedSectionGroups, setSelectedSectionGroups] = useState([]); // [{sectionId, groupNo}]
+  const [mappingMode, setMappingMode] = useState("L"); // "L", "T", "P"
   const [sectionError, setSectionError] = useState("");
   const [lastMerge, setLastMerge] = useState(null);
   const [showToast, setShowToast] = useState(false);
@@ -44,11 +45,10 @@ export default function MergeSections() {
   const dropdownPortalRef = useRef(null);
   const [dropdownPos, setDropdownPos] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
-  const [selectedGroupNo, setSelectedGroupNo] = useState(null);
 
   // ── Edit mode state ──
   const [editingGroup, setEditingGroup] = useState(null);
-  const [editSections, setEditSections] = useState([]);
+  const [editSectionGroups, setEditSectionGroups] = useState([]); // [{sectionId, groupNo}]
   const [updating, setUpdating] = useState(false);
 
   const { refreshKey } = useDataRefresh();
@@ -119,11 +119,6 @@ export default function MergeSections() {
     ? mappings.filter((m) => mappingCourseCode(m) === getCourseCode(selectedCourse))
     : [];
 
-  // Extract distinct group numbers available for this course
-  const availableGroupNos = [...new Set(
-    relatedMappings.map(m => mappingGroupNo(m)).filter(g => g !== null && g !== undefined)
-  )].sort((a, b) => a - b);
-
   const groupMap = {};
   const groupFacultyMap = {};
   relatedMappings.forEach(m => {
@@ -141,19 +136,16 @@ export default function MergeSections() {
   });
 
   const existingMergeCodes = Object.keys(groupMap);
-  const mergedSectionIds = new Set(Object.values(groupMap).flat());
 
-  // Filter mappings by selected group number
-  const filteredMappings = selectedGroupNo !== null
-    ? relatedMappings.filter(m => mappingGroupNo(m) === selectedGroupNo)
-    : relatedMappings;
+  // Filter mappings by mappingMode
+  const modeFilteredMappings = relatedMappings.filter(m => {
+      const type = (m.MappingType || m.mappingType || "L");
+      return type === mappingMode;
+  });
 
-  // When editing, also include sections that belong to the group being edited as "available"
-  const editingGroupSections = editingGroup && groupMap[editingGroup] ? new Set(groupMap[editingGroup]) : new Set();
-
-  // Build L/T/P info map per section from mappings
+  // Build L/T/P info map per section from ALL related mappings (for display)
   const sectionLTPMap = {};
-  filteredMappings.forEach(m => {
+  relatedMappings.forEach(m => {
     const sec = mappingSection(m);
     if (!sectionLTPMap[sec]) {
       sectionLTPMap[sec] = {
@@ -168,36 +160,50 @@ export default function MergeSections() {
 
   const availableSections = sections.filter(s => {
     const id = sectionRowId(s);
-    // Only show sections that are MAPPED to this course (and group)
-    return filteredMappings.some(m => mappingSection(m) === id);
+    return modeFilteredMappings.some(m => mappingSection(m) === id);
   });
+
+  const getSectionGroupsForMode = (sectionId, mode) => {
+      return [...new Set(
+          relatedMappings
+              .filter(m => mappingSection(m) === sectionId)
+              .filter(m => (m.MappingType || m.mappingType || "L") === mode)
+              .map(m => mappingGroupNo(m))
+      )].sort((a,b) => (a===null?-1:a) - (b===null?-1:b));
+  };
 
   const handlePickCourse = (course) => {
     setSelectedCourse(course);
     setQuery("");
     setShowSuggestions(false);
-    setSelectedSections([]);
+    setSelectedSectionGroups([]);
     setSelectedGroup(null);
-    setSelectedGroupNo(null);
+    setMappingMode("L");
     setSectionError("");
     setLastMerge(null);
   };
 
   const handleChangeCourse = () => {
     setSelectedCourse(null);
-    setSelectedSections([]);
+    setSelectedSectionGroups([]);
     setSelectedGroup(null);
-    setSelectedGroupNo(null);
+    setMappingMode("L");
     setSectionError("");
     setLastMerge(null);
     setTimeout(() => searchRef.current?.querySelector("input")?.focus(), 100);
   };
 
-  const handleToggleSection = (id) => {
+  const toggleSectionGroup = (sectionId, groupNo, isEdit = false) => {
     setSectionError("");
-    setSelectedSections((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
+    const setter = isEdit ? setEditSectionGroups : setSelectedSectionGroups;
+    setter(prev => {
+        const index = prev.findIndex(g => g.sectionId === sectionId && g.groupNo === groupNo);
+        if (index >= 0) {
+            return prev.filter((_, i) => i !== index);
+        } else {
+            return [...prev, { sectionId, groupNo }];
+        }
+    });
   };
 
   const handleToggleGroup = (code) => {
@@ -227,22 +233,18 @@ export default function MergeSections() {
            setQuery("");
            setShowSuggestions(false);
        }
-       
-       // Set the correct group No
-       const gn = groupMapping.GroupNo ?? groupMapping.groupno ?? groupMapping.groupNo;
-       setSelectedGroupNo(gn !== undefined && gn !== null ? gn : null);
+       setMappingMode(groupMapping.MappingType || groupMapping.mappingType || "L");
     }
 
     setSelectedGroup(null);
-    setSelectedSections([]);
+    setSelectedSectionGroups([]);
     setEditingGroup(code);
     
-    // Calculate edit sections from global mappings to avoid timing issues with state updates
-    const sectionsInGroup = mappings
+    const groupsInMerge = mappings
         .filter(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code)
-        .map(m => mappingSection(m));
+        .map(m => ({ sectionId: mappingSection(m), groupNo: mappingGroupNo(m) }));
     
-    setEditSections([...sectionsInGroup]);
+    setEditSectionGroups(groupsInMerge);
     
     // Scroll to top to see sections
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -250,31 +252,24 @@ export default function MergeSections() {
 
   const handleCancelEdit = () => {
     setEditingGroup(null);
-    setEditSections([]);
+    setEditSectionGroups([]);
     setSectionError("");
-  };
-
-  const handleToggleEditSection = (id) => {
-    setSectionError("");
-    setEditSections((prev) =>
-      prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]
-    );
   };
 
   const handleUpdateGroup = async () => {
-    if (!editingGroup || editSections.length < 2 || updating) return;
+    if (!editingGroup || editSectionGroups.length < 2 || updating) return;
     setUpdating(true);
     setSectionError("");
     try {
       await axios.put(`http://localhost:8080/merge/update-merge/${editingGroup}`, {
         courseCode: getCourseCode(selectedCourse),
-        sectionIds: editSections,
-        groupNo: selectedGroupNo
+        sectionGroups: editSectionGroups,
+        mappingType: mappingMode // Send the mapping type with it
       });
       setShowToast(true);
       setLastMerge({ mergeCode: editingGroup });
       setEditingGroup(null);
-      setEditSections([]);
+      setEditSectionGroups([]);
       const mRes = await axios.get("http://localhost:8080/mappings");
       setMappings(mRes.data);
     } catch (err) {
@@ -290,15 +285,7 @@ export default function MergeSections() {
     }
   };
 
-  const handleSelectAll = () => {
-    if (selectedSections.length === availableSections.length) {
-      setSelectedSections([]);
-    } else {
-      setSelectedSections(availableSections.map((s) => sectionRowId(s)));
-    }
-  };
-
-  const canMergeOrExtend = (selectedSections.length >= 2 && !selectedGroup) || (selectedSections.length >= 1 && selectedGroup);
+  const canMergeOrExtend = (selectedSectionGroups.length >= 2 && !selectedGroup) || (selectedSectionGroups.length >= 1 && selectedGroup);
   const [merging, setMerging] = useState(false);
 
   const handleMerge = async () => {
@@ -308,26 +295,23 @@ export default function MergeSections() {
     try {
       const res = await axios.post("http://localhost:8080/merge/merge-section", {
         courseCode: getCourseCode(selectedCourse),
-        sectionIds: selectedSections,
+        sectionGroups: selectedSectionGroups,
         existingMergeCode: selectedGroup,
-        groupNo: selectedGroupNo
+        mappingType: mappingMode
       });
-      // Backend returns a List<CourseMappingDto>, so res.data is an array
       const mappingsReturned = res.data;
       const mergeCode = mappingsReturned.length > 0 
         ? (mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].mergeCode || mappingsReturned[0].MergeCode || "UNKNOWN") 
         : "UNKNOWN";
       setLastMerge({ mergeCode });
       setShowToast(true);
-      setSelectedSections([]);
+      setSelectedSectionGroups([]);
       setSelectedGroup(null);
-      setSelectedGroupNo(null);
       const mRes = await axios.get("http://localhost:8080/mappings");
       setMappings(mRes.data);
     } catch (err) {
       console.error("Merge Error:", err);
       if (!err.response) {
-         // Fallback for demo if backend is down (optional, but keeping it for robustness)
          setSectionError("Connection Error: Please ensure the backend is running.");
       } else {
          setSectionError(err.response?.data?.error || err.message || "Merge failed.");
@@ -406,7 +390,7 @@ export default function MergeSections() {
                 Course Mapping & Merge
             </h1>
             <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
-                Combine sections into merge groups. Select 2+ sections to merge, or a group + sections to extend.
+                Combine specific groups across different sections into merge groups under a specific Mapping Type (L/T/P).
             </p>
         </header>
 
@@ -487,83 +471,37 @@ export default function MergeSections() {
             <div className="flex-1 relative glass rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl p-6 flex flex-col overflow-hidden">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100">Available Sections</h2>
-                {selectedCourse && availableSections.length > 0 && (
-                  <button onClick={handleSelectAll} className="text-xs font-black text-primary px-3 py-2 rounded-xl">
-                    {selectedSections.length === availableSections.length ? "Deselect All" : "Select All"}
-                  </button>
-                )}
               </div>
 
-              {/* ── Type Selector & Related Groups ── */}
-              {selectedCourse && (selectedSections.length > 0 || editingGroup) && (
+              {/* ── Type Selector ── */}
+              {selectedCourse && (
                 <div className="mb-6 flex flex-col gap-4 bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 animate-fade-in-up">
                   
-                  {/* Related Groups Display */}
-                  {selectedSections.length > 0 && (
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                       <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Related Groups for Selection</span>
-                       <div className="flex gap-2 flex-wrap">
-                          {(() => {
-                             const relGroups = [...new Set(
-                               relatedMappings
-                                 .filter(m => selectedSections.includes(mappingSection(m)))
-                                 .map(m => mappingGroupNo(m))
-                                 .filter(g => g !== null && g !== undefined)
-                             )].sort((a,b) => a - b);
-                             if (relGroups.length === 0) return <span className="text-xs font-bold text-slate-500 bg-white dark:bg-slate-800 px-2 py-1 rounded border border-slate-200 dark:border-slate-700">None mapped</span>;
-                             return relGroups.map(g => (
-                               <button 
-                                 key={g}
-                                 onClick={() => setSelectedGroupNo(g)}
-                                 className={`px-3 py-1.5 rounded-xl text-[10px] font-black transition-all border-2 ${
-                                   selectedGroupNo === g
-                                     ? "bg-indigo-500 text-white border-indigo-500 shadow-lg shadow-indigo-500/20"
-                                     : "bg-indigo-50 dark:bg-indigo-900/40 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 hover:border-indigo-400"
-                                 }`}
-                               >
-                                 Group {g}
-                               </button>
-                             ));
-                          })()}
-                       </div>
-                    </div>
-                  )}
-
                   {/* L/T/P Type Merge Option */}
-                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap pt-3 border-t border-slate-200/60 dark:border-slate-800/60">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 flex-wrap border-slate-200/60 dark:border-slate-800/60">
                     <div className="flex items-center gap-3">
-                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Merge As Type</span>
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Mapping Type</span>
                       <div className="flex gap-2 flex-wrap">
-                        <button
-                          onClick={() => { setSelectedGroupNo(null); }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                            selectedGroupNo === null
-                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                          }`}
-                        >Lecture (L)</button>
-                        <button
-                          onClick={() => { setSelectedGroupNo(1); }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                            selectedGroupNo === 1
-                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                          }`}
-                        >Tutorial (T)</button>
-                        <button
-                          onClick={() => { setSelectedGroupNo(2); }}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
-                            selectedGroupNo === 2
-                              ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
-                              : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
-                          }`}
-                        >Practical (P)</button>
+                        {["L", "T", "P"].map(mode => (
+                            <button
+                                key={mode}
+                                onClick={() => { setMappingMode(mode); setSelectedSectionGroups([]); }}
+                                disabled={editingGroup !== null}
+                                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all border-2 ${
+                                    mappingMode === mode
+                                    ? "bg-primary text-white border-primary shadow-lg shadow-primary/20"
+                                    : "bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary/30"
+                                } ${(editingGroup !== null && mappingMode !== mode) ? "opacity-50 cursor-not-allowed" : ""}`}
+                            >
+                                {mode === "L" ? "Lecture (L)" : mode === "T" ? "Tutorial (T)" : "Practical (P)"}
+                            </button>
+                        ))}
                       </div>
                     </div>
                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-950 shadow-sm border border-slate-200 dark:border-slate-700">
                        <span className="material-symbols-outlined text-[16px] text-primary">groups</span>
                        <span className="text-xs font-black text-slate-700 dark:text-slate-200">
-                         {availableSections.length} <span className="text-slate-400 font-bold">Groups Available</span>
+                         {availableSections.length} <span className="text-slate-400 font-bold">Sections Map Data</span>
                        </span>
                     </div>
                   </div>
@@ -581,7 +519,7 @@ export default function MergeSections() {
                   </div>
                 ) : (availableSections.length === 0 && existingMergeCodes.length === 0) ? (
                   <div className="h-full flex flex-col items-center justify-center text-center opacity-40">
-                    <h3 className="text-lg font-black">No Sections found</h3>
+                    <h3 className="text-lg font-black">No Sections found for this mode</h3>
                   </div>
                 ) : (
                   <div className="space-y-8 pb-24">
@@ -658,58 +596,71 @@ export default function MergeSections() {
                     {availableSections.length > 0 && (
                         <div className="space-y-4">
                             <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-widest pl-1">
-                                {editingGroup ? "Available Sections (click to add to group)" : "Individual Sections"}
+                                {editingGroup ? `Available Sections for type ${mappingMode} (click group pill to add)` : `Individual Sections for type ${mappingMode}`}
                             </h3>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 {availableSections.map((s) => {
                                     const id = sectionRowId(s);
-                                    // In edit mode, use editSections; otherwise use selectedSections
-                                    const isSelected = editingGroup
-                                      ? editSections.includes(id)
-                                      : selectedSections.includes(id);
-                                    // Skip rendering sections already in the editing group's chip list
-                                    if (editingGroup && editingGroupSections.has(id)) return null;
                                     const ltp = sectionLTPMap[id];
                                     
-                                    // Find if section belongs to another group
-                                    const sectionMergeCode = Object.keys(groupMap).find(code => groupMap[code].includes(id));
-                                    const isInOtherGroup = sectionMergeCode && sectionMergeCode !== editingGroup;
+                                    const availableGroupsList = getSectionGroupsForMode(id, mappingMode);
 
                                     return (
                                         <div 
-                                        key={id} 
-                                        onClick={() => editingGroup ? handleToggleEditSection(id) : handleToggleSection(id)}
-                                        className={`p-5 rounded-2xl border-2 transition-all cursor-pointer ${
-                                            editingGroup
-                                              ? isSelected
-                                                ? "bg-blue-500/5 border-blue-500 shadow-lg shadow-blue-500/10"
-                                                : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-blue-200"
-                                              : isSelected
-                                                ? "bg-primary/5 border-primary shadow-lg shadow-primary/10"
-                                                : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-primary/20"
-                                        }`}
+                                            key={id} 
+                                            className={`p-5 rounded-2xl border-2 transition-all bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800 hover:border-blue-200`}
                                         >
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-6 h-6 rounded-lg border-2 flex items-center justify-center transition-colors ${
-                                                editingGroup
-                                                  ? isSelected ? "bg-blue-500 border-blue-500 text-white" : "border-slate-200"
-                                                  : isSelected ? "bg-primary border-primary text-white" : "border-slate-200"
-                                            }`}>
-                                            {isSelected && <span className="material-symbols-outlined text-[14px]">check</span>}
-                                            </div>
-                                            <div className="flex-1">
+                                            <div className="flex items-center justify-between mb-2">
                                                 <h4 className="text-md font-black text-slate-800 dark:text-slate-100">{id}</h4>
                                                 {ltp && (
                                                     <div className="flex items-center gap-1.5 mt-1">
                                                         {ltp.L > 0 && <span className="px-1.5 py-0.5 rounded bg-sky-100 dark:bg-sky-900/30 text-[8px] font-black text-sky-600 dark:text-sky-300">L:{ltp.L}</span>}
                                                         {ltp.T > 0 && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-600 dark:text-amber-300">T:{ltp.T}</span>}
                                                         {ltp.P > 0 && <span className="px-1.5 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/30 text-[8px] font-black text-emerald-600 dark:text-emerald-300">P:{ltp.P}</span>}
-                                                        {ltp.groupNo != null && <span className="px-1.5 py-0.5 rounded bg-purple-100 dark:bg-purple-900/30 text-[8px] font-black text-purple-600 dark:text-purple-300">Type: {ltp.groupNo === 1 ? 'T' : ltp.groupNo === 2 ? 'P' : 'L'}</span>}
-                                                        {isInOtherGroup && <span className="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-[8px] font-black text-amber-700 dark:text-amber-400">In {sectionMergeCode}</span>}
                                                     </div>
                                                 )}
                                             </div>
-                                        </div>
+                                            
+                                            <div className="mt-2 border-t border-slate-100 dark:border-slate-800 pt-3">
+                                                <p className="text-[9px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Available Groups</p>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {availableGroupsList.map(grp => {
+                                                        const isSelected = editingGroup 
+                                                            ? editSectionGroups.some(g => g.sectionId === id && g.groupNo === grp)
+                                                            : selectedSectionGroups.some(g => g.sectionId === id && g.groupNo === grp);
+                                                        
+                                                        // Check if this specific group is already in another merge
+                                                        const mappingForThisGroup = relatedMappings.find(m => mappingSection(m) === id && mappingGroupNo(m) === grp && (m.MappingType || m.mappingType || "L") === mappingMode);
+                                                        const thisGroupMergeCode = mappingForThisGroup?.Mergecode || mappingForThisGroup?.mergecode;
+                                                        const isInOtherGroup = thisGroupMergeCode && thisGroupMergeCode !== editingGroup;
+
+                                                        return (
+                                                            <button
+                                                                key={grp ?? 'null'}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    if (!isInOtherGroup) {
+                                                                        toggleSectionGroup(id, grp, editingGroup !== null);
+                                                                    }
+                                                                }}
+                                                                disabled={isInOtherGroup}
+                                                                className={`px-3 py-1.5 text-xs font-bold rounded-xl border-2 cursor-pointer transition-all ${
+                                                                    isInOtherGroup 
+                                                                    ? 'bg-slate-50 dark:bg-slate-800 text-slate-400 border-slate-100 dark:border-slate-700 opacity-50 cursor-not-allowed'
+                                                                    : isSelected 
+                                                                        ? 'bg-primary text-white border-primary shadow-lg shadow-primary/20' 
+                                                                        : 'bg-white dark:bg-slate-900 text-primary dark:text-blue-300 border-primary/20 dark:border-blue-800/50 hover:bg-primary/5 hover:border-primary/50'
+                                                                }`}
+                                                            >
+                                                                {grp !== null ? `Grp ${grp}` : `Default`}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                    {availableGroupsList.length === 0 && (
+                                                        <span className="text-xs text-slate-400 italic">No unmerged groups</span>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
                                     );
                                 })}
@@ -728,15 +679,15 @@ export default function MergeSections() {
                   /* ── Edit Mode Action Bar ── */
                   <div className="glass px-6 py-4 rounded-3xl border border-blue-200 dark:border-blue-800 shadow-2xl flex items-center justify-between gap-4 backdrop-blur-xl bg-blue-50/60 dark:bg-slate-900/60">
                     <div className="flex items-center gap-4">
-                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${editSections.length >= 2 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400"}`}>
+                      <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${editSectionGroups.length >= 2 ? "bg-blue-500 text-white" : "bg-slate-100 text-slate-400"}`}>
                         <span className="material-symbols-outlined text-xl">edit</span>
                       </div>
                       <div>
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
-                          Editing {editingGroup} — {editSections.length} Sections
+                          Editing {editingGroup} — {editSectionGroups.length} Items
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">
-                          {editSections.length >= 2 ? "Ready to update" : "Select at least 2 sections"}
+                          {editSectionGroups.length >= 2 ? "Ready to update" : "Select at least 2 groups"}
                         </p>
                       </div>
                     </div>
@@ -749,9 +700,9 @@ export default function MergeSections() {
                       </button>
                       <button 
                         onClick={handleUpdateGroup}
-                        disabled={editSections.length < 2 || updating}
+                        disabled={editSectionGroups.length < 2 || updating}
                         className={`px-8 py-3 rounded-2xl font-black text-xs uppercase tracking-widest transition-all ${
-                          editSections.length >= 2
+                          editSectionGroups.length >= 2
                             ? "bg-blue-500 text-white shadow-xl hover:scale-105 active:scale-95"
                             : "bg-slate-200 text-slate-400 cursor-not-allowed opacity-50"
                         }`}
@@ -769,7 +720,7 @@ export default function MergeSections() {
                       </div>
                       <div>
                         <p className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-tighter">
-                          {selectedSections.length} Sections {selectedGroup ? `+ Group ${selectedGroup}` : "Selected"}
+                          {selectedSectionGroups.length} Groups {selectedGroup ? `+ Merge ${selectedGroup}` : "Selected"}
                         </p>
                         <p className="text-[10px] font-bold text-slate-400 uppercase">
                           {!selectedCourse ? "Search course first" : canMergeOrExtend ? (selectedGroup ? "Ready to Extend" : "Ready to Merge") : "Pick selections"}
@@ -818,20 +769,26 @@ export default function MergeSections() {
                   <tbody className="divide-y divide-slate-50 dark:divide-slate-800">
                     {existingMergeCodes.map((code) => {
                       const facultyIds = groupFacultyMap[code] ? [...groupFacultyMap[code]] : [];
+                      
+                      // Find which specific groups are in this merge code
+                      const groupsInThisCode = relatedMappings
+                        .filter(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code);
+                      
+                      const sectionGroupStr = groupsInThisCode.map(m => {
+                         const sid = mappingSection(m);
+                         const gno = mappingGroupNo(m);
+                         const type = m.MappingType || m.mappingType || "L";
+                         return `${sid}(${type}${gno !== null ? `-${gno}` : ''})`;
+                      }).join(', ');
+
                       return (
                       <tr key={code} className="hover:bg-slate-50 transition-colors">
                         <td className="px-6 py-5 font-mono text-xs font-black text-primary">{code}</td>
                         <td className="px-6 py-5">
                             <div className="flex flex-wrap gap-1">
-                                {groupMap[code].map(sId => {
-                                  // Find LTP info for display
-                                  const ltp = sectionLTPMap[sId];
-                                  return (
-                                    <span key={sId} className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold text-slate-700 flex items-center gap-1 border border-slate-200">
-                                        {sId}
-                                        {ltp && <span className="text-[8px] text-slate-400 font-mono">(L{ltp.L} T{ltp.T} P{ltp.P})</span>}
-                                    </span>
-                                )})}
+                                <span className="px-2 py-1 rounded-md bg-slate-100 text-[10px] font-bold text-slate-700 flex items-center gap-1 border border-slate-200">
+                                    {sectionGroupStr}
+                                </span>
                             </div>
                         </td>
                         <td className="px-6 py-5">

@@ -2,6 +2,7 @@ package com.capstone.University.Time.Table.manager.Service;
 
 import com.capstone.University.Time.Table.manager.DTO.CourseMappingDto;
 import com.capstone.University.Time.Table.manager.DTO.MergeDTO;
+import com.capstone.University.Time.Table.manager.DTO.SectionGroupDTO;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
@@ -32,14 +33,18 @@ public class MergeService {
     public List<CourseMappingDto> mergeSection(MergeDTO mergeDTO) {
 
         String courseCode = mergeDTO.getCourseCode();
-        List<String> sectionIds = mergeDTO.getSectionIds();
-        Short groupNo = mergeDTO.getGroupNo();
+        List<SectionGroupDTO> sectionGroups = mergeDTO.getSectionGroups();
         String mappingType = mergeDTO.getMappingType();
         String existingMergeCode = mergeDTO.getExistingMergeCode();
 
-        if (sectionIds == null || sectionIds.isEmpty()) {
-            throw new IllegalArgumentException("At least one section ID is required.");
+        if (sectionGroups == null || sectionGroups.isEmpty()) {
+            throw new IllegalArgumentException("At least one section group is required.");
         }
+
+        List<String> sectionIds = sectionGroups.stream()
+                .map(SectionGroupDTO::getSectionId)
+                .distinct()
+                .toList();
 
         for (String sectionId : sectionIds) {
             if (!courseMappingRepository.existsBySection(sectionId)) {
@@ -48,6 +53,7 @@ public class MergeService {
         }
 
         List<CourseMapping> existingGroupMappings = new ArrayList<>();
+
         if (existingMergeCode != null && !existingMergeCode.isEmpty()) {
             existingGroupMappings = courseMappingRepository.findByMergecode(existingMergeCode);
             if (existingGroupMappings.isEmpty()) {
@@ -55,13 +61,25 @@ public class MergeService {
             }
         }
 
-        List<CourseMapping> newMappings =
-                courseMappingRepository.findFlexibleMappings(
-                        courseCode,
-                        sectionIds,
-                        groupNo,
-                        mappingType
-                );
+        List<CourseMapping> candidateMappings = courseMappingRepository.findByCoursecodeAndSectionIn(courseCode, sectionIds);
+        List<CourseMapping> newMappings = new ArrayList<>();
+
+        for (SectionGroupDTO sg : sectionGroups) {
+            String targetSection = sg.getSectionId();
+            Short targetGroup = sg.getGroupNo();
+
+            CourseMapping match = candidateMappings.stream()
+                    .filter(c -> c.getSection().equals(targetSection))
+                    .filter(c -> (targetGroup == null && c.getGroupNo() == null) || (targetGroup != null && targetGroup.equals(c.getGroupNo())))
+                    .filter(c -> mappingType == null || mappingType.equals(c.getMappingType()))
+                    .filter(c -> c.getMergeStatus() == null || !c.getMergeStatus())
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "No available mapping found for section " + targetSection + 
+                            (targetGroup != null ? " group " + targetGroup : "") + 
+                            " with type " + mappingType));
+            newMappings.add(match);
+        }
 
         if (newMappings.isEmpty()) {
             throw new ResourceNotFoundException("No matching course mappings found for the given sections.");
@@ -129,17 +147,36 @@ public class MergeService {
         courseMappingRepository.saveAll(existingMappings);
 
         String courseCode = mergeDTO.getCourseCode();
-        List<String> sectionIds = mergeDTO.getSectionIds();
-        Short groupNo = mergeDTO.getGroupNo();
+        List<SectionGroupDTO> sectionGroups = mergeDTO.getSectionGroups();
         String mappingType = mergeDTO.getMappingType();
 
-        List<CourseMapping> newMappings =
-                courseMappingRepository.findFlexibleMappings(
-                        courseCode,
-                        sectionIds,
-                        groupNo,
-                        mappingType
-                );
+        if (sectionGroups == null || sectionGroups.isEmpty()) {
+            throw new IllegalArgumentException("At least one section group is required.");
+        }
+
+        List<String> sectionIds = sectionGroups.stream()
+                .map(SectionGroupDTO::getSectionId)
+                .distinct()
+                .toList();
+
+        List<CourseMapping> candidateMappings = courseMappingRepository.findByCoursecodeAndSectionIn(courseCode, sectionIds);
+        List<CourseMapping> newMappings = new ArrayList<>();
+
+        for (SectionGroupDTO sg : sectionGroups) {
+            String targetSection = sg.getSectionId();
+            Short targetGroup = sg.getGroupNo();
+
+            CourseMapping match = candidateMappings.stream()
+                    .filter(c -> c.getSection().equals(targetSection))
+                    .filter(c -> (targetGroup == null && c.getGroupNo() == null) || (targetGroup != null && targetGroup.equals(c.getGroupNo())))
+                    .filter(c -> mappingType == null || mappingType.equals(c.getMappingType()))
+                    .findFirst()
+                    .orElseThrow(() -> new ResourceNotFoundException(
+                            "No available mapping found for section " + targetSection + 
+                            (targetGroup != null ? " group " + targetGroup : "") + 
+                            " with type " + mappingType));
+            newMappings.add(match);
+        }
 
         if (newMappings.isEmpty()) {
             throw new ResourceNotFoundException("No matching course mappings found for the given sections.");

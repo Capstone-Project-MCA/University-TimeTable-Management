@@ -13,8 +13,7 @@ import java.util.List;
 @NoArgsConstructor
 public class MergeDTO {
     String courseCode;
-    List<String> sectionIds;
-    Short groupNo;
+    List<SectionGroupDTO> sectionGroups;
     String mappingType;
     String existingMergeCode;
 }
