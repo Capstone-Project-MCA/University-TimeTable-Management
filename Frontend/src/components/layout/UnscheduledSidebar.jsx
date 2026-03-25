@@ -10,17 +10,16 @@ import SectionCard from '../common/SectionCard'
 
 const ROOM_TYPE_MAP = { 0: 'Lecture Hall', 1: 'Lab', 2: 'Seminar Hall' }
 
-export default function UnscheduledSidebar({ activeTab = 'courses' }) {
+export default function UnscheduledSidebar({ activeTab = 'courses', filterSection = 'All', setFilterSection }) {
   const [courses,   setCourses]   = useState([])
   const [faculties, setFaculties] = useState([])
   const [rooms,     setRooms]     = useState([])
   const [sections,  setSections]  = useState([])
   const [tickets,   setTickets]   = useState([])
   const [searchQuery, setSearchQuery] = useState('')
-  const [selectedSection, setSelectedSection] = useState('All')
+
   // Filter panel state (tickets tab)
   const [filterOpen,    setFilterOpen]    = useState(false)
-  const [filterSection, setFilterSection] = useState('All')
   const [filterFaculty, setFilterFaculty] = useState('All')
   const [filterCourse,  setFilterCourse]  = useState('All')
 
@@ -31,8 +30,8 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
 
   // Reset all filters when switching tabs
   useEffect(() => {
-    setSelectedSection('All'); setSearchQuery('')
-    setFilterOpen(false); setFilterSection('All'); setFilterFaculty('All'); setFilterCourse('All')
+    setSearchQuery('')
+    setFilterOpen(false); setFilterSection?.('All'); setFilterFaculty('All'); setFilterCourse('All')
   }, [activeTab])
 
   useEffect(() => {
@@ -242,7 +241,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
           {/* Clear all */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterSection('All'); setFilterFaculty('All'); setFilterCourse('All') }}
+              onClick={() => { setFilterSection?.('All'); setFilterFaculty('All'); setFilterCourse('All') }}
               className='w-full text-[10px] font-bold text-red-500 dark:text-red-400 py-1 rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all flex items-center justify-center gap-1'
             >
               <span className='material-symbols-outlined text-[12px]'>filter_list_off</span>
@@ -333,6 +332,26 @@ export default function UnscheduledSidebar({ activeTab = 'courses' }) {
                     e.dataTransfer.effectAllowed = 'move'
                     setDraggedTicket({ ticketId: tid, coursecode: course, type: typeCode, lectureNo: lno, section, facultyUID: faculty })
                     try { e.dataTransfer.setData('text/plain', tid) } catch {}
+
+                    /* ── tiny drag-ghost so the large card doesn't block drop zones ── */
+                    const ghost = document.createElement('div')
+                    ghost.style.cssText = [
+                      'position:fixed', 'top:-200px', 'left:-200px',
+                      'display:flex', 'align-items:center', 'gap:5px',
+                      'padding:4px 9px', 'border-radius:999px',
+                      'font:700 11px/1.2 Inter,sans-serif',
+                      'white-space:nowrap', 'pointer-events:none',
+                      'box-shadow:0 2px 8px rgba(0,0,0,.25)',
+                      typeCode === 'L'
+                        ? 'background:#3b82f6;color:#fff;border:2px solid #2563eb'
+                        : typeCode === 'T'
+                        ? 'background:#8b5cf6;color:#fff;border:2px solid #7c3aed'
+                        : 'background:#10b981;color:#fff;border:2px solid #059669',
+                    ].join(';')
+                    ghost.textContent = `${course}  ·  ${typeCode === 'L' ? 'Lec' : typeCode === 'T' ? 'Tut' : 'Prac'} #${lno}`
+                    document.body.appendChild(ghost)
+                    e.dataTransfer.setDragImage(ghost, -12, -12)
+                    requestAnimationFrame(() => ghost.remove())
                   }}
                   onDragEnd={() => clearDraggedTicket()}
                   className={`rounded-xl border bg-white dark:bg-slate-800 transition-all cursor-grab active:cursor-grabbing group select-none overflow-hidden ${

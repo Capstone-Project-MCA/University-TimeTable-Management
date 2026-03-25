@@ -71,47 +71,53 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
       draggable
       onDragStart={e => onDragStart(e, ticket)}
       onDragEnd={() => clearDraggedTicket()}
-      className={`group relative rounded border text-[9px] font-bold cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-hidden ${bgCard}`}
+      className={`group relative rounded border cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-visible ${bgCard}`}
       title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}`}
     >
       {/* Coloured left accent */}
-      <div className={`absolute left-0 top-0 bottom-0 w-1 ${accentBar}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${accentBar}`} />
 
-      {/* × remove button — larger, always slightly visible */}
+      {/* × remove button — big & always slightly visible */}
       <button
         onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
         onClick={e => { e.stopPropagation(); onUnschedule(tid); }}
         title="Remove from grid"
-        className="absolute -top-1.5 -right-1.5 z-10 w-5 h-5 rounded-full bg-slate-500 dark:bg-slate-400 text-white flex items-center justify-center opacity-30 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-110 shadow"
+        className="absolute -top-2 -right-2 z-30 w-6 h-6 rounded-full bg-slate-600 dark:bg-slate-400 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-125 shadow"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 12, fontVariationSettings: "'FILL' 1,'wght' 700" }}>close</span>
+        <span className="material-symbols-outlined" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1,'wght' 900" }}>close</span>
       </button>
 
-      <div className="pl-2.5 pr-1.5 py-1.5">
-        {/* Course + type badge */}
-        <div className="flex items-center gap-1 mb-1">
-          <span className="font-extrabold text-slate-800 dark:text-slate-100 truncate text-[10px] leading-tight">{course}</span>
-          <span className={`ml-auto shrink-0 text-[8px] font-bold px-1 rounded ${
-            type === 'L' ? 'bg-blue-400 text-white' : type === 'T' ? 'bg-purple-400 text-white' : 'bg-emerald-400 text-white'
+      <div className="pl-3 pr-2 py-1.5">
+        {/* Row 1 — Course code (large) + type pill */}
+        <div className="flex items-center justify-between gap-1 mb-1">
+          <span className="font-black text-slate-900 dark:text-white text-[13px] leading-none tracking-tight truncate">{course}</span>
+          <span className={`shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded ${
+            type === 'L' ? 'bg-blue-500 text-white' : type === 'T' ? 'bg-purple-500 text-white' : 'bg-emerald-500 text-white'
           }`}>{typeShort}</span>
         </div>
 
-        {/* Section · Group */}
-        <div className="flex items-center gap-1 text-[8px] text-slate-500 dark:text-slate-400 leading-tight mb-0.5">
-          <span className="material-symbols-outlined text-[9px]">class</span>
-          <span>Sec {section}</span>
-          <span className="opacity-40">·</span>
-          <span className="material-symbols-outlined text-[9px]">group</span>
-          <span>G{group}</span>
-          <span className="opacity-40">·</span>
-          <span className="font-semibold text-slate-600 dark:text-slate-300">#{lno}</span>
+        {/* Row 2 — Section / Group (with labels) */}
+        <div className="flex items-center gap-1.5 leading-none mb-0.5 flex-wrap">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Sec</span>
+          <span className="font-bold text-[11px] text-slate-800 dark:text-slate-100">{section}</span>
+          <span className="text-slate-300 dark:text-slate-600">·</span>
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Group</span>
+          <span className="font-bold text-[11px] text-slate-800 dark:text-slate-100">{Number(group) === 0 ? 'All' : group}</span>
         </div>
 
-        {/* Faculty */}
+        {/* Row 3 — Slot number with type-aware label */}
+        <div className="flex items-center gap-1 leading-none mb-0.5">
+          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">
+            {type === 'L' ? 'Lecture' : type === 'T' ? 'Tutorial' : 'Practical'} No.
+          </span>
+          <span className="font-bold text-[11px] text-slate-700 dark:text-slate-300">{lno}</span>
+        </div>
+
+        {/* Row 4 — Faculty with label */}
         {faculty && (
-          <div className="flex items-center gap-0.5 text-[8px] text-slate-400 truncate leading-tight">
-            <span className="material-symbols-outlined text-[9px]">person</span>
-            <span className="font-mono">{faculty}</span>
+          <div className="mt-0.5 flex items-center gap-1 truncate">
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-medium shrink-0">Faculty:</span>
+            <span className="font-mono text-[11px] font-bold text-slate-700 dark:text-slate-200 truncate">{faculty}</span>
           </div>
         )}
       </div>
@@ -119,7 +125,7 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
   );
 }
 
-export default function TimetableGrid() {
+export default function TimetableGrid({ filterSection = 'All' }) {
   const days = useMemo(() => getWeekDays(new Date()), []);
   const { refreshKey, triggerRefresh } = useDataRefresh();
 
@@ -147,6 +153,11 @@ export default function TimetableGrid() {
       const day  = t.Day  || t.day;
       const time = t.Time || t.time;
       if (day && time) {
+        if (filterSection !== 'All') {
+          const section = t.Section || t.section;
+          if (section !== filterSection) return;
+        }
+
         // Normalise time to HH:MM
         const hhmm = String(time).slice(0, 5);
         const key  = `${day}|${hhmm}`;
@@ -155,12 +166,19 @@ export default function TimetableGrid() {
       }
     });
     return map;
-  }, [tickets]);
+  }, [tickets, filterSection]);
 
   /* ── unscheduled (no Day or Time set) ─────────────────────────────────── */
   const unscheduledCount = useMemo(
-    () => tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time)).length,
-    [tickets]
+    () => tickets.filter(t => {
+      if ((t.Day || t.day) && (t.Time || t.time)) return false;
+      if (filterSection !== 'All') {
+        const section = t.Section || t.section;
+        if (section !== filterSection) return false;
+      }
+      return true;
+    }).length,
+    [tickets, filterSection]
   );
 
   /* ── drag start (from grid cards) ────────────────────────────────────── */
@@ -214,6 +232,15 @@ export default function TimetableGrid() {
     const ticketId = data?.ticketId;
     if (!ticketId) {
       console.warn('Drop: no ticket data found in dragStore');
+      return;
+    }
+
+    // ── Block drop if cell is already occupied by a DIFFERENT ticket ──────
+    const existingInSlot = (slotMap[key] || []).filter(
+      t => (t.TicketId || t.ticketId) !== ticketId
+    );
+    if (existingInSlot.length > 0) {
+      console.info('Drop blocked: slot already occupied');
       return;
     }
 
@@ -277,9 +304,16 @@ export default function TimetableGrid() {
           className="grid border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 shrink-0 relative z-20"
           style={{ gridTemplateColumns: COL_TEMPLATE }}
         >
-          {/* Time gutter */}
-          <div className="h-12 border-r border-slate-200 dark:border-slate-700 flex items-center justify-center bg-slate-100/50 dark:bg-slate-800">
-            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">IST</span>
+          {/* Time gutter — also shows active section badge */}
+          <div className="h-12 border-r border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-0.5 bg-slate-100/50 dark:bg-slate-800 px-0.5">
+            <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">IST</span>
+            {filterSection !== 'All' ? (
+              <span className="text-[9px] font-black px-1.5 py-0.5 rounded bg-indigo-500 dark:bg-indigo-600 text-white leading-none tracking-wide truncate max-w-full">
+                {filterSection}
+              </span>
+            ) : (
+              <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-wide">ALL</span>
+            )}
           </div>
 
           {days.map(d => (
@@ -307,11 +341,14 @@ export default function TimetableGrid() {
           ))}
         </div>
 
-        {/* Unscheduled count hint */}
+        {/* Unscheduled count hint — compact single-line pill */}
         {unscheduledCount > 0 && (
-          <div className="px-3 py-1.5 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex items-center gap-2 text-[11px] text-amber-700 dark:text-amber-400 font-semibold shrink-0">
-            <span className="material-symbols-outlined text-sm">info</span>
-            {unscheduledCount} ticket{unscheduledCount !== 1 ? 's' : ''} not yet scheduled — drag from the Tickets panel on the left to place them.
+          <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex items-center gap-1.5 shrink-0">
+            <span className="material-symbols-outlined text-[13px] text-amber-500 dark:text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>pending</span>
+            <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
+              {unscheduledCount} unscheduled ticket{unscheduledCount !== 1 ? 's' : ''}
+            </span>
+            <span className="text-[10px] text-amber-500/70 dark:text-amber-500/60">— drag from Tickets panel to place</span>
           </div>
         )}
 
@@ -350,6 +387,7 @@ export default function TimetableGrid() {
                 {days.map(d => {
                   const key = `${d.id}|${time}`;
                   const cellTickets = slotMap[key] || [];
+                  const isOccupied = cellTickets.length > 0;
                   const isOver = dragOverKey === key;
                   return (
                     <div
@@ -360,12 +398,26 @@ export default function TimetableGrid() {
                       onDrop={e => handleDrop(e, d.id, time)}
                       className={`p-0.5 h-full relative z-0 border-r border-slate-100/60 dark:border-slate-700/30 last:border-r-0 transition-colors ${
                         d.isWeekend ? 'opacity-60' : ''
-                      } ${isOver ? 'bg-primary/10 dark:bg-primary/15 ring-1 ring-inset ring-primary/30 dark:ring-primary/40' : ''}`}
+                      }`}
                     >
-                      {/* Drop zone indicator when dragging over */}
-                      {isOver && cellTickets.length === 0 && (
-                        <div className="absolute inset-1 rounded border-2 border-dashed border-primary/40 dark:border-primary/50 flex items-center justify-center pointer-events-none">
-                          <span className="material-symbols-outlined text-primary/50 text-base">add_circle</span>
+                      {/* ── Full-cell drop overlay — always on top of cards ── */}
+                      {isOver && (
+                        <div className={`absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center gap-1 rounded transition-all ${
+                          isOccupied
+                            ? 'bg-red-500/20 dark:bg-red-500/30 ring-2 ring-inset ring-red-400/70'
+                            : 'bg-primary/20 dark:bg-primary/25 ring-2 ring-inset ring-primary/60'
+                        }`}>
+                          {isOccupied ? (
+                            <>
+                              <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>block</span>
+                              <span className="text-[9px] font-bold text-red-600 dark:text-red-400 text-center leading-tight px-1">Slot occupied</span>
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-symbols-outlined text-primary dark:text-blue-400" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>add_circle</span>
+                              <span className="text-[9px] font-bold text-primary dark:text-blue-400">Drop here</span>
+                            </>
+                          )}
                         </div>
                       )}
 
