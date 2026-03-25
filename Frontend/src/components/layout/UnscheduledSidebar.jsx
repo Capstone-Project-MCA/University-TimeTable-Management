@@ -324,11 +324,15 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
                 typeCode === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                 : typeCode === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-              const isScheduled = !!(( item.Day || item.day) && (item.Time || item.time))
+              const isScheduled = !!((item.Day || item.day) && (item.Time || item.time))
+              const scheduledDay  = item.Day  || item.day  || ''
+              const scheduledTime = item.Time || item.time || ''
+              const scheduledHHMM = String(scheduledTime).slice(0, 5)
               return (
                 <div key={tid}
-                  draggable
+                  draggable={!isScheduled}
                   onDragStart={e => {
+                    if (isScheduled) { e.preventDefault(); return; }
                     e.dataTransfer.effectAllowed = 'move'
                     setDraggedTicket({ ticketId: tid, coursecode: course, type: typeCode, lectureNo: lno, section, facultyUID: faculty })
                     try { e.dataTransfer.setData('text/plain', tid) } catch {}
@@ -354,18 +358,28 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
                     requestAnimationFrame(() => ghost.remove())
                   }}
                   onDragEnd={() => clearDraggedTicket()}
-                  className={`rounded-xl border bg-white dark:bg-slate-800 transition-all cursor-grab active:cursor-grabbing group select-none overflow-hidden ${
+                  className={`rounded-xl border bg-white dark:bg-slate-800 transition-all select-none overflow-hidden relative ${
                     isScheduled
-                      ? 'border-emerald-200 dark:border-emerald-800 opacity-40'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-md'
+                      ? 'border-emerald-300 dark:border-emerald-700 cursor-default'
+                      : 'cursor-grab active:cursor-grabbing group hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-md border-slate-200 dark:border-slate-700'
                   }`}
                 >
-                  {/* Coloured top stripe */}
+                  {/* Coloured top stripe — green when scheduled */}
                   <div className={`h-1 w-full ${
+                    isScheduled ? 'bg-emerald-400' :
                     typeCode === 'L' ? 'bg-blue-400' : typeCode === 'T' ? 'bg-purple-400' : 'bg-emerald-400'
                   }`} />
 
-                  <div className='p-2.5'>
+                  {/* Scheduled overlay banner */}
+                  {isScheduled && (
+                    <div className='absolute inset-x-0 bottom-0 bg-emerald-50 dark:bg-emerald-900/30 border-t border-emerald-200 dark:border-emerald-700 px-2.5 py-1 flex items-center gap-1.5 z-10'>
+                      <span className='material-symbols-outlined text-[11px] text-emerald-600 dark:text-emerald-400' style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                      <span className='text-[10px] font-bold text-emerald-700 dark:text-emerald-400'>Scheduled</span>
+                      <span className='text-[10px] text-emerald-600 dark:text-emerald-500 font-mono ml-auto'>{scheduledDay} · {scheduledHHMM}</span>
+                    </div>
+                  )}
+
+                  <div className={`p-2.5 ${isScheduled ? 'pb-8 opacity-60' : ''}`}>
                     {/* Row 1: Course + type pill */}
                     <div className='flex items-start justify-between gap-1 mb-2'>
                       <p className='text-[12px] font-extrabold text-slate-800 dark:text-slate-100 leading-tight'>{course}</p>
@@ -398,8 +412,10 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
                           </span>
                         )}
                       </span>
-                      {/* Drag hint */}
-                      <span className='material-symbols-outlined text-[13px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity'>drag_indicator</span>
+                      {/* Drag hint — only for unscheduled */}
+                      {!isScheduled && (
+                        <span className='material-symbols-outlined text-[13px] text-slate-300 dark:text-slate-600 opacity-0 group-hover:opacity-100 transition-opacity'>drag_indicator</span>
+                      )}
                     </div>
 
                     {/* Row 4: Faculty */}

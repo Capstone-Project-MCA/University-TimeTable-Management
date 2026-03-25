@@ -33,7 +33,9 @@ function getWeekDays(today = new Date()) {
   });
 }
 
-const COL_TEMPLATE = '50px repeat(7, 1fr)';
+/* ── COL_TEMPLATE is computed dynamically based on showWeekends ──────────── */
+const buildColTemplate = (showWeekends) =>
+  showWeekends ? '50px repeat(7, 1fr)' : '50px repeat(5, 1fr)';
 
 /* ── type → colour ─────────────────────────────────────────────────────── */
 function typeColor(type) {
@@ -65,26 +67,41 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
   const group     = ticket.GroupNo     ?? ticket.groupNo     ?? '';
   const lno       = ticket.LectureNo   ?? ticket.lectureNo   ?? '';
   const faculty   = ticket.FacultyUID  || ticket.facultyUID  || null;
+  const hasConflict = ticket._hasConflict || false;
 
   return (
     <div
       draggable
       onDragStart={e => onDragStart(e, ticket)}
       onDragEnd={() => clearDraggedTicket()}
-      className={`group relative rounded border cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-visible ${bgCard}`}
-      title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}`}
+      className={`group relative rounded border cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-visible ${
+        hasConflict
+          ? 'border-amber-400 dark:border-amber-500 ring-1 ring-amber-400/60'
+          : bgCard
+      }`}
+      title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}${
+        hasConflict ? ' ⚠ Faculty conflict in this slot!' : ''
+      }`}
     >
-      {/* Coloured left accent */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${accentBar}`} />
+      {/* Conflict warning badge */}
+      {hasConflict && (
+        <div className="absolute -top-2 -left-2 z-30 w-5 h-5 rounded-full bg-amber-400 dark:bg-amber-500 flex items-center justify-center shadow"
+             title="Faculty conflict: same faculty assigned at this time slot">
+          <span className="material-symbols-outlined text-white" style={{ fontSize: 12, fontVariationSettings: "'FILL' 1" }}>warning</span>
+        </div>
+      )}
 
-      {/* × remove button — big & always slightly visible */}
+      {/* Coloured left accent */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${hasConflict ? 'bg-amber-400' : accentBar}`} />
+
+      {/* × remove button */}
       <button
         onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
         onClick={e => { e.stopPropagation(); onUnschedule(tid); }}
         title="Remove from grid"
-        className="absolute -top-2 -right-2 z-30 w-6 h-6 rounded-full bg-slate-600 dark:bg-slate-400 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-125 shadow"
+        className="absolute -top-3 -right-3 z-30 w-8 h-8 rounded-full bg-slate-600 dark:bg-slate-400 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-110 shadow-md"
       >
-        <span className="material-symbols-outlined" style={{ fontSize: 15, fontVariationSettings: "'FILL' 1,'wght' 900" }}>close</span>
+        <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1,'wght' 900" }}>close</span>
       </button>
 
       <div className="pl-3 pr-2 py-1.5">
@@ -126,12 +143,17 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
 }
 
 export default function TimetableGrid({ filterSection = 'All' }) {
-  const days = useMemo(() => getWeekDays(new Date()), []);
+  const days        = useMemo(() => getWeekDays(new Date()), []);
   const { refreshKey, triggerRefresh } = useDataRefresh();
+
+  // weekend toggle
+  const [showWeekends, setShowWeekends] = useState(false);
+  const COL_TEMPLATE = buildColTemplate(showWeekends);
+  const visibleDays  = showWeekends ? days : days.filter(d => !d.isWeekend);
 
   // all tickets fetched from backend
   const [tickets, setTickets] = useState([]);
-  // dragover cell key for highlight — tracked with enter counter to avoid false leaves
+  // dragover cell key for highlight
   const [dragOverKey, setDragOverKey] = useState(null);
   const dragEnterCounters = useRef({});
 
@@ -167,6 +189,27 @@ export default function TimetableGrid({ filterSection = 'All' }) {
     });
     return map;
   }, [tickets, filterSection]);
+
+  /* ── faculty conflict detection: slot key → Set of conflicting ticket IDs ── */
+  const conflictTicketIds = useMemo(() => {
+    const ids = new Set();
+    // Use ALL tickets regardless of section filter so cross-section conflicts show
+    const fullMap = {};
+    tickets.forEach(t => {
+      const day  = t.Day  || t.day;
+      const time = t.Time || t.time;
+      const fac  = t.FacultyUID || t.facultyUID;
+      if (!day || !time || !fac) return;
+      const hhmm = String(time).slice(0, 5);
+      const key  = `${fac}|${day}|${hhmm}`;
+      if (!fullMap[key]) fullMap[key] = [];
+      fullMap[key].push(t.TicketId || t.ticketId);
+    });
+    Object.values(fullMap).forEach(group => {
+      if (group.length > 1) group.forEach(id => ids.add(id));
+    });
+    return ids;
+  }, [tickets]);
 
   /* ── unscheduled (no Day or Time set) ─────────────────────────────────── */
   const unscheduledCount = useMemo(
@@ -314,9 +357,21 @@ export default function TimetableGrid({ filterSection = 'All' }) {
             ) : (
               <span className="text-[8px] font-bold text-slate-300 dark:text-slate-600 uppercase tracking-wide">ALL</span>
             )}
+            {/* Weekend toggle */}
+            <button
+              onClick={() => setShowWeekends(s => !s)}
+              title={showWeekends ? 'Hide weekends' : 'Show weekends'}
+              className={`mt-0.5 text-[7px] font-bold px-1 py-px rounded leading-none transition-colors ${
+                showWeekends
+                  ? 'bg-emerald-500 text-white'
+                  : 'bg-slate-200 dark:bg-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-300 dark:hover:bg-slate-600'
+              }`}
+            >
+              {showWeekends ? 'SAT–SUN ✓' : 'SAT–SUN'}
+            </button>
           </div>
 
-          {days.map(d => (
+          {visibleDays.map(d => (
             <div
               key={d.id}
               className={`h-12 flex flex-col items-center justify-center border-r border-slate-200 dark:border-slate-700 last:border-r-0 px-1 transition-colors ${
@@ -353,7 +408,8 @@ export default function TimetableGrid({ filterSection = 'All' }) {
         )}
 
         {/* ── Grid Body ─────────────────────────────────────────────────── */}
-        <div className="flex-1 relative flex flex-col h-full overflow-y-auto">
+        {/* flex-1 alone controls height — h-full was causing over-sizing */}
+        <div className="flex-1 min-h-0 relative flex flex-col overflow-y-auto">
 
           {/* Background vertical column lines */}
           <div
@@ -361,7 +417,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
             style={{ gridTemplateColumns: COL_TEMPLATE }}
           >
             <div className="bg-slate-50/50 dark:bg-slate-800/30" />
-            {days.map(d => (
+            {visibleDays.map(d => (
               <div key={d.id} className={
                 d.isToday    ? 'bg-primary/[0.03] dark:bg-primary/[0.05]'
                 : d.isWeekend ? 'bg-slate-50/80 dark:bg-slate-800/40'
@@ -370,10 +426,10 @@ export default function TimetableGrid({ filterSection = 'All' }) {
             ))}
           </div>
 
-          {/* Time Rows */}
+          {/* Time Rows — pure 1fr so all slots share available height with no scroll */}
           <div
             className="flex-1 divide-y divide-slate-100 dark:divide-slate-700/50 relative z-10"
-            style={{ display: 'grid', gridTemplateRows: `repeat(${TIMES.length}, minmax(72px, 1fr))` }}
+            style={{ display: 'grid', gridTemplateRows: `repeat(${TIMES.length}, 1fr)` }}
           >
             {TIMES.map(time => (
               <div key={time} className="grid w-full min-h-0 relative" style={{ gridTemplateColumns: COL_TEMPLATE }}>
@@ -384,7 +440,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
                 </div>
 
                 {/* Day cells — each is a drop target */}
-                {days.map(d => {
+                {visibleDays.map(d => {
                   const key = `${d.id}|${time}`;
                   const cellTickets = slotMap[key] || [];
                   const isOccupied = cellTickets.length > 0;
@@ -423,14 +479,17 @@ export default function TimetableGrid({ filterSection = 'All' }) {
 
                       {/* Placed ticket cards */}
                       <div className="flex flex-col gap-0.5 p-0.5 h-full overflow-hidden">
-                        {cellTickets.map(t => (
-                          <GridTicketCard
-                            key={t.TicketId || t.ticketId}
-                            ticket={t}
-                            onDragStart={handleDragStart}
-                            onUnschedule={handleUnschedule}
-                          />
-                        ))}
+                        {cellTickets.map(t => {
+                          const tid = t.TicketId || t.ticketId;
+                          return (
+                            <GridTicketCard
+                              key={tid}
+                              ticket={{ ...t, _hasConflict: conflictTicketIds.has(tid) }}
+                              onDragStart={handleDragStart}
+                              onUnschedule={handleUnschedule}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                   );
