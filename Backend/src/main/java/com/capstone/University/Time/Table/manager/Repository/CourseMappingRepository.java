@@ -18,39 +18,24 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
 
     boolean existsBySection(String section);
 
-    @Query("SELECT COUNT(c) > 0 FROM CourseMapping c WHERE c.section = :section AND c.Coursecode = :coursecode")
-    boolean existsBySectionAndCoursecode(@Param("section") String section, @Param("coursecode") String coursecode);
+    boolean existsBySectionAndCourseCode(String section, String courseCode);
 
-    @Query("SELECT c FROM CourseMapping c WHERE c.section = :section AND c.Coursecode = :coursecode AND c.GroupNo = :groupNo AND c.mappingType = :mappingType")
-    Optional<CourseMapping> findBySectionAndCoursecodeAndGroupNoAndMappingType(
-            @Param("section") String section,
-            @Param("coursecode") String coursecode,
-            @Param("groupNo") Short groupNo,
-            @Param("mappingType") String mappingType
-    );
+    Optional<CourseMapping> findBySectionAndCourseCodeAndGroupNoAndMappingType(
+            String section, String courseCode, Short groupNo, String mappingType);
 
-    // 🔥 THIS replaces your broken query
-    @Query("SELECT c FROM CourseMapping c WHERE c.Coursecode = :coursecode AND c.section IN :sections")
-    List<CourseMapping> findByCoursecodeAndSectionIn(
-            @Param("coursecode") String coursecode,
-            @Param("sections") List<String> sections
-    );
+    List<CourseMapping> findByCourseCodeAndSectionIn(String courseCode, List<String> sections);
 
-    @Query("SELECT c FROM CourseMapping c WHERE c.Coursecode = :coursecode AND c.section IN :sections AND c.GroupNo = :groupNo")
-    List<CourseMapping> findByCoursecodeAndSectionInAndGroupNo(
-            @Param("coursecode") String coursecode,
-            @Param("sections") List<String> sections,
-            @Param("groupNo") Short groupNo
-    );
+    List<CourseMapping> findByCourseCodeAndSectionInAndGroupNo(
+            String courseCode, List<String> sections, Short groupNo);
 
     @Query("""
     SELECT c FROM CourseMapping c
-    WHERE c.Coursecode = :coursecode
+    WHERE c.courseCode = :coursecode
     AND c.section IN :sections
     AND (
-        :groupNo IS NULL 
-        OR c.GroupNo = :groupNo 
-        OR c.GroupNo IS NULL
+        :groupNo IS NULL
+        OR c.groupNo = :groupNo
+        OR c.groupNo IS NULL
     )
     AND (:mappingType IS NULL OR c.mappingType = :mappingType)
 """)
@@ -61,17 +46,14 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
             @Param("mappingType") String mappingType
     );
 
-    @Query("SELECT c FROM CourseMapping c WHERE c.Mergecode = :mergecode")
-    List<CourseMapping> findByMergecode(@Param("mergecode") String mergecode);
+    List<CourseMapping> findByMergeCode(String mergeCode);
 
-    @Query("SELECT c FROM CourseMapping c WHERE c.Mergecode = :mergecode AND c.mappingType = :mappingType")
-    List<CourseMapping> findByMergecodeAndMappingType(@Param("mergecode") String mergecode, @Param("mappingType") String mappingType);
+    List<CourseMapping> findByMergeCodeAndMappingType(String mergeCode, String mappingType);
 
-    @Query("SELECT c FROM CourseMapping c WHERE c.Mergecode IS NOT NULL")
-    List<CourseMapping> findByMergecodeIsNotNull();
+    List<CourseMapping> findByMergeCodeIsNotNull();
 
-    @Query("SELECT MAX(c.Mergecode) FROM CourseMapping c")
-    String findMaxMergecode();
+    @Query("SELECT MAX(c.mergeCode) FROM CourseMapping c")
+    String findMaxMergeCode();
 
     @Modifying
     @Transactional

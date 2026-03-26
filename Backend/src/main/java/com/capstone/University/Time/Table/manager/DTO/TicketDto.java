@@ -5,14 +5,14 @@ import java.time.LocalTime;
 
 @Data
 public class TicketDto {
-    private String TicketId;
-    private String Section;
-    private String Coursecode;
-    private Short GroupNo;
-    private Short LectureNo;
-    private String Day;
-    private LocalTime Time;
-    private String MergedCode;
-    private String FacultyUID;
-    private String RoomNo;
+    private String ticketId;
+    private String section;
+    private String courseCode;
+    private Short groupNo;
+    private Short lectureNo;
+    private String day;
+    private LocalTime time;
+    private String mergedCode;
+    private String facultyUid;
+    private String roomNo;
 }

@@ -107,7 +107,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
       // Only unscheduled — then apply dropdown filters
       rawData = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
       if (filterSection !== 'All') rawData = rawData.filter(t => (t.Section || t.section) === filterSection)
-      if (filterFaculty !== 'All') rawData = rawData.filter(t => (t.FacultyUID || t.facultyUID) === filterFaculty)
+      if (filterFaculty !== 'All') rawData = rawData.filter(t => (t.FacultyUID || t.facultyUID || t.facultyUid) === filterFaculty)
       if (filterCourse  !== 'All') rawData = rawData.filter(t => (t.Coursecode || t.coursecode) === filterCourse)
       break
     }
@@ -117,7 +117,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
   // Derive filter options from ALL unscheduled tickets (irrespective of other filters)
   const unscheduledTickets = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
   const sectionOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Section  || t.section  || '').filter(Boolean))).sort()]
-  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.FacultyUID || t.facultyUID || '').filter(Boolean))).sort()]
+  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.FacultyUID || t.facultyUID || t.facultyUid || '').filter(Boolean))).sort()]
   const courseOptions   = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Coursecode || t.coursecode || '').filter(Boolean))).sort()]
   const activeFilterCount = [filterSection, filterFaculty, filterCourse].filter(v => v !== 'All').length
 
@@ -151,7 +151,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
               (item.ticketId   || item.TicketId   || '').toLowerCase().includes(q) ||
               (item.Coursecode || item.coursecode || '').toLowerCase().includes(q) ||
               (item.Section    || item.section    || '').toLowerCase().includes(q) ||
-              (item.FacultyUID || item.facultyUID || '').toLowerCase().includes(q)
+              (item.FacultyUID || item.facultyUID || item.facultyUid || '').toLowerCase().includes(q)
             )
           default:
             return true
@@ -261,59 +261,77 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
         )}
         {data.map((item) => {
           switch (activeTab) {
-            case 'courses':
+            case 'courses': {
+              const courseCode  = item.courseCode  || item.CourseCode  || ''
+              const courseTitle = item.courseTitle || item.CourseTitle || ''
+              const credit      = item.credit      ?? item.Credit
               return (
                 <CourseCard
-                  key={item.CourseCode}
-                  course={item.CourseCode}
-                  title={item.CourseTitle}
-                  credits={item.Credit}
+                  key={courseCode}
+                  course={courseCode}
+                  title={courseTitle}
+                  credits={credit}
                   teacher={'TBA'}
                   color='blue'
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
               )
-            case 'faculties':
+            }
+            case 'faculties': {
+              const facultyUID    = item.facultyUid    || item.FacultyUID    || ''
+              const facultyName   = item.facultyName   || item.FacultyName   || ''
+              const facultyDomain = item.facultyDomain || item.FacultyDomain || ''
               return (
                 <FacultyCard
-                  key={item.FacultyUID}
-                  name={item.FacultyName}
-                  department={item.FacultyDomain}
+                  key={facultyUID}
+                  name={facultyName}
+                  department={facultyDomain}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
               )
-            case 'rooms':
+            }
+            case 'rooms': {
+              const roomNo   = item.roomNo          || item.RoomNo          || ''
+              const capacity = item.seatingCapacity ?? item.SeatingCapacity
+              const rType    = item.roomType        ?? item.RoomType
+              const level    = item.level           ?? item.Level
               return (
                 <RoomCard
-                  key={item.RoomNo}
-                  roomNumber={item.RoomNo}
-                  capacity={item.SeatingCapacity}
-                  type={ROOM_TYPE_MAP[item.RoomType] || 'Other'}
-                  floor={item.Level}
+                  key={roomNo}
+                  roomNumber={roomNo}
+                  capacity={capacity}
+                  type={ROOM_TYPE_MAP[rType] || 'Other'}
+                  floor={level}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
               )
-            case 'sections':
+            }
+            case 'sections': {
+              const sectionId   = item.sectionId   || item.SectionId   || ''
+              const programName = item.programName || item.ProgramName || ''
+              const semester    = item.semester    ?? item.Semester
+              const strength    = item.strength    ?? item.Strength
               return (
                 <SectionCard
-                  key={item.SectionId}
-                  sectionName={item.SectionId}
-                  course={item.ProgramName}
-                  semester={item.Semester}
-                  strength={item.Strength}
+                  key={sectionId}
+                  sectionName={sectionId}
+                  course={programName}
+                  semester={semester}
+                  strength={strength}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
               )
+            }
             case 'tickets': {
               const tid      = item.ticketId   || item.TicketId   || '?'
               const course   = item.Coursecode || item.coursecode || '—'
               const section  = item.Section    || item.section    || '—'
               const group    = item.GroupNo    ?? item.groupNo    ?? ''
-              const faculty  = item.FacultyUID || item.facultyUID || null
+              const faculty  = item.FacultyUID || item.facultyUID || item.facultyUid || null
               const merged   = !!(item.MergedCode || item.mergedCode)
               const lno      = item.LectureNo  ?? item.lectureNo  ?? ''
               // mappingType not in TicketDto — extract from TicketId pattern: ...{type}{lno}$

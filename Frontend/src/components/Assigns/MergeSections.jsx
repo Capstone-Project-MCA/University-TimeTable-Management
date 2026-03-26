@@ -127,7 +127,7 @@ export default function MergeSections() {
         if (!groupMap[code]) groupMap[code] = [];
         groupMap[code].push(mappingSection(m));
         // Collect faculty UIDs per merge group
-        const fuid = m.FacultyUID ?? m.facultyUID ?? null;
+        const fuid = m.FacultyUID ?? m.facultyUID ?? m.facultyUid ?? null;
         if (fuid) {
           if (!groupFacultyMap[code]) groupFacultyMap[code] = new Set();
           groupFacultyMap[code].add(fuid);
@@ -428,7 +428,7 @@ export default function MergeSections() {
                       ) : (
                         suggestions.map(c => (
                           <button
-                            key={c.CourseCode}
+                            key={getCourseCode(c)}
                             onClick={() => handlePickCourse(c)}
                             className="w-full px-5 py-3 text-left hover:bg-primary/5 flex items-center gap-3 transition-colors group"
                           >

@@ -34,7 +34,7 @@ public class UploadFacultyFileService {
                     continue;
 
                 Faculty faculty = new Faculty();
-                faculty.setFacultyUID(formatter.formatCellValue(row.getCell(0)).trim());
+                faculty.setFacultyUid(formatter.formatCellValue(row.getCell(0)).trim());
                 localFacultyList.add(faculty);
             }
         } catch (Exception e) {
@@ -78,7 +78,7 @@ public class UploadFacultyFileService {
                         try {
                             String facultyId = value;
                             if (facultyIdsSet.add(facultyId)) {
-                                faculty.setFacultyUID(facultyId);
+                                faculty.setFacultyUid(facultyId);
                             } else {
                                 faults.add("Duplicate Faculty UID at Row -> "
                                         + (row.getRowNum() + 1)
@@ -230,7 +230,7 @@ public class UploadFacultyFileService {
     }
 
     private void fillFacultyRow(Row row, Faculty faculty, String status) {
-        row.createCell(0).setCellValue(faculty.getFacultyUID() != null ? faculty.getFacultyUID() : "");
+        row.createCell(0).setCellValue(faculty.getFacultyUid() != null ? faculty.getFacultyUid() : "");
         row.createCell(1).setCellValue(faculty.getFacultyName() != null ? faculty.getFacultyName() : "");
         row.createCell(2).setCellValue(faculty.getFacultyDomain() != null ? faculty.getFacultyDomain() : "");
         row.createCell(3).setCellValue(faculty.getCurrentLoad() != null ? faculty.getCurrentLoad().toString() : "");

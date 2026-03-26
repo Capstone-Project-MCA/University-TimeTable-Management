@@ -93,7 +93,7 @@ export default function TicketsView() {
   const filtered = tickets.filter(t => {
     const course  = (t.Coursecode  || t.coursecode  || "").toLowerCase();
     const section = t.Section || t.section || "";
-    const faculty = (t.FacultyUID  || t.facultyUID  || "").toLowerCase();
+    const faculty = (t.FacultyUID  || t.facultyUID || t.facultyUid  || "").toLowerCase();
     const type    = t.mappingType || t.MappingType || "";
     return (
       course.includes(filterCourse.toLowerCase()) &&
@@ -111,7 +111,7 @@ export default function TicketsView() {
   const handleFilter = (setter) => (val) => { setter(val); setPage(1); };
 
   const mergedCount   = tickets.filter(t => !!(t.MergedCode || t.mergedCode)).length;
-  const assignedCount = tickets.filter(t => !!(t.FacultyUID || t.facultyUID)).length;
+  const assignedCount = tickets.filter(t => !!(t.FacultyUID || t.facultyUID || t.facultyUid)).length;
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 font-body text-slate-900 dark:text-slate-100">
@@ -234,7 +234,7 @@ export default function TicketsView() {
                       const group      = t.GroupNo    ?? t.groupNo   ?? "—";
                       const type       = t.mappingType || t.MappingType || "—";
                       const lectureNo  = t.LectureNo  ?? t.lectureNo ?? "—";
-                      const faculty    = t.FacultyUID || t.facultyUID || null;
+                      const faculty    = t.FacultyUID || t.facultyUID || t.facultyUid || null;
                       const mergeCode  = t.MergedCode || t.mergedCode || null;
                       const day        = t.Day  || t.day  || null;
                       const time       = t.Time || t.time || null;

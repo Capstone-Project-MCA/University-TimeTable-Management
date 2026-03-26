@@ -91,8 +91,8 @@ export default function DashboardNavbar({ activeTab }) {
       if (!mappingRes.ok) throw new Error("Failed to load mappings.");
       const mappings = await mappingRes.json();
 
-      const assigned   = mappings.filter(m => !!(m.facultyUID || m.FacultyUID));
-      const unassigned = mappings.filter(m =>  !(m.facultyUID || m.FacultyUID));
+      const assigned   = mappings.filter(m => !!(m.facultyUID || m.facultyUid || m.FacultyUID));
+      const unassigned = mappings.filter(m =>  !(m.facultyUID || m.facultyUid || m.FacultyUID));
 
       // ── Step 2: nothing assigned at all → hard block ────────────────────
       if (assigned.length === 0) {
@@ -245,7 +245,7 @@ export default function DashboardNavbar({ activeTab }) {
                   <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-red-50/60 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/30">
                     <span className="material-symbols-outlined text-red-400 text-sm">person_off</span>
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
-                      {m.coursecode || m.Coursecode}
+                      {m.courseCode || m.coursecode || m.Coursecode}
                     </span>
                     <span className="text-xs text-slate-500">·</span>
                     <span className="text-xs text-slate-500">Section {m.section || m.Section}</span>

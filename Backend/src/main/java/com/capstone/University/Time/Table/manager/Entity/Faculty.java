@@ -15,19 +15,19 @@ import java.util.List;
 public class Faculty {
     @Id
     @Column(name = "FacultyUID", length = 5)
-    private String FacultyUID;
+    private String facultyUid;
 
     @Column(name = "FacultyName", length = 50, nullable = false)
-    private String FacultyName;
+    private String facultyName;
 
     @Column(name = "FacultyDomain", length = 20, nullable = false)
-    private String FacultyDomain;
+    private String facultyDomain;
 
     @Column(name = "CurrentLoad", nullable = false)
-    private Short CurrentLoad=0;
+    private Short currentLoad = 0;
 
     @Column(name = "ExpectedLoad", nullable = false)
-    private Short ExpectedLoad=0;
+    private Short expectedLoad = 0;
 
     @OneToMany(mappedBy = "facultyEntity", cascade = CascadeType.ALL)
     private List<CourseMapping> courseMappings = new ArrayList<>();

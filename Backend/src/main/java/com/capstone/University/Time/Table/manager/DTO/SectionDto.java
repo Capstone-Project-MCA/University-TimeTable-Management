@@ -4,13 +4,13 @@ import lombok.Data;
 
 @Data
 public class SectionDto {
-    private String SectionId;
-    private Short Strength;
-    private Short NumberOfGroups;
-    private String ProgramName;
-    private Short Semester;
-    private Short Batch;
-    private Short ProgramType;
-    private Double ProgramDuration;
-    private String ProgramCode;
+    private String sectionId;
+    private Short strength;
+    private Short numberOfGroups;
+    private String programName;
+    private Short semester;
+    private Short batch;
+    private Short programType;
+    private Double programDuration;
+    private String programCode;
 }

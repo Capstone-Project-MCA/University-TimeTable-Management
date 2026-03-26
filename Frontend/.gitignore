@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+### Custom Ignores ###
+*.code-workspace
+*.sql
+*.txt
+*.bak
+*.tmp
+*.log
+patch-facultyuid.cjs

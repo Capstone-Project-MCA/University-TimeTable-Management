@@ -107,19 +107,19 @@ public class AssignService {
                         .orElseThrow(() -> new ResourceNotFoundException(
                                 "CourseMapping not found with id=" + incoming.getCourseMappingId()));
             } else {
-                existing = courseMappingRepository.findBySectionAndCoursecodeAndGroupNoAndMappingType(
-                        incoming.getSection(), incoming.getCoursecode(),
+                existing = courseMappingRepository.findBySectionAndCourseCodeAndGroupNoAndMappingType(
+                        incoming.getSection(), incoming.getCourseCode(),
                         incoming.getGroupNo(), incoming.getMappingType()
                 ).orElseThrow(() -> new ResourceNotFoundException(
                         "CourseMapping not found for Section=" + incoming.getSection()
-                        + ", Course=" + incoming.getCoursecode()
+                        + ", Course=" + incoming.getCourseCode()
                         + ", GroupNo=" + incoming.getGroupNo()
                         + ", MappingType=" + incoming.getMappingType()));
             }
 
-            if (incoming.getFacultyUID() != null) existing.setFacultyUID(incoming.getFacultyUID());
-            if (incoming.getMergecode() != null) existing.setMergecode(incoming.getMergecode());
-            if (incoming.getReserveslot() != null) existing.setReserveslot(incoming.getReserveslot());
+            if (incoming.getFacultyUid() != null) existing.setFacultyUid(incoming.getFacultyUid());
+            if (incoming.getMergeCode() != null) existing.setMergeCode(incoming.getMergeCode());
+            if (incoming.getReserveSlot() != null) existing.setReserveSlot(incoming.getReserveSlot());
 
             courseMappingRepository.save(existing);
             results.add(courseMappingMapper.toDto(existing));
@@ -131,22 +131,22 @@ public class AssignService {
     @Transactional
     public CourseMappingDto assignFacultyToCoursesAndSection(CourseMapping courseMapping) {
         CourseMapping existMapping = courseMappingRepository
-                .findBySectionAndCoursecodeAndGroupNoAndMappingType(
+                .findBySectionAndCourseCodeAndGroupNoAndMappingType(
                         courseMapping.getSection(),
-                        courseMapping.getCoursecode(),
+                        courseMapping.getCourseCode(),
                         courseMapping.getGroupNo(),
                         courseMapping.getMappingType()
                 )
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Course Mapping not found for Section=" + courseMapping.getSection()
-                        + ", Course=" + courseMapping.getCoursecode()
+                        + ", Course=" + courseMapping.getCourseCode()
                         + ", GroupNo=" + courseMapping.getGroupNo()
                         + ", MappingType=" + courseMapping.getMappingType()
                 ));
 
-        if (courseMapping.getFacultyUID() != null) existMapping.setFacultyUID(courseMapping.getFacultyUID());
-        if (courseMapping.getMergecode() != null) existMapping.setMergecode(courseMapping.getMergecode());
-        if (courseMapping.getReserveslot() != null) existMapping.setReserveslot(courseMapping.getReserveslot());
+        if (courseMapping.getFacultyUid() != null) existMapping.setFacultyUid(courseMapping.getFacultyUid());
+        if (courseMapping.getMergeCode() != null) existMapping.setMergeCode(courseMapping.getMergeCode());
+        if (courseMapping.getReserveSlot() != null) existMapping.setReserveSlot(courseMapping.getReserveSlot());
 
         courseMappingRepository.save(existMapping);
         return courseMappingMapper.toDto(existMapping);
@@ -159,7 +159,7 @@ public class AssignService {
 
         List<Pair<String, Pair<String, List<CourseMappingDto>>>> pairs = new ArrayList<>();
 
-        Faculty faculty = facultyRepository.findByFacultyUID(facultyUID);
+        Faculty faculty = facultyRepository.findByFacultyUid(facultyUID);
         if (faculty == null) throw new ResourceNotFoundException("Faculty Not Found");
 
         Section section = sectionRepository.findBySectionId(sectionId);
@@ -172,8 +172,8 @@ public class AssignService {
                     courseMapping.getCourseMappingId()
             ).orElseThrow(() -> new ResourceNotFoundException("Course Mapping Not Found"));
 
-            if (courseMappingTemp.getFacultyUID() == null) {
-                courseMappingTemp.setFacultyUID(faculty.getFacultyUID());
+            if (courseMappingTemp.getFacultyUid() == null) {
+                courseMappingTemp.setFacultyUid(faculty.getFacultyUid());
                 courseMappingRepository.save(courseMappingTemp);
                 list.add(courseMappingMapper.toDto(courseMappingTemp));
             }
@@ -211,13 +211,13 @@ public class AssignService {
             List<CourseDto> courses = new ArrayList<>();
 
             for(String courseId : courseIds) {
-                if(courseMappingRepository.existsBySectionAndCoursecode(sectionId, courseId)) {
+                if(courseMappingRepository.existsBySectionAndCourseCode(sectionId, courseId)) {
                     errors.add("Course with id -  " + courseId +
                             " connected to Section with id - " + sectionId + " already exists");
                     continue;
                 }
 
-                Course course = courseRepository.getCourseByCourseCode(courseId);
+                Course course = courseRepository.findByCourseCode(courseId);
                 if (course == null) {throw new ResourceNotFoundException("Course not found with id -  " + courseId);}
 
                 List<CourseMapping> courseMappings = getCourseMappings(sectionId, courseId, course, section);
@@ -247,7 +247,7 @@ public class AssignService {
         if (course.getL() > 0) {
             CourseMapping courseMapping = new CourseMapping();
             courseMapping.setSection(sectionId);
-            courseMapping.setCoursecode(courseId);
+            courseMapping.setCourseCode(courseId);
             courseMapping.setCourseNature(course.getCourseNature());
             courseMapping.setGroupNo((short) 0);
             courseMapping.setL(course.getL());
@@ -262,7 +262,7 @@ public class AssignService {
                 CourseMapping courseMapping = new CourseMapping();
 
                 courseMapping.setSection(sectionId);
-                courseMapping.setCoursecode(courseId);
+                courseMapping.setCourseCode(courseId);
                 courseMapping.setGroupNo((short) i);
                 courseMapping.setL(course.getL());
                 courseMapping.setT(course.getT());
@@ -280,7 +280,7 @@ public class AssignService {
                 CourseMapping courseMapping = new CourseMapping();
 
                 courseMapping.setSection(sectionId);
-                courseMapping.setCoursecode(courseId);
+                courseMapping.setCourseCode(courseId);
                 courseMapping.setGroupNo((short) i);
                 courseMapping.setL(course.getL());
                 courseMapping.setT(course.getT());

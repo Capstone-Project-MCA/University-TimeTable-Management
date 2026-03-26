@@ -14,34 +14,34 @@ import java.time.LocalTime;
 public class Ticket {
     @Id
     @Column(name = "TicketId", length = 30)
-    private String TicketId;
+    private String ticketId;
 
     @Column(name = "Section", length = 5, nullable = false)
-    private String Section;
+    private String section;
 
     @Column(name = "Coursecode", length = 7, nullable = false)
-    private String Coursecode;
+    private String courseCode;
 
     @Column(name = "GroupNo", nullable = false, columnDefinition = "TINYINT UNSIGNED")
-    private Short GroupNo;
+    private Short groupNo;
 
     @Column(name = "LectureNo", nullable = false)
-    private Short LectureNo;
+    private Short lectureNo;
 
     @Column(name = "Day", length = 10)
-    private String Day;
+    private String day;
 
     @Column(name = "Time")
-    private LocalTime Time;
+    private LocalTime time;
 
     @Column(name = "MergedCode", length = 7, nullable = false, columnDefinition = "VARCHAR(7) DEFAULT ''")
-    private String MergedCode = "";
+    private String mergedCode = "";
 
     @Column(name = "FacultyUID", length = 5)
-    private String FacultyUID;
+    private String facultyUid;
 
     @Column(name = "RoomNo", length = 10)
-    private String RoomNo;
+    private String roomNo;
 
     @Column(name = "CourseMappingId")
     private Long courseMappingId;

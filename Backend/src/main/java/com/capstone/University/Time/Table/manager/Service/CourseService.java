@@ -53,7 +53,7 @@ public class CourseService {
     }
 
     public CourseDto getCourseByCourseCode(String courseCode) {
-        Course course = courseRepository.getCourseByCourseCode(courseCode);
+        Course course = courseRepository.findByCourseCode(courseCode);
         if (course == null) {
             throw new ResourceNotFoundException("Course not found with code '" + courseCode + "'");
         }
@@ -61,7 +61,7 @@ public class CourseService {
     }
 
     public CourseDto getCourseByCourseTitle(String courseTitle) {
-        Course course = courseRepository.getCourseByCourseTitle(courseTitle);
+        Course course = courseRepository.findByCourseTitle(courseTitle);
         if (course == null) {
             throw new ResourceNotFoundException("Course not found with title '" + courseTitle + "'");
         }
@@ -71,7 +71,7 @@ public class CourseService {
     // ---------------------------------- All Course Post Requests Service -----------------------------------------
     public CourseDto createNewCourse(Course course) {
         String courseCode = course.getCourseCode();
-        Course existingCourse = courseRepository.getCourseByCourseCode(courseCode);
+        Course existingCourse = courseRepository.findByCourseCode(courseCode);
 
         if (existingCourse != null) {
             throw new DuplicateResourceException(
@@ -84,7 +84,7 @@ public class CourseService {
 
     // ---------------------------------- All Course Put Requests Service -------------------------------------------
     public CourseDto updateCourseByUID(String courseCode, Course course) {
-        Course existingCourse = courseRepository.getCourseByCourseCode(courseCode);
+        Course existingCourse = courseRepository.findByCourseCode(courseCode);
 
         if (existingCourse == null) {
             throw new ResourceNotFoundException("Cannot update: Course not found with code '" + courseCode + "'");
@@ -108,7 +108,7 @@ public class CourseService {
 
     // ----------------------------------- All Course Delete Requests Service -----------------------------------------
     public void deleteCourseByCourseCode(String courseCode) {
-        Course course = courseRepository.getCourseByCourseCode(courseCode);
+        Course course = courseRepository.findByCourseCode(courseCode);
         if (course == null) {
             throw new ResourceNotFoundException("Cannot delete: Course not found with code '" + courseCode + "'");
         }
@@ -116,7 +116,7 @@ public class CourseService {
     }
 
     public void deleteCourseByCourseTitle(String courseTitle) {
-        Course course = courseRepository.getCourseByCourseTitle(courseTitle);
+        Course course = courseRepository.findByCourseTitle(courseTitle);
         if (course == null) {
             throw new ResourceNotFoundException("Cannot delete: Course not found with title '" + courseTitle + "'");
         }

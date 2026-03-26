@@ -1,1 +1,15 @@
 docs/
+
+### General Ignores ###
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+*.log
+*.sql
+*.tmp
+*.bak
+*.code-workspace
+node_modules/
+dist/
+target/

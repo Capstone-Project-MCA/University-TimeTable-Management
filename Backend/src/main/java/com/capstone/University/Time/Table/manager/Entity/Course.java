@@ -15,34 +15,34 @@ import java.util.*;
 public class Course {
     @Id
     @Column(name = "CourseCode", length = 7)
-    private String CourseCode;
+    private String courseCode;
 
     @Column(name = "CourseTitle")
-    private String CourseTitle;
+    private String courseTitle;
 
     @Column(name = "L")
-    private Short L;
+    private Short l;
 
     @Column(name = "T")
-    private Short T;
+    private Short t;
 
     @Column(name = "P")
-    private Short P;
+    private Short p;
 
     @Column(name = "Credit")
-    private Short Credit;
+    private Short credit;
 
     @Column(name = "CourseType")
-    private String CourseType;
+    private String courseType;
 
     @Column(name = "Domain")
-    private String Domain;
+    private String domain;
 
     @Column(name = "Remarks")
     private String remarks;
 
     @Column(name = "CourseNature")
-    private Character CourseNature;
+    private Character courseNature;
 
     @ManyToMany(mappedBy = "courses")
     @JsonIgnoreProperties("courses")

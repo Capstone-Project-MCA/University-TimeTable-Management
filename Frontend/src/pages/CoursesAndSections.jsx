@@ -52,8 +52,8 @@ export default function CoursesAndSections() {
   const filteredCourses = cq
     ? courses.filter(
         (c) =>
-          (c.CourseCode || "").toLowerCase().includes(cq) ||
-          (c.CourseTitle || "").toLowerCase().includes(cq)
+          (c.courseCode  || c.CourseCode  || "").toLowerCase().includes(cq) ||
+          (c.courseTitle || c.CourseTitle || "").toLowerCase().includes(cq)
       )
     : courses;
 
@@ -61,8 +61,8 @@ export default function CoursesAndSections() {
   const filteredSections = sq
     ? sections.filter(
         (s) =>
-          (s.SectionId || "").toLowerCase().includes(sq) ||
-          (s.ProgramName || "").toLowerCase().includes(sq)
+          (s.sectionId   || s.SectionId   || "").toLowerCase().includes(sq) ||
+          (s.programName || s.ProgramName || "").toLowerCase().includes(sq)
       )
     : sections;
 
@@ -163,18 +163,23 @@ export default function CoursesAndSections() {
                 </p>
               </div>
             ) : (
-              filteredCourses.map((item) => (
-                <CourseCard
-                  key={item.CourseCode}
-                  course={item.CourseCode}
-                  title={item.CourseTitle}
-                  credits={item.Credit}
-                  teacher={"TBA"}
-                  color="blue"
-                  onEdit={() => handleEditCourse(item)}
-                  onDelete={() => handleDeleteCourse(item)}
-                />
-              ))
+              filteredCourses.map((item) => {
+                const courseCode  = item.courseCode  || item.CourseCode  || ''
+                const courseTitle = item.courseTitle || item.CourseTitle || ''
+                const credit      = item.credit      ?? item.Credit
+                return (
+                  <CourseCard
+                    key={courseCode}
+                    course={courseCode}
+                    title={courseTitle}
+                    credits={credit}
+                    teacher={"TBA"}
+                    color="blue"
+                    onEdit={() => handleEditCourse(item)}
+                    onDelete={() => handleDeleteCourse(item)}
+                  />
+                )
+              })
             )}
           </div>
         </section>
@@ -241,17 +246,23 @@ export default function CoursesAndSections() {
                 </p>
               </div>
             ) : (
-              filteredSections.map((item) => (
-                <SectionCard
-                  key={item.SectionId}
-                  sectionName={item.SectionId}
-                  course={item.ProgramName}
-                  semester={item.Semester}
-                  strength={item.Strength}
-                  onEdit={() => handleEditSection(item)}
-                  onDelete={() => handleDeleteSection(item)}
-                />
-              ))
+              filteredSections.map((item) => {
+                const sectionId   = item.sectionId   || item.SectionId   || ''
+                const programName = item.programName || item.ProgramName || ''
+                const semester    = item.semester    ?? item.Semester
+                const strength    = item.strength    ?? item.Strength
+                return (
+                  <SectionCard
+                    key={sectionId}
+                    sectionName={sectionId}
+                    course={programName}
+                    semester={semester}
+                    strength={strength}
+                    onEdit={() => handleEditSection(item)}
+                    onDelete={() => handleDeleteSection(item)}
+                  />
+                )
+              })
             )}
           </div>
         </section>

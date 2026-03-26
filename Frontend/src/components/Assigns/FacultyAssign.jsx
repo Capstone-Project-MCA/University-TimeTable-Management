@@ -103,24 +103,24 @@ const FacultyAssignmentWorkspace = () => {
           const isMerged = item.mergeStatus === true || item.MergeStatus === true;
           return {
             id: item.courseMappingId ??
-              `${item.section || item.Section}-${item.coursecode || item.Coursecode}-${item.groupNo || item.GroupNo}-${item.mappingType}`,
+              `${item.section || item.Section}-${item.courseCode || item.coursecode || item.Coursecode}-${item.groupNo ?? item.GroupNo}-${item.mappingType}`,
             courseMappingId: item.courseMappingId,
-            courseCode:  item.coursecode    || item.Coursecode  || "",
-            group:      `G${item.groupNo   || item.GroupNo}`,
-            groupRaw:    item.groupNo       || item.GroupNo,
-            section:     item.section       || item.Section,
+            courseCode:  item.courseCode || item.coursecode || item.Coursecode || "",
+            group:      `G${item.groupNo ?? item.GroupNo}`,
+            groupRaw:    item.groupNo ?? item.GroupNo,
+            section:     item.section || item.Section,
             type:        item.mappingType,
             attendance:  item.attendanceType || item.AttendanceType || "Regular",
-            nature:      item.courseNature   || item.CourseNature   || "C",
-            uid:         item.facultyUID    || item.FacultyUID  || "",
-            originalUid: item.facultyUID    || item.FacultyUID  || "",
-            isSaved:   !!(item.facultyUID   || item.FacultyUID),
+            nature:      item.courseNature || item.CourseNature || "C",
+            uid:         item.facultyUID || item.facultyUid || item.FacultyUID || "",
+            originalUid: item.facultyUID || item.facultyUid || item.FacultyUID || "",
+            isSaved:   !!(item.facultyUID || item.facultyUid || item.FacultyUID),
             l: item.l ?? item.L ?? 0,
             t: item.t ?? item.T ?? 0,
             p: item.p ?? item.P ?? 0,
             mergeStatus: isMerged ? "check_circle" : "circle",
-            mergeCode:  item.mergecode   || item.Mergecode   || "---",
-            reserve:    item.reserveslot || item.Reserveslot || "---",
+            mergeCode:  item.mergeCode || item.mergecode || item.Mergecode || "---",
+            reserve:    item.reserveSlot || item.reserveslot || item.Reserveslot || "---",
             statusColor: isMerged ? "text-tertiary" : "text-slate-300 dark:text-slate-600",
           };
         });
@@ -153,7 +153,7 @@ const FacultyAssignmentWorkspace = () => {
       alert(`Cannot save — Faculty UID is empty for ${row.courseCode} ${row.group}`);
       return;
     }
-    if (!faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid)) {
+    if (!faculties.some(f => String(f.facultyUID || f.facultyUid || f.FacultyUID || "") === row.uid)) {
       alert(`Invalid Faculty UID: ${row.uid}\nSelect a valid UID from the dropdown.`);
       return;
     }
@@ -187,7 +187,7 @@ const FacultyAssignmentWorkspace = () => {
 
     const empty   = toSave.filter(r => !r.uid?.trim());
     const invalid = toSave.filter(r => r.uid?.trim() &&
-      !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === r.uid));
+      !faculties.some(f => String(f.facultyUID || f.facultyUid || f.FacultyUID || "") === r.uid));
     if (empty.length)   { alert(`Empty UID in: ${empty.map(r => r.courseCode).join(", ")}`);   return; }
     if (invalid.length) { alert(`Invalid UID in: ${invalid.map(r => r.courseCode).join(", ")}`); return; }
 
@@ -328,7 +328,7 @@ const FacultyAssignmentWorkspace = () => {
             className={`w-full text-sm rounded-lg py-1.5 px-3 focus:ring-4 transition-all border shadow-sm
               ${row.isSaved
                 ? "bg-slate-100 dark:bg-slate-800 text-slate-500 cursor-not-allowed opacity-70 border-slate-200 dark:border-[#334155]"
-                : (!row.uid?.trim() || !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid))
+                : (!row.uid?.trim() || !faculties.some(f => String(f.facultyUID || f.facultyUid || f.FacultyUID || "") === row.uid))
                   ? "border-error focus:border-error focus:ring-error/20 dark:border-red-500 dark:bg-[#020617] dark:text-white"
                   : "border-slate-200 dark:border-[#334155] dark:bg-[#020617] dark:text-white focus:border-primary dark:focus:border-[#3b82f6] focus:ring-primary/10 dark:focus:ring-[#3b82f6]/20"
               }`}
@@ -346,14 +346,14 @@ const FacultyAssignmentWorkspace = () => {
               {(() => {
                 const search = String(row.uid || "").toLowerCase();
                 const matches = faculties.filter(f => {
-                  const uid  = String(f.facultyUID  || f.FacultyUID  || "");
+                  const uid  = String(f.facultyUID || f.facultyUid  || f.FacultyUID  || "");
                   const name = String(f.facultyName || f.FacultyName || "");
                   return uid.toLowerCase().includes(search) || name.toLowerCase().includes(search);
                 });
                 return matches.length === 0
                   ? <div className="px-3 py-2 text-xs text-slate-400 italic">No matching faculty found.</div>
                   : matches.map(f => {
-                      const uid  = String(f.facultyUID  || f.FacultyUID  || "");
+                      const uid  = String(f.facultyUID || f.facultyUid  || f.FacultyUID  || "");
                       const name = String(f.facultyName || f.FacultyName || "");
                       return (
                         <div key={uid}
@@ -371,7 +371,7 @@ const FacultyAssignmentWorkspace = () => {
           {!row.isSaved && !row.uid?.trim() && (
             <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-error dark:text-red-400">UID cannot be empty</span>
           )}
-          {!row.isSaved && row.uid?.trim() && !faculties.some(f => String(f.facultyUID || f.FacultyUID || "") === row.uid) && (
+          {!row.isSaved && row.uid?.trim() && !faculties.some(f => String(f.facultyUID || f.facultyUid || f.FacultyUID || "") === row.uid) && (
             <span className="absolute -bottom-4 left-1 text-[9px] font-bold text-error dark:text-red-400">UID not found in master list</span>
           )}
         </div>

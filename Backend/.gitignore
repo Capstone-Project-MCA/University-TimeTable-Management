@@ -31,3 +31,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Custom Ignores ###
+*.log
+*.sql
+*.txt
+.apt_generated_tests/

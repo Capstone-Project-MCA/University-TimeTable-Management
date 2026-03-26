@@ -38,7 +38,7 @@ public class FacultyService {
     }
 
     public FacultyDto getFacultyByUID(String facultyUID) {
-        Faculty faculty = facultyRepository.findByFacultyUID(facultyUID);
+        Faculty faculty = facultyRepository.findByFacultyUid(facultyUID);
         if (faculty == null) {
             throw new ResourceNotFoundException("Faculty not found with UID '" + facultyUID + "'");
         }
@@ -56,9 +56,9 @@ public class FacultyService {
     // ------------------------------------ All Faculty Post Requests Service
     // -----------------------------------------
     public FacultyDto createFaculty(Faculty faculty) {
-        Faculty exists = facultyRepository.findByFacultyUID(faculty.getFacultyUID());
+        Faculty exists = facultyRepository.findByFacultyUid(faculty.getFacultyUid());
         if (exists != null) {
-            throw new DuplicateResourceException("Faculty with UID '" + faculty.getFacultyUID()
+            throw new DuplicateResourceException("Faculty with UID '" + faculty.getFacultyUid()
                     + "' already exists. Please use a unique faculty UID.");
         }
         facultyRepository.save(faculty);
@@ -68,7 +68,7 @@ public class FacultyService {
     // ----------------------------------- All Faculty Put Requests Service
     // -------------------------------------------
     public FacultyDto updateFacultyByUID(String facultyUID, Faculty faculty) {
-        Faculty exists = facultyRepository.findByFacultyUID(facultyUID);
+        Faculty exists = facultyRepository.findByFacultyUid(facultyUID);
         if (exists == null) {
             throw new ResourceNotFoundException("Cannot update: Faculty not found with UID '" + facultyUID + "'");
         }
@@ -86,7 +86,7 @@ public class FacultyService {
     // ----------------------------------- All Faculty Delete Requests Service
     // --------------------------------------
     public void deleteFacultyByUID(String facultyUID) {
-        Faculty exists = facultyRepository.findByFacultyUID(facultyUID);
+        Faculty exists = facultyRepository.findByFacultyUid(facultyUID);
         if (exists == null) {
             throw new ResourceNotFoundException("Cannot delete: Faculty not found with UID '" + facultyUID + "'");
         }

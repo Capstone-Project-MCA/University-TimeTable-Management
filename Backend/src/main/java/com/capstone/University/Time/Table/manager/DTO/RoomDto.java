@@ -4,8 +4,8 @@ import lombok.Data;
 
 @Data
 public class RoomDto {
-    private String RoomNo;
-    private Short SeatingCapacity;
-    private Short RoomType;
-    private Short Level;
+    private String roomNo;
+    private Short seatingCapacity;
+    private Short roomType;
+    private Short level;
 }

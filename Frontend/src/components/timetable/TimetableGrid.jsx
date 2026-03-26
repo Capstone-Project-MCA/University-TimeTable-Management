@@ -66,7 +66,7 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
   const section   = ticket.Section     || ticket.section     || '—';
   const group     = ticket.GroupNo     ?? ticket.groupNo     ?? '';
   const lno       = ticket.LectureNo   ?? ticket.lectureNo   ?? '';
-  const faculty   = ticket.FacultyUID  || ticket.facultyUID  || null;
+  const faculty   = ticket.FacultyUID  || ticket.facultyUID || ticket.facultyUid  || null;
   const hasConflict = ticket._hasConflict || false;
 
   return (
@@ -198,7 +198,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
     tickets.forEach(t => {
       const day  = t.Day  || t.day;
       const time = t.Time || t.time;
-      const fac  = t.FacultyUID || t.facultyUID;
+      const fac  = t.FacultyUID || t.facultyUID || t.facultyUid;
       if (!day || !time || !fac) return;
       const hhmm = String(time).slice(0, 5);
       const key  = `${fac}|${day}|${hhmm}`;
@@ -234,7 +234,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
       type:       ticket.mappingType || ticket.MappingType || '',
       lectureNo:  ticket.LectureNo   || ticket.lectureNo,
       section:    ticket.Section     || ticket.section,
-      facultyUID: ticket.FacultyUID  || ticket.facultyUID,
+      facultyUID: ticket.FacultyUID  || ticket.facultyUID || ticket.facultyUid,
     });
   };
 

@@ -4,9 +4,9 @@ import lombok.Data;
 
 @Data
 public class FacultyDto {
-    private String FacultyUID;
-    private String FacultyName;
-    private String FacultyDomain;
-    private Short CurrentLoad;
-    private Short ExpectedLoad;
+    private String facultyUid;
+    private String facultyName;
+    private String facultyDomain;
+    private Short currentLoad;
+    private Short expectedLoad;
 }

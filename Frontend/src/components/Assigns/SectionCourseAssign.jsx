@@ -10,14 +10,25 @@ const BulkAssignment = () => {
   const [error, setError] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Helpers for casing fallback
+  const getSecId = (s) => s?.sectionId || s?.SectionId || "";
+  const getProgName = (s) => s?.programName || s?.ProgramName || "";
+  const getSem = (s) => s?.semester ?? s?.Semester ?? "";
+  const getStrength = (s) => s?.strength ?? s?.Strength ?? "";
+
+  const getCourseCode = (c) => c?.courseCode || c?.CourseCode || "";
+  const getCourseTitle = (c) => c?.courseTitle || c?.CourseTitle || "";
+  const getCourseType = (c) => c?.courseType || c?.CourseType || "";
+  const getCredit = (c) => c?.credit ?? c?.Credit ?? "";
+
   // Filtered lists based on search query
   const filteredSections = sections.filter((s) => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      (s.SectionId || "").toLowerCase().includes(q) ||
-      (s.ProgramName || "").toLowerCase().includes(q) ||
-      String(s.Semester || "").toLowerCase().includes(q)
+      getSecId(s).toLowerCase().includes(q) ||
+      getProgName(s).toLowerCase().includes(q) ||
+      String(getSem(s)).toLowerCase().includes(q)
     );
   });
 
@@ -25,9 +36,9 @@ const BulkAssignment = () => {
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase();
     return (
-      (c.CourseTitle || "").toLowerCase().includes(q) ||
-      (c.CourseCode || "").toLowerCase().includes(q) ||
-      (c.CourseType || "").toLowerCase().includes(q)
+      getCourseTitle(c).toLowerCase().includes(q) ||
+      getCourseCode(c).toLowerCase().includes(q) ||
+      getCourseType(c).toLowerCase().includes(q)
     );
   });
 
@@ -76,10 +87,10 @@ const BulkAssignment = () => {
     try {
       const data = JSON.parse(e.dataTransfer.getData("application/json"));
       if (zone === "sections" && data._type === "section") {
-        const exists = selectedSections.some((s) => s.SectionId === data.SectionId);
+        const exists = selectedSections.some((s) => getSecId(s) === getSecId(data));
         if (!exists) setSelectedSections((prev) => [...prev, data]);
       } else if (zone === "courses" && data._type === "course") {
-        const exists = selectedCourses.some((c) => c.CourseCode === data.CourseCode);
+        const exists = selectedCourses.some((c) => getCourseCode(c) === getCourseCode(data));
         if (!exists) setSelectedCourses((prev) => [...prev, data]);
       }
     } catch { /* ignore */ }
@@ -90,8 +101,8 @@ const BulkAssignment = () => {
     e.dataTransfer.dropEffect = "copy";
   };
 
-  const removeSection = (id) => setSelectedSections((prev) => prev.filter((s) => s.SectionId !== id));
-  const removeCourse = (code) => setSelectedCourses((prev) => prev.filter((c) => c.CourseCode !== code));
+  const removeSection = (id) => setSelectedSections((prev) => prev.filter((s) => getSecId(s) !== id));
+  const removeCourse = (code) => setSelectedCourses((prev) => prev.filter((c) => getCourseCode(c) !== code));
 
   const handleAssign = async () => {
     if (selectedSections.length === 0 || selectedCourses.length === 0) return;
@@ -104,8 +115,8 @@ const BulkAssignment = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          sectionIds: selectedSections.map((s) => s.SectionId),
-          courseIds: selectedCourses.map((c) => c.CourseCode),
+          sectionIds: selectedSections.map(getSecId),
+          courseIds: selectedCourses.map(getCourseCode),
         }),
       });
 
@@ -217,15 +228,15 @@ const BulkAssignment = () => {
 
             {!loading && !error && sidebarView === "sections" && filteredSections.map((section) => (
               <div
-                key={section.SectionId}
+                key={getSecId(section)}
                 draggable
                 onDragStart={(e) => handleDragStart(e, section, "section")}
                 className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-grab hover:border-primary/50 hover:shadow-sm transition-all active:cursor-grabbing"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{section.SectionId}</p>
+                  <p className="text-sm font-semibold truncate">{getSecId(section)}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {section.ProgramName} · Sem {section.Semester} · {section.Strength} students
+                    {getProgName(section)} · Sem {getSem(section)} · {getStrength(section)} students
                   </p>
                 </div>
                 <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg shrink-0">
@@ -236,15 +247,15 @@ const BulkAssignment = () => {
 
             {!loading && !error && sidebarView === "courses" && filteredCourses.map((course) => (
               <div
-                key={course.CourseCode}
+                key={getCourseCode(course)}
                 draggable
                 onDragStart={(e) => handleDragStart(e, course, "course")}
                 className="flex items-center gap-3 p-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-grab hover:border-primary/50 hover:shadow-sm transition-all active:cursor-grabbing"
               >
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-semibold truncate">{course.CourseTitle}</p>
+                  <p className="text-sm font-semibold truncate">{getCourseTitle(course)}</p>
                   <p className="text-xs text-slate-500 dark:text-slate-400">
-                    {course.CourseCode} · {course.Credit} Cr · {course.CourseType}
+                    {getCourseCode(course)} · {getCredit(course)} Cr · {getCourseType(course)}
                   </p>
                 </div>
                 <span className="material-symbols-outlined text-slate-300 dark:text-slate-600 text-lg shrink-0">
@@ -326,15 +337,15 @@ const BulkAssignment = () => {
 
                 <div className="space-y-2">
                   {selectedSections.map((section) => (
-                    <div key={section.SectionId} className="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between group">
+                    <div key={getSecId(section)} className="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between group">
                       <div>
-                        <p className="font-bold text-sm">{section.SectionId}</p>
+                        <p className="font-bold text-sm">{getSecId(section)}</p>
                         <p className="text-xs text-slate-500">
-                          {section.ProgramName} · Sem {section.Semester}
+                          {getProgName(section)} · Sem {getSem(section)}
                         </p>
                       </div>
                       <button
-                        onClick={() => removeSection(section.SectionId)}
+                        onClick={() => removeSection(getSecId(section))}
                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <span className="material-symbols-outlined text-lg">close</span>
@@ -371,15 +382,15 @@ const BulkAssignment = () => {
 
                 <div className="space-y-2">
                   {selectedCourses.map((course) => (
-                    <div key={course.CourseCode} className="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between group">
+                    <div key={getCourseCode(course)} className="p-3 bg-white dark:bg-slate-800 rounded-lg shadow-sm border border-slate-200 dark:border-slate-700 flex items-center justify-between group">
                       <div>
-                        <p className="font-bold text-sm">{course.CourseTitle}</p>
+                        <p className="font-bold text-sm">{getCourseTitle(course)}</p>
                         <p className="text-xs text-slate-500">
-                          {course.CourseCode} · {course.Credit} Credits
+                          {getCourseCode(course)} · {getCredit(course)} Credits
                         </p>
                       </div>
                       <button
-                        onClick={() => removeCourse(course.CourseCode)}
+                        onClick={() => removeCourse(getCourseCode(course))}
                         className="text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
                       >
                         <span className="material-symbols-outlined text-lg">close</span>

@@ -27,40 +27,40 @@ public class CourseMapping {
     private String section;
 
     @Column(name = "Coursecode", length = 7, nullable = false)
-    private String Coursecode;
+    private String courseCode;
 
     @Column(name = "GroupNo", nullable = false, columnDefinition = "TINYINT UNSIGNED")
-    private Short GroupNo;
+    private Short groupNo;
 
     @Column(name = "MappingType", nullable = false)
     private String mappingType;
 
     @Column(name = "AttendanceType", length = 15, nullable = false)
-    private String AttendanceType = "Regular";
+    private String attendanceType = "Regular";
 
     @Column(name = "Mergecode", length = 7)
-    private String Mergecode;
+    private String mergeCode;
 
     @Column(name = "MergeStatus", nullable = false)
-    private Boolean MergeStatus = false;
+    private Boolean mergeStatus = false;
 
     @Column(name = "FacultyUID", length = 5)
-    private String FacultyUID;
+    private String facultyUid;
 
     @Column(name = "L", nullable = false, columnDefinition = "TINYINT UNSIGNED")
-    private Short L = (short) 0;
+    private Short l = (short) 0;
 
     @Column(name = "T", nullable = false, columnDefinition = "TINYINT UNSIGNED")
-    private Short T = (short) 0;
+    private Short t = (short) 0;
 
     @Column(name = "P", nullable = false, columnDefinition = "TINYINT UNSIGNED")
-    private Short P = (short) 0;
+    private Short p = (short) 0;
 
     @Column(name = "Reserveslot", length = 50)
-    private String Reserveslot;
+    private String reserveSlot;
 
     @Column(name = "CourseNature", nullable = false)
-    private Character CourseNature;
+    private Character courseNature;
 
     @ManyToOne
     @JoinColumn(name = "Section", insertable = false, updatable = false)

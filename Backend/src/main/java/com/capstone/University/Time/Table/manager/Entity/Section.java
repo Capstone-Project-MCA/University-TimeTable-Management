@@ -15,31 +15,31 @@ import java.util.*;
 public class Section {
     @Id
     @Column(name = "SectionId", length = 5)
-    private String SectionId;
+    private String sectionId;
 
     @Column(name = "Strength", nullable = false)
-    private Short Strength;
+    private Short strength;
 
     @Column(name = "NumberOfGroups", nullable = false)
-    private Short NumberOfGroups;
+    private Short numberOfGroups;
 
     @Column(name = "ProgramName", length = 12, nullable = false)
-    private String ProgramName;
+    private String programName;
 
     @Column(name = "Semester", nullable = false)
-    private Short Semester;
+    private Short semester;
 
     @Column(name = "Batch", nullable = false)
-    private Short Batch;
+    private Short batch;
 
     @Column(name = "ProgramType", nullable = false)
-    private Short ProgramType;
+    private Short programType;
 
     @Column(name = "ProgramDuration", nullable = false)
-    private Double ProgramDuration;
+    private Double programDuration;
 
     @Column(name = "ProgramCode", length = 9, nullable = false)
-    private String ProgramCode;
+    private String programCode;
 
     @ManyToMany
     @JoinTable(

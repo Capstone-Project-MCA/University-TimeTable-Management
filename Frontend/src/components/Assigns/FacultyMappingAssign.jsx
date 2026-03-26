@@ -111,16 +111,16 @@ export default function FacultyMappingAssign() {
   const handleSaveOverride = async (m) => {
     const uid = overrideSearch.trim();
     if (!uid) { alert("Faculty UID cannot be empty."); return; }
-    if (!faculties.some(f => (f.FacultyUID || f.facultyUID || "") === uid)) {
+    if (!faculties.some(f => (f.FacultyUID || f.facultyUID || f.facultyUid || "") === uid)) {
       alert(`Invalid Faculty UID: "${uid}"\nSelect a valid UID from the dropdown.`);
       return;
     }
     setOverrideSaving(true);
     const payload = [{
       courseMappingId: m.courseMappingId ?? m.CourseMappingId ?? null,
-      Section:        m.section       || m.Section,
-      Coursecode:     m.coursecode    || m.Coursecode,
-      GroupNo:        m.groupNo       ?? m.GroupNo,
+      Section:        m.section || m.Section,
+      Coursecode:     m.courseCode || m.coursecode || m.Coursecode,
+      GroupNo:        m.groupNo ?? m.GroupNo,
       mappingType:    m.mappingType,
       AttendanceType: m.attendanceType || m.AttendanceType || "Regular",
       CourseNature:   String(m.courseNature || m.CourseNature || "C"),
@@ -128,9 +128,9 @@ export default function FacultyMappingAssign() {
       L: m.l ?? m.L ?? 0,
       T: m.t ?? m.T ?? 0,
       P: m.p ?? m.P ?? 0,
-      Mergecode:   m.mergecode   || m.Mergecode   || null,
+      Mergecode:   m.mergeCode || m.mergecode || m.Mergecode || null,
       MergeStatus: m.mergeStatus === true || m.MergeStatus === true,
-      Reserveslot: m.reserveslot || m.Reserveslot || null,
+      Reserveslot: m.reserveSlot || m.reserveslot || m.Reserveslot || null,
     }];
     try {
       const res = await fetch(`${API_BASE}/assign/save-all-faculty`, {
@@ -207,8 +207,8 @@ export default function FacultyMappingAssign() {
     const q = facultySearch.toLowerCase();
     setFacultySuggestions(
       faculties.filter(f =>
-        (f.FacultyUID  || "").toLowerCase().includes(q) ||
-        (f.FacultyName || "").toLowerCase().includes(q)
+        (f.FacultyUID || f.facultyUID || f.facultyUid || "").toLowerCase().includes(q) ||
+        (f.FacultyName || f.facultyName || "").toLowerCase().includes(q)
       ).slice(0, 6)
     );
   }, [facultySearch, faculties]);
@@ -233,8 +233,8 @@ export default function FacultyMappingAssign() {
   }, [selectedSection]);
 
   // ── derived: split into two sorted groups ─────────────────────────────────
-  const unassignedAll = mappings.filter(m => !(m.facultyUID || m.FacultyUID)).sort(sortByCode);
-  const assignedAll   = mappings.filter(m =>  !!(m.facultyUID || m.FacultyUID)).sort(sortByCode);
+  const unassignedAll = mappings.filter(m => !(m.facultyUID || m.facultyUid || m.FacultyUID)).sort(sortByCode);
+  const assignedAll   = mappings.filter(m =>  !!(m.facultyUID || m.facultyUid || m.FacultyUID)).sort(sortByCode);
 
   const pendingTotalPages  = Math.max(1, Math.ceil(unassignedAll.length / pendingPerPage));
   const assignedTotalPages = Math.max(1, Math.ceil(assignedAll.length   / assignedPerPage));
@@ -249,7 +249,7 @@ export default function FacultyMappingAssign() {
   const allPendingChecked  = pendingPageRows.length  > 0 && pendingPageRows.every(m  => checkedIds.has(rowId(m)));
   const allAssignedChecked = assignedPageRows.length > 0 && assignedPageRows.every(m => checkedIds.has(rowId(m)));
 
-  const selectedFacultyObj = faculties.find(f => f.FacultyUID === selectedFaculty?.FacultyUID);
+  const selectedFacultyObj = faculties.find(f => (f.facultyUid || f.FacultyUID) === (selectedFaculty?.facultyUid || selectedFaculty?.FacultyUID));
   const currentLoad  = selectedFacultyObj?.CurrentLoad  ?? 0;
   const expectedLoad = selectedFacultyObj?.ExpectedLoad ?? 0;
 
@@ -278,7 +278,7 @@ export default function FacultyMappingAssign() {
   // ── handlers ───────────────────────────────────────────────────────────────
   function rowId(m) { return m.courseMappingId ?? m.CourseMappingId ?? JSON.stringify(m); }
 
-  function selectFaculty(f) { setSelectedFaculty(f); setFacultySearch(f.FacultyUID); setShowSuggestions(false); }
+  function selectFaculty(f) { setSelectedFaculty(f); setFacultySearch(f.facultyUid || f.facultyUID || f.FacultyUID || ""); setShowSuggestions(false); }
   function clearFaculty()   { setSelectedFaculty(null); setFacultySearch(""); }
 
   function toggleRow(id) {
@@ -298,24 +298,25 @@ export default function FacultyMappingAssign() {
     if (!selectedFaculty || checkedIds.size === 0) return;
     setSaving(true); setResult(null);
     const selected = mappings.filter(m => checkedIds.has(rowId(m)));
+    const sid = selectedFaculty.facultyUid || selectedFaculty.FacultyUID; // Get the correct UID
     // ⚠️  Keys MUST match the Java entity's exact field names (PascalCase where defined)
     // so Jackson deserializes them correctly.  FacultyUID = null → backend skips update.
     const payload = selected.map(m => ({
       courseMappingId: m.courseMappingId ?? m.CourseMappingId ?? null,
       // Entity fields: Section, Coursecode, GroupNo, mappingType (only this one is camelCase)
-      Section:        m.section       || m.Section,
-      Coursecode:     m.coursecode    || m.Coursecode,
-      GroupNo:        m.groupNo       ?? m.GroupNo,
+      Section:        m.section || m.Section,
+      Coursecode:     m.courseCode || m.coursecode || m.Coursecode,
+      GroupNo:        m.groupNo ?? m.GroupNo,
       mappingType:    m.mappingType,
       AttendanceType: m.attendanceType || m.AttendanceType || "Regular",
       CourseNature:   String(m.courseNature || m.CourseNature || "C"),
-      FacultyUID:     selectedFaculty.FacultyUID,
+      FacultyUID:     sid, // Use sid here
       L: m.l ?? m.L ?? 0,
       T: m.t ?? m.T ?? 0,
       P: m.p ?? m.P ?? 0,
-      Mergecode:   m.mergecode   || m.Mergecode   || null,
+      Mergecode:   m.mergeCode || m.mergecode || m.Mergecode || null,
       MergeStatus: m.mergeStatus === true || m.MergeStatus === true,
-      Reserveslot: m.reserveslot || m.Reserveslot || null,
+      Reserveslot: m.reserveSlot || m.reserveslot || m.Reserveslot || null,
     }));
     try {
       const res = await fetch(`${API_BASE}/assign/save-all-faculty`, {
@@ -325,11 +326,11 @@ export default function FacultyMappingAssign() {
       });
       setSaving(false);
       if (res.ok) {
-        setResult({ success: true, message: `Assigned ${selected.length} mapping(s) to ${selectedFaculty.FacultyUID}.` });
+        setResult({ success: true, message: `Assigned ${selected.length} mapping(s) to ${sid}.` }); // Use sid here
         // Update local mapping state immediately
         setMappings(prev => prev.map(m =>
           checkedIds.has(rowId(m))
-            ? { ...m, facultyUID: selectedFaculty.FacultyUID, FacultyUID: selectedFaculty.FacultyUID }
+            ? { ...m, facultyUID: sid, FacultyUID: sid } // Use sid here
             : m
         ));
         setCheckedIds(new Set());
@@ -404,7 +405,7 @@ export default function FacultyMappingAssign() {
   function renderRow(m, showOverride = false) {
     const id           = rowId(m);
     const checked      = checkedIds.has(id);
-    const currentUID   = m.facultyUID || m.FacultyUID || "";
+    const currentUID   = m.facultyUID || m.facultyUid || m.FacultyUID || "";
     const isOverriding = showOverride && checked;
     return (
       <tr key={id}
@@ -426,7 +427,7 @@ export default function FacultyMappingAssign() {
               className="rounded border-slate-300 dark:border-slate-600 text-primary focus:ring-primary" />
           </td>
         )}
-        <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{m.coursecode || m.Coursecode}</td>
+        <td className="px-4 py-3.5 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{m.courseCode || m.coursecode || m.Coursecode}</td>
         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300">{m.section || m.Section}</td>
         <td className="px-4 py-3.5 text-slate-600 dark:text-slate-300 whitespace-nowrap">G{m.groupNo ?? m.GroupNo}</td>
         <td className="px-4 py-3.5">{natureBadge(m.courseNature || m.CourseNature)}</td>
@@ -441,13 +442,13 @@ export default function FacultyMappingAssign() {
             : <span className="text-[10px] font-bold text-slate-400">—</span>}
         </td>
         <td className="px-4 py-3.5 text-center">
-          {(m.mergecode || m.Mergecode)
-            ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.mergecode || m.Mergecode}</span>
+          {(m.mergeCode || m.mergecode || m.Mergecode)
+            ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.mergeCode || m.mergecode || m.Mergecode}</span>
             : <span className="text-xs text-slate-400">—</span>}
         </td>
         <td className="px-4 py-3.5 text-center">
-          {(m.reserveslot || m.Reserveslot)
-            ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.reserveslot || m.Reserveslot}</span>
+          {(m.reserveSlot || m.reserveslot || m.Reserveslot)
+            ? <span className="text-xs font-mono text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded border border-slate-200 dark:border-slate-700">{m.reserveSlot || m.reserveslot || m.Reserveslot}</span>
             : <span className="text-xs text-slate-400">—</span>}
         </td>
         {/* Current Faculty column OR inline override input */}
@@ -464,7 +465,7 @@ export default function FacultyMappingAssign() {
                 onBlur={() => setTimeout(() => setOverrideFocused(false), 200)}
                 placeholder="Search UID or Name…"
                 className={`w-full text-xs rounded-lg py-1.5 px-3 border shadow-sm focus:ring-2 transition-all ${
-                  overrideSearch.trim() && !faculties.some(f => (f.FacultyUID || f.facultyUID || "") === overrideSearch.trim())
+                  overrideSearch.trim() && !faculties.some(f => (f.FacultyUID || f.facultyUID || f.facultyUid || "") === overrideSearch.trim())
                     ? "border-red-400 dark:border-red-500 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-red-300/40"
                     : "border-primary/40 dark:border-primary/50 bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 focus:ring-primary/20"
                 }`}
@@ -475,14 +476,14 @@ export default function FacultyMappingAssign() {
                   {(() => {
                     const q = overrideSearch.toLowerCase();
                     const matches = faculties.filter(f => {
-                      const uid  = (f.FacultyUID  || f.facultyUID  || "");
+                      const uid  = (f.FacultyUID  || f.facultyUID || f.facultyUid  || "");
                       const name = (f.FacultyName || f.facultyName || "");
                       return uid.toLowerCase().includes(q) || name.toLowerCase().includes(q);
                     });
                     return matches.length === 0
                       ? <div className="px-3 py-2 text-xs text-slate-400 italic">No match found.</div>
                       : matches.map(f => {
-                          const uid  = f.FacultyUID  || f.facultyUID  || "";
+                          const uid  = f.FacultyUID  || f.facultyUID || f.facultyUid  || "";
                           const name = f.FacultyName || f.facultyName || "";
                           return (
                             <div key={uid}
@@ -565,16 +566,19 @@ export default function FacultyMappingAssign() {
               />
               {showSuggestions && facultySuggestions.length > 0 && (
                 <ul className="absolute top-full mt-1 left-0 right-0 z-50 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden">
-                  {facultySuggestions.map(f => (
-                    <li key={f.FacultyUID} onMouseDown={() => selectFaculty(f)}
+                  {facultySuggestions.map(f => {
+                    const fuid = f.facultyUid || f.facultyUID || f.FacultyUID;
+                    const fname = f.facultyName || f.FacultyName;
+                    return (
+                    <li key={fuid} onMouseDown={() => selectFaculty(f)}
                       className="px-4 py-3 text-sm hover:bg-slate-50 dark:hover:bg-slate-700 cursor-pointer flex items-center gap-3">
                       <span className="material-symbols-outlined text-primary text-lg">person</span>
                       <span>
-                        <span className="font-bold text-slate-900 dark:text-slate-100">{f.FacultyUID}</span>
-                        <span className="ml-2 text-slate-500 dark:text-slate-400">{f.FacultyName}</span>
+                        <span className="font-bold text-slate-900 dark:text-slate-100">{fuid}</span>
+                        <span className="ml-2 text-slate-500 dark:text-slate-400">{fname}</span>
                       </span>
                     </li>
-                  ))}
+                  )})}
                 </ul>
               )}
             </div>
@@ -593,11 +597,11 @@ export default function FacultyMappingAssign() {
               </div>
               <div className="flex-1 min-w-0">
                 <h2 className="text-xl font-headline font-bold text-slate-900 dark:text-slate-100 tracking-tight truncate">
-                  {selectedFaculty.FacultyName || selectedFaculty.FacultyUID}
+                  {selectedFaculty.facultyName || selectedFaculty.FacultyName || selectedFaculty.facultyUid || selectedFaculty.FacultyUID}
                 </h2>
                 <p className="text-slate-500 dark:text-slate-400 text-sm flex items-center gap-1.5 mt-0.5">
                   <span className="material-symbols-outlined text-sm">badge</span>
-                  {selectedFaculty.FacultyUID}
+                  {selectedFaculty.facultyUid || selectedFaculty.FacultyUID}
                   {selectedFaculty.FacultyDomain && (
                     <span className="ml-2 text-xs font-semibold text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{selectedFaculty.FacultyDomain}</span>
                   )}
@@ -669,8 +673,8 @@ export default function FacultyMappingAssign() {
                 className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100 rounded-lg px-4 py-3 text-sm font-medium focus:ring-2 focus:ring-primary focus:border-primary appearance-none cursor-pointer transition-all">
                 <option value="">— Choose a section to load mappings —</option>
                 {sections.map((s, idx) => (
-                  <option key={s.SectionId ?? idx} value={s.SectionId}>
-                    {s.SectionId} — {s.ProgramName} · Sem {s.Semester}
+                  <option key={s.sectionId ?? s.SectionId ?? idx} value={s.sectionId || s.SectionId}>
+                    {s.sectionId || s.SectionId} — {s.programName || s.ProgramName} · Sem {s.semester ?? s.Semester}
                   </option>
                 ))}
               </select>
@@ -859,7 +863,7 @@ export default function FacultyMappingAssign() {
             </div>
             <div className="text-sm text-slate-500 dark:text-slate-400 font-medium">
               <span className="font-bold text-slate-900 dark:text-slate-100">{checkedIds.size}</span> mapping{checkedIds.size !== 1 ? "s" : ""} selected
-              {selectedFaculty && <span> → <span className="font-bold text-primary">{selectedFaculty.FacultyUID}</span></span>}
+              {selectedFaculty && <span> → <span className="font-bold text-primary">{selectedFaculty.facultyUid || selectedFaculty.FacultyUID}</span></span>}
             </div>
           </div>
           <button onClick={handleAssign} disabled={saving}
@@ -868,7 +872,7 @@ export default function FacultyMappingAssign() {
               <><span className="material-symbols-outlined animate-spin text-lg">refresh</span>Assigning…</>
             ) : (
               <><span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>assignment_turned_in</span>
-                Assign {checkedIds.size} Mapping{checkedIds.size !== 1 ? "s" : ""} to {selectedFaculty.FacultyUID}</>
+                Assign {checkedIds.size} Mapping{checkedIds.size !== 1 ? "s" : ""} to {selectedFaculty.facultyUid || selectedFaculty.FacultyUID}</>
             )}
           </button>
         </div>
