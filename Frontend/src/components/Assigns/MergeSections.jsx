@@ -17,12 +17,12 @@ const colorBg = {
 };
 const getColor = (s) => COLORS[[...(s || "")].reduce((a, c) => a + c.charCodeAt(0), 0) % COLORS.length];
 
-const mappingCourseCode = (m) => m?.Coursecode ?? m?.coursecode ?? m?.CourseCode ?? m?.courseCode ?? "";
-const mappingSection = (m) => m?.Section ?? m?.section ?? m?.SectionId ?? m?.sectionId ?? "";
-const mappingGroupNo = (m) => m?.GroupNo ?? m?.groupNo ?? m?.groupno ?? null;
-const sectionRowId = (s) => s?.SectionId ?? s?.sectionId ?? s?.Section ?? s?.section ?? "";
-const getCourseCode = (c) => c?.CourseCode ?? c?.courseCode ?? c?.coursecode ?? "";
-const getCourseTitle = (c) => c?.CourseTitle ?? c?.courseTitle ?? c?.coursetitle ?? "";
+const mappingCourseCode = (m) => m?.courseCode ?? m?.coursecode ?? m?.Coursecode ?? m?.CourseCode ?? "";
+const mappingSection = (m) => m?.section ?? m?.Section ?? m?.sectionId ?? m?.SectionId ?? "";
+const mappingGroupNo = (m) => m?.groupNo ?? m?.GroupNo ?? m?.groupno ?? null;
+const sectionRowId = (s) => s?.sectionId ?? s?.SectionId ?? s?.section ?? s?.Section ?? "";
+const getCourseCode = (c) => c?.courseCode ?? c?.CourseCode ?? c?.coursecode ?? "";
+const getCourseTitle = (c) => c?.courseTitle ?? c?.CourseTitle ?? c?.coursetitle ?? "";
 
 export default function MergeSections() {
   const [courses, setCourses] = useState([]);
@@ -122,12 +122,12 @@ export default function MergeSections() {
   const groupMap = {};
   const groupFacultyMap = {};
   relatedMappings.forEach(m => {
-    const code = m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode;
+    const code = m.mergeCode ?? m.mergecode ?? m.Mergecode ?? m.MergeCode;
     if (code) {
         if (!groupMap[code]) groupMap[code] = [];
         groupMap[code].push(mappingSection(m));
         // Collect faculty UIDs per merge group
-        const fuid = m.FacultyUID ?? m.facultyUID ?? m.facultyUid ?? null;
+        const fuid = m.facultyUid ?? m.facultyUID ?? m.FacultyUID ?? null;
         if (fuid) {
           if (!groupFacultyMap[code]) groupFacultyMap[code] = new Set();
           groupFacultyMap[code].add(fuid);
@@ -139,7 +139,7 @@ export default function MergeSections() {
 
   // Filter mappings by mappingMode
   const modeFilteredMappings = relatedMappings.filter(m => {
-      const type = (m.MappingType || m.mappingType || "L");
+      const type = (m.mappingType || m.MappingType || "L");
       return type === mappingMode;
   });
 
@@ -149,9 +149,9 @@ export default function MergeSections() {
     const sec = mappingSection(m);
     if (!sectionLTPMap[sec]) {
       sectionLTPMap[sec] = {
-        L: m.L ?? m.l ?? 0,
-        T: m.T ?? m.t ?? 0,
-        P: m.P ?? m.p ?? 0,
+        L: m.l ?? m.L ?? 0,
+        T: m.t ?? m.T ?? 0,
+        P: m.p ?? m.P ?? 0,
         groupNo: mappingGroupNo(m),
         mappingType: m.mappingType ?? m.MappingType ?? ""
       };
@@ -222,7 +222,7 @@ export default function MergeSections() {
     setSectionError("");
     
     // Find the mapping for this merge code
-    const groupMapping = mappings.find(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code);
+    const groupMapping = mappings.find(m => (m.mergeCode ?? m.mergecode ?? m.Mergecode ?? m.MergeCode) === code);
     
     if (groupMapping) {
        // Set the correct course
@@ -233,7 +233,7 @@ export default function MergeSections() {
            setQuery("");
            setShowSuggestions(false);
        }
-       setMappingMode(groupMapping.MappingType || groupMapping.mappingType || "L");
+       setMappingMode(groupMapping.mappingType || groupMapping.MappingType || "L");
     }
 
     setSelectedGroup(null);
@@ -241,7 +241,7 @@ export default function MergeSections() {
     setEditingGroup(code);
     
     const groupsInMerge = mappings
-        .filter(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code)
+        .filter(m => (m.mergeCode ?? m.mergecode ?? m.Mergecode ?? m.MergeCode) === code)
         .map(m => ({ sectionId: mappingSection(m), groupNo: mappingGroupNo(m) }));
     
     setEditSectionGroups(groupsInMerge);
@@ -301,7 +301,7 @@ export default function MergeSections() {
       });
       const mappingsReturned = res.data;
       const mergeCode = mappingsReturned.length > 0 
-        ? (mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].mergeCode || mappingsReturned[0].MergeCode || "UNKNOWN") 
+        ? (mappingsReturned[0].mergeCode || mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].MergeCode || "UNKNOWN") 
         : "UNKNOWN";
       setLastMerge({ mergeCode });
       setShowToast(true);
@@ -630,8 +630,8 @@ export default function MergeSections() {
                                                             : selectedSectionGroups.some(g => g.sectionId === id && g.groupNo === grp);
                                                         
                                                         // Check if this specific group is already in another merge
-                                                        const mappingForThisGroup = relatedMappings.find(m => mappingSection(m) === id && mappingGroupNo(m) === grp && (m.MappingType || m.mappingType || "L") === mappingMode);
-                                                        const thisGroupMergeCode = mappingForThisGroup?.Mergecode || mappingForThisGroup?.mergecode;
+                                                        const mappingForThisGroup = relatedMappings.find(m => mappingSection(m) === id && mappingGroupNo(m) === grp && (m.mappingType || m.MappingType || "L") === mappingMode);
+                                                        const thisGroupMergeCode = mappingForThisGroup?.mergeCode || mappingForThisGroup?.mergecode || mappingForThisGroup?.Mergecode;
                                                         const isInOtherGroup = thisGroupMergeCode && thisGroupMergeCode !== editingGroup;
 
                                                         return (
@@ -772,12 +772,12 @@ export default function MergeSections() {
                       
                       // Find which specific groups are in this merge code
                       const groupsInThisCode = relatedMappings
-                        .filter(m => (m.Mergecode ?? m.mergecode ?? m.MergeCode ?? m.mergeCode) === code);
+                        .filter(m => (m.mergeCode ?? m.mergecode ?? m.Mergecode ?? m.MergeCode) === code);
                       
                       const sectionGroupStr = groupsInThisCode.map(m => {
                          const sid = mappingSection(m);
                          const gno = mappingGroupNo(m);
-                         const type = m.MappingType || m.mappingType || "L";
+                         const type = m.mappingType || m.MappingType || "L";
                          return `${sid}(${type}${gno !== null ? `-${gno}` : ''})`;
                       }).join(', ');
 

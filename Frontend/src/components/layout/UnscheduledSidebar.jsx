@@ -105,20 +105,20 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
     case 'sections':  rawData = sections;  break
     case 'tickets': {
       // Only unscheduled — then apply dropdown filters
-      rawData = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
-      if (filterSection !== 'All') rawData = rawData.filter(t => (t.Section || t.section) === filterSection)
-      if (filterFaculty !== 'All') rawData = rawData.filter(t => (t.FacultyUID || t.facultyUID || t.facultyUid) === filterFaculty)
-      if (filterCourse  !== 'All') rawData = rawData.filter(t => (t.Coursecode || t.coursecode) === filterCourse)
+      rawData = tickets.filter(t => !(t.day || t.Day) || !(t.time || t.Time))
+      if (filterSection !== 'All') rawData = rawData.filter(t => (t.section || t.Section) === filterSection)
+      if (filterFaculty !== 'All') rawData = rawData.filter(t => (t.facultyUid || t.facultyUID || t.FacultyUID) === filterFaculty)
+      if (filterCourse  !== 'All') rawData = rawData.filter(t => (t.courseCode || t.coursecode || t.Coursecode) === filterCourse)
       break
     }
     default: rawData = []
   }
 
   // Derive filter options from ALL unscheduled tickets (irrespective of other filters)
-  const unscheduledTickets = tickets.filter(t => !(t.Day || t.day) || !(t.Time || t.time))
-  const sectionOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Section  || t.section  || '').filter(Boolean))).sort()]
-  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.FacultyUID || t.facultyUID || t.facultyUid || '').filter(Boolean))).sort()]
-  const courseOptions   = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.Coursecode || t.coursecode || '').filter(Boolean))).sort()]
+  const unscheduledTickets = tickets.filter(t => !(t.day || t.Day) || !(t.time || t.Time))
+  const sectionOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.section  || t.Section  || '').filter(Boolean))).sort()]
+  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.facultyUid || t.facultyUID || t.FacultyUID || '').filter(Boolean))).sort()]
+  const courseOptions   = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.courseCode || t.coursecode || t.Coursecode || '').filter(Boolean))).sort()]
   const activeFilterCount = [filterSection, filterFaculty, filterCourse].filter(v => v !== 'All').length
 
   // ---------- search filter ----------
@@ -128,30 +128,30 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
         switch (activeTab) {
           case 'courses':
             return (
-              (item.CourseCode || '').toLowerCase().includes(q) ||
-              (item.CourseTitle || '').toLowerCase().includes(q)
+              (item.courseCode  || '').toLowerCase().includes(q) ||
+              (item.courseTitle || '').toLowerCase().includes(q)
             )
           case 'faculties':
             return (
-              (item.FacultyName || '').toLowerCase().includes(q) ||
-              (item.FacultyDomain || '').toLowerCase().includes(q)
+              (item.facultyName   || '').toLowerCase().includes(q) ||
+              (item.facultyDomain || '').toLowerCase().includes(q)
             )
           case 'rooms':
             return (
-              (item.RoomNo || '').toLowerCase().includes(q) ||
-              (ROOM_TYPE_MAP[item.RoomType] || '').toLowerCase().includes(q)
+              (item.roomNo   || '').toLowerCase().includes(q) ||
+              (ROOM_TYPE_MAP[item.roomType] || '').toLowerCase().includes(q)
             )
           case 'sections':
             return (
-              (item.SectionId || '').toLowerCase().includes(q) ||
-              (item.ProgramName || '').toLowerCase().includes(q)
+              (item.sectionId   || '').toLowerCase().includes(q) ||
+              (item.programName || '').toLowerCase().includes(q)
             )
           case 'tickets':
             return (
               (item.ticketId   || item.TicketId   || '').toLowerCase().includes(q) ||
-              (item.Coursecode || item.coursecode || '').toLowerCase().includes(q) ||
-              (item.Section    || item.section    || '').toLowerCase().includes(q) ||
-              (item.FacultyUID || item.facultyUID || item.facultyUid || '').toLowerCase().includes(q)
+              (item.courseCode || item.coursecode || item.Coursecode || '').toLowerCase().includes(q) ||
+              (item.section    || item.Section    || '').toLowerCase().includes(q) ||
+              (item.facultyUid || item.facultyUID || item.FacultyUID || '').toLowerCase().includes(q)
             )
           default:
             return true
@@ -328,12 +328,12 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
             }
             case 'tickets': {
               const tid      = item.ticketId   || item.TicketId   || '?'
-              const course   = item.Coursecode || item.coursecode || '—'
-              const section  = item.Section    || item.section    || '—'
-              const group    = item.GroupNo    ?? item.groupNo    ?? ''
-              const faculty  = item.FacultyUID || item.facultyUID || item.facultyUid || null
-              const merged   = !!(item.MergedCode || item.mergedCode)
-              const lno      = item.LectureNo  ?? item.lectureNo  ?? ''
+              const course   = item.courseCode  || item.coursecode || item.Coursecode || '—'
+              const section  = item.section     || item.Section    || '—'
+              const group    = item.groupNo     ?? item.GroupNo    ?? ''
+              const faculty  = item.facultyUid  || item.facultyUID || item.FacultyUID || null
+              const merged   = !!(item.mergedCode || item.MergedCode)
+              const lno      = item.lectureNo   ?? item.LectureNo  ?? ''
               // mappingType not in TicketDto — extract from TicketId pattern: ...{type}{lno}$
               const typeMatch = String(tid).match(/([LTP])(\d+)$/)
               const typeCode  = item.mappingType || item.MappingType || (typeMatch ? typeMatch[1] : '')
@@ -342,9 +342,9 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
                 typeCode === 'L' ? 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-800'
                 : typeCode === 'T' ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400 border-purple-200 dark:border-purple-800'
                 : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-800'
-              const isScheduled = !!((item.Day || item.day) && (item.Time || item.time))
-              const scheduledDay  = item.Day  || item.day  || ''
-              const scheduledTime = item.Time || item.time || ''
+              const isScheduled = !!((item.day || item.Day) && (item.time || item.Time))
+              const scheduledDay  = item.day  || item.Day  || ''
+              const scheduledTime = item.time || item.Time || ''
               const scheduledHHMM = String(scheduledTime).slice(0, 5)
               return (
                 <div key={tid}

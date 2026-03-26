@@ -125,6 +125,7 @@ export default function FacultyMappingAssign() {
       AttendanceType: m.attendanceType || m.AttendanceType || "Regular",
       CourseNature:   String(m.courseNature || m.CourseNature || "C"),
       FacultyUID:     uid,
+      facultyUid:     uid,
       L: m.l ?? m.L ?? 0,
       T: m.t ?? m.T ?? 0,
       P: m.p ?? m.P ?? 0,
@@ -142,7 +143,7 @@ export default function FacultyMappingAssign() {
         // Update local mapping immediately
         setMappings(prev => prev.map(mp =>
           rowId(mp) === overrideRowId
-            ? { ...mp, facultyUID: uid, FacultyUID: uid }
+            ? { ...mp, facultyUID: uid, FacultyUID: uid, facultyUid: uid }
             : mp
         ));
         setResult({ success: true, message: `Override saved — ${m.coursecode || m.Coursecode} reassigned to ${uid}.` });
@@ -186,7 +187,6 @@ export default function FacultyMappingAssign() {
     if (!lastRefreshedEntity || lastRefreshedEntity === "section") {
       fetch(`${API_BASE}/section/all`).then(r => r.ok ? r.json() : []).then(setSections).catch(() => {});
     }
-    // BulkAssign saved — re-fetch current section so Current Faculty column updates
     if ((!lastRefreshedEntity || lastRefreshedEntity === "mappings") && selectedSection) {
       fetch(`${API_BASE}/mappings`)
         .then(r => r.json())
@@ -233,8 +233,8 @@ export default function FacultyMappingAssign() {
   }, [selectedSection]);
 
   // ── derived: split into two sorted groups ─────────────────────────────────
-  const unassignedAll = mappings.filter(m => !(m.facultyUID || m.facultyUid || m.FacultyUID)).sort(sortByCode);
-  const assignedAll   = mappings.filter(m =>  !!(m.facultyUID || m.facultyUid || m.FacultyUID)).sort(sortByCode);
+  const unassignedAll = mappings.filter(m => !(m.facultyUid || m.facultyUID || m.FacultyUID)).sort(sortByCode);
+  const assignedAll   = mappings.filter(m =>  !!(m.facultyUid || m.facultyUID || m.FacultyUID)).sort(sortByCode);
 
   const pendingTotalPages  = Math.max(1, Math.ceil(unassignedAll.length / pendingPerPage));
   const assignedTotalPages = Math.max(1, Math.ceil(assignedAll.length   / assignedPerPage));
@@ -310,7 +310,8 @@ export default function FacultyMappingAssign() {
       mappingType:    m.mappingType,
       AttendanceType: m.attendanceType || m.AttendanceType || "Regular",
       CourseNature:   String(m.courseNature || m.CourseNature || "C"),
-      FacultyUID:     sid, // Use sid here
+      FacultyUID:     sid, // Legacy Java Entity match
+      facultyUid:     sid, // Correct Jackson match
       L: m.l ?? m.L ?? 0,
       T: m.t ?? m.T ?? 0,
       P: m.p ?? m.P ?? 0,
@@ -330,7 +331,7 @@ export default function FacultyMappingAssign() {
         // Update local mapping state immediately
         setMappings(prev => prev.map(m =>
           checkedIds.has(rowId(m))
-            ? { ...m, facultyUID: sid, FacultyUID: sid } // Use sid here
+            ? { ...m, facultyUID: sid, FacultyUID: sid, facultyUid: sid } // Use sid everywhere
             : m
         ));
         setCheckedIds(new Set());
@@ -338,11 +339,12 @@ export default function FacultyMappingAssign() {
         // ── Persist updated CurrentLoad to DB ──────────────────────────────
         const newLoad = currentLoad + addedLoad;
         try {
-          await fetch(`${API_BASE}/faculty/update/${selectedFaculty.FacultyUID}`, {
+          await fetch(`${API_BASE}/faculty/update/${sid}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              FacultyUID:    selectedFaculty.FacultyUID,
+              FacultyUID:    sid,
+              facultyUid:    sid,
               FacultyName:   selectedFacultyObj?.FacultyName   ?? "",
               FacultyDomain: selectedFacultyObj?.FacultyDomain ?? "",
               CurrentLoad:   newLoad,
@@ -351,7 +353,7 @@ export default function FacultyMappingAssign() {
           });
           // Reflect new CurrentLoad in local faculty list immediately
           setFaculties(prev => prev.map(f =>
-            f.FacultyUID === selectedFaculty.FacultyUID
+            (f.FacultyUID || f.facultyUid) === sid
               ? { ...f, CurrentLoad: newLoad }
               : f
           ));

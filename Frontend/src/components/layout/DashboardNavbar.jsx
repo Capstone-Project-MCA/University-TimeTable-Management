@@ -91,8 +91,8 @@ export default function DashboardNavbar({ activeTab }) {
       if (!mappingRes.ok) throw new Error("Failed to load mappings.");
       const mappings = await mappingRes.json();
 
-      const assigned   = mappings.filter(m => !!(m.facultyUID || m.facultyUid || m.FacultyUID));
-      const unassigned = mappings.filter(m =>  !(m.facultyUID || m.facultyUid || m.FacultyUID));
+      const assigned   = mappings.filter(m => !!(m.facultyUid || m.facultyUID || m.FacultyUID));
+      const unassigned = mappings.filter(m =>  !(m.facultyUid || m.facultyUID || m.FacultyUID));
 
       // ── Step 2: nothing assigned at all → hard block ────────────────────
       if (assigned.length === 0) {

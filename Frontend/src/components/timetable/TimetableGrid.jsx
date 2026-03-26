@@ -52,7 +52,7 @@ function typeBg(type) {
 /* ── mini ticket card displayed inside a grid cell ─────────────────────── */
 function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
   // mappingType not in TicketDto — extract from TicketId
-  const tid  = ticket.TicketId || ticket.ticketId || '';
+  const tid  = ticket.ticketId || ticket.TicketId || '';
   const typeMatch = String(tid).match(/([LTP])(\d+)$/);
   const type = ticket.mappingType || ticket.MappingType || (typeMatch ? typeMatch[1] : '');
   const typeShort = { L: 'Lec', T: 'Tut', P: 'Prac' }[type] || type;
@@ -62,11 +62,11 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
     : type === 'T'
     ? 'bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800'
     : 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800';
-  const course    = ticket.Coursecode  || ticket.coursecode  || '—';
-  const section   = ticket.Section     || ticket.section     || '—';
-  const group     = ticket.GroupNo     ?? ticket.groupNo     ?? '';
-  const lno       = ticket.LectureNo   ?? ticket.lectureNo   ?? '';
-  const faculty   = ticket.FacultyUID  || ticket.facultyUID || ticket.facultyUid  || null;
+  const course    = ticket.courseCode  || ticket.Coursecode  || ticket.coursecode  || '—';
+  const section   = ticket.section     || ticket.Section     || '—';
+  const group     = ticket.groupNo     ?? ticket.GroupNo     ?? '';
+  const lno       = ticket.lectureNo   ?? ticket.LectureNo   ?? '';
+  const faculty   = ticket.facultyUid  || ticket.facultyUID  || ticket.FacultyUID  || null;
   const hasConflict = ticket._hasConflict || false;
 
   return (
@@ -172,11 +172,11 @@ export default function TimetableGrid({ filterSection = 'All' }) {
   const slotMap = useMemo(() => {
     const map = {};
     tickets.forEach(t => {
-      const day  = t.Day  || t.day;
-      const time = t.Time || t.time;
+      const day  = t.day  || t.Day;
+      const time = t.time || t.Time;
       if (day && time) {
         if (filterSection !== 'All') {
-          const section = t.Section || t.section;
+          const section = t.section || t.Section;
           if (section !== filterSection) return;
         }
 
@@ -196,14 +196,14 @@ export default function TimetableGrid({ filterSection = 'All' }) {
     // Use ALL tickets regardless of section filter so cross-section conflicts show
     const fullMap = {};
     tickets.forEach(t => {
-      const day  = t.Day  || t.day;
-      const time = t.Time || t.time;
-      const fac  = t.FacultyUID || t.facultyUID || t.facultyUid;
+      const day  = t.day  || t.Day;
+      const time = t.time || t.Time;
+      const fac  = t.facultyUid || t.facultyUID || t.FacultyUID;
       if (!day || !time || !fac) return;
       const hhmm = String(time).slice(0, 5);
       const key  = `${fac}|${day}|${hhmm}`;
       if (!fullMap[key]) fullMap[key] = [];
-      fullMap[key].push(t.TicketId || t.ticketId);
+      fullMap[key].push(t.ticketId || t.TicketId);
     });
     Object.values(fullMap).forEach(group => {
       if (group.length > 1) group.forEach(id => ids.add(id));
@@ -214,9 +214,9 @@ export default function TimetableGrid({ filterSection = 'All' }) {
   /* ── unscheduled (no Day or Time set) ─────────────────────────────────── */
   const unscheduledCount = useMemo(
     () => tickets.filter(t => {
-      if ((t.Day || t.day) && (t.Time || t.time)) return false;
+      if ((t.day || t.Day) && (t.time || t.Time)) return false;
       if (filterSection !== 'All') {
-        const section = t.Section || t.section;
+        const section = t.section || t.Section;
         if (section !== filterSection) return false;
       }
       return true;
@@ -227,14 +227,14 @@ export default function TimetableGrid({ filterSection = 'All' }) {
   /* ── drag start (from grid cards) ────────────────────────────────────── */
   const handleDragStart = (e, ticket) => {
     e.dataTransfer.effectAllowed = 'move';
-    try { e.dataTransfer.setData('text/plain', ticket.TicketId || ticket.ticketId || ''); } catch {}
+    try { e.dataTransfer.setData('text/plain', ticket.ticketId || ticket.TicketId || ''); } catch {}
     setDraggedTicket({
-      ticketId:   ticket.TicketId    || ticket.ticketId,
-      coursecode: ticket.Coursecode  || ticket.coursecode,
+      ticketId:   ticket.ticketId    || ticket.TicketId,
+      coursecode: ticket.courseCode  || ticket.coursecode  || ticket.Coursecode,
       type:       ticket.mappingType || ticket.MappingType || '',
-      lectureNo:  ticket.LectureNo   || ticket.lectureNo,
-      section:    ticket.Section     || ticket.section,
-      facultyUID: ticket.FacultyUID  || ticket.facultyUID || ticket.facultyUid,
+      lectureNo:  ticket.lectureNo   || ticket.LectureNo,
+      section:    ticket.section     || ticket.Section,
+      facultyUID: ticket.facultyUid  || ticket.facultyUID  || ticket.FacultyUID,
     });
   };
 
@@ -280,7 +280,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
 
     // ── Block drop if cell is already occupied by a DIFFERENT ticket ──────
     const existingInSlot = (slotMap[key] || []).filter(
-      t => (t.TicketId || t.ticketId) !== ticketId
+      t => (t.ticketId || t.TicketId) !== ticketId
     );
     if (existingInSlot.length > 0) {
       console.info('Drop blocked: slot already occupied');
@@ -289,8 +289,8 @@ export default function TimetableGrid({ filterSection = 'All' }) {
 
     // Optimistic UI update
     setTickets(prev => prev.map(t =>
-      (t.TicketId || t.ticketId) === ticketId
-        ? { ...t, Day: day, day, Time: `${time}:00`, time: `${time}:00` }
+      (t.ticketId || t.TicketId) === ticketId
+        ? { ...t, day, time: `${time}:00` }
         : t
     ));
 
@@ -314,10 +314,10 @@ export default function TimetableGrid({ filterSection = 'All' }) {
 
   /* ── unschedule: remove from grid, return ticket to sidebar panel ────── */
   const handleUnschedule = async (ticketId) => {
-    // Optimistic: clear Day + Time locally
+    // Optimistic: clear day + time locally
     setTickets(prev => prev.map(t =>
-      (t.TicketId || t.ticketId) === ticketId
-        ? { ...t, Day: null, day: null, Time: null, time: null }
+      (t.ticketId || t.TicketId) === ticketId
+        ? { ...t, day: null, time: null }
         : t
     ));
     try {
@@ -480,7 +480,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
                       {/* Placed ticket cards */}
                       <div className="flex flex-col gap-0.5 p-0.5 h-full overflow-hidden">
                         {cellTickets.map(t => {
-                          const tid = t.TicketId || t.ticketId;
+                          const tid = t.ticketId || t.TicketId;
                           return (
                             <GridTicketCard
                               key={tid}

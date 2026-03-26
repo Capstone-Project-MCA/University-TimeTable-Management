@@ -168,6 +168,7 @@ const FacultyAssignmentWorkspace = () => {
           GroupNo:    row.groupRaw,
           mappingType: row.type,
           FacultyUID: row.uid || null,
+          facultyUid: row.uid || null,
         }),
       });
       if (res.ok) {
@@ -201,6 +202,7 @@ const FacultyAssignmentWorkspace = () => {
       AttendanceType: row.attendance,
       CourseNature:   String(row.nature || "C"),
       FacultyUID:     row.uid || null,
+      facultyUid:     row.uid || null,
       L:              row.l,
       T:              row.t,
       P:              row.p,

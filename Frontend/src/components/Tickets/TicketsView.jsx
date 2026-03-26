@@ -86,14 +86,14 @@ export default function TicketsView() {
   useEffect(() => { if (refreshKey > 0) fetchTickets(); }, [refreshKey]);
 
   // Derived filter options
-  const uniqueSections = ["All", ...Array.from(new Set(tickets.map(t => t.Section || t.section || ""))).filter(Boolean).sort()];
+  const uniqueSections = ["All", ...Array.from(new Set(tickets.map(t => t.section || t.Section || ""))).filter(Boolean).sort()];
   const uniqueTypes    = ["All", ...Array.from(new Set(tickets.map(t => t.mappingType || t.MappingType || ""))).filter(Boolean).sort()];
 
   // Apply filters
   const filtered = tickets.filter(t => {
-    const course  = (t.Coursecode  || t.coursecode  || "").toLowerCase();
-    const section = t.Section || t.section || "";
-    const faculty = (t.FacultyUID  || t.facultyUID || t.facultyUid  || "").toLowerCase();
+    const course  = (t.courseCode  || t.coursecode  || t.Coursecode  || "").toLowerCase();
+    const section = t.section || t.Section || "";
+    const faculty = (t.facultyUid  || t.facultyUID  || t.FacultyUID  || "").toLowerCase();
     const type    = t.mappingType || t.MappingType || "";
     return (
       course.includes(filterCourse.toLowerCase()) &&
@@ -110,8 +110,8 @@ export default function TicketsView() {
   // Reset page on filter change
   const handleFilter = (setter) => (val) => { setter(val); setPage(1); };
 
-  const mergedCount   = tickets.filter(t => !!(t.MergedCode || t.mergedCode)).length;
-  const assignedCount = tickets.filter(t => !!(t.FacultyUID || t.facultyUID || t.facultyUid)).length;
+  const mergedCount   = tickets.filter(t => !!(t.mergedCode || t.MergedCode)).length;
+  const assignedCount = tickets.filter(t => !!(t.facultyUid || t.facultyUID || t.FacultyUID)).length;
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 font-body text-slate-900 dark:text-slate-100">
@@ -229,16 +229,16 @@ export default function TicketsView() {
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                     {pageRows.map(t => {
                       const ticketId   = t.ticketId   || t.TicketId  || "—";
-                      const course     = t.Coursecode || t.coursecode || "—";
-                      const section    = t.Section    || t.section   || "—";
-                      const group      = t.GroupNo    ?? t.groupNo   ?? "—";
+                      const course     = t.courseCode  || t.coursecode || t.Coursecode || "—";
+                      const section    = t.section     || t.Section   || "—";
+                      const group      = t.groupNo     ?? t.GroupNo   ?? "—";
                       const type       = t.mappingType || t.MappingType || "—";
-                      const lectureNo  = t.LectureNo  ?? t.lectureNo ?? "—";
-                      const faculty    = t.FacultyUID || t.facultyUID || t.facultyUid || null;
-                      const mergeCode  = t.MergedCode || t.mergedCode || null;
-                      const day        = t.Day  || t.day  || null;
-                      const time       = t.Time || t.time || null;
-                      const room       = t.RoomNo || t.roomNo || null;
+                      const lectureNo  = t.lectureNo   ?? t.LectureNo ?? "—";
+                      const faculty    = t.facultyUid  || t.facultyUID || t.FacultyUID || null;
+                      const mergeCode  = t.mergedCode  || t.MergedCode || null;
+                      const day        = t.day  || t.Day  || null;
+                      const time       = t.time || t.Time || null;
+                      const room       = t.roomNo || t.RoomNo || null;
                       return (
                         <tr key={ticketId} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
                           <td className="px-4 py-3 font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{ticketId}</td>
