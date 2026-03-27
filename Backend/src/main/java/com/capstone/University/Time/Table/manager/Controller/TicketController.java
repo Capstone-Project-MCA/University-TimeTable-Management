@@ -27,6 +27,13 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.generateTicket(courseMappings));
     }
 
+    @PostMapping("/generate-merged")
+    public ResponseEntity<List<TicketDto>> generateMergedTickets(
+            @RequestBody List<CourseMapping> courseMappings
+    ){
+        return ResponseEntity.ok(ticketService.generateMergedSectionsTicket(courseMappings));
+    }
+
     @GetMapping("/get/{sectionId}")
     public ResponseEntity<List<TicketDto>> getAllTicketsBySectionId(@PathVariable String sectionId) {
         return ResponseEntity.ok(ticketService.getAllTicketsBySectionId(sectionId));
@@ -57,5 +64,10 @@ public class TicketController {
         TicketDto updated = ticketService.scheduleTicket(ticketId, day, time);
         if (updated == null) return ResponseEntity.notFound().build();
         return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/delete-all-tickets")
+    public void deleteTicket(){
+        ticketService.deleteAllTickets();
     }
 }

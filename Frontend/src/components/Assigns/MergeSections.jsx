@@ -299,6 +299,7 @@ export default function MergeSections() {
         existingMergeCode: selectedGroup,
         mappingType: mappingMode
       });
+      console.log("Output Merge section data: ", res.data);
       const mappingsReturned = res.data;
       const mergeCode = mappingsReturned.length > 0 
         ? (mappingsReturned[0].mergeCode || mappingsReturned[0].mergecode || mappingsReturned[0].Mergecode || mappingsReturned[0].MergeCode || "UNKNOWN") 

@@ -21,6 +21,7 @@ public class TicketService {
     private final FacultyRepository facultyRepository;
     private final TicketMapper ticketMapper;
 
+
     @Autowired
     public TicketService(
             TicketRepository ticketRepository,
@@ -56,13 +57,14 @@ public class TicketService {
             Short T = courseMapping.getT();
             Short P = courseMapping.getP();
             Boolean mergeStatus = courseMapping.getMergeStatus();
+            String mergeCode = courseMapping.getMergeCode();
 
             if(Boolean.TRUE.equals(mergeStatus)){
                 switch (mappingType) {
                     case "L" -> {
                         for (int i = 1; i <= L; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -70,7 +72,7 @@ public class TicketService {
                             ticket.setLectureNo((short) i);
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
-                            ticket.setMergedCode(courseMapping.getMergeCode());
+                            ticket.setMergedCode(mergeCode);
                             ticketList.add(ticket);
                         }
                     }
@@ -85,7 +87,7 @@ public class TicketService {
                             ticket.setLectureNo((short) i);
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
-                            ticket.setMergedCode(courseMapping.getMergeCode());
+                            ticket.setMergedCode(mergeCode);
                             ticketList.add(ticket);
                         }
                     }
@@ -100,7 +102,7 @@ public class TicketService {
                             ticket.setLectureNo((short) i);
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
-                            ticket.setMergedCode(courseMapping.getMergeCode());
+                            ticket.setMergedCode(mergeCode);
                             ticketList.add(ticket);
                         }
                     }
@@ -151,6 +153,7 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
                         ticket.setCourseMappingId(courseMappingId);
+                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticketList.add(ticket);
                     }
                 }
@@ -164,6 +167,7 @@ public class TicketService {
                         ticket.setSection(sectionId);
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
+                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticket.setCourseMappingId(courseMappingId);
                         ticketList.add(ticket);
                     }
@@ -178,6 +182,7 @@ public class TicketService {
                         ticket.setSection(sectionId);
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
+                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticket.setCourseMappingId(courseMappingId);
                         ticketList.add(ticket);
                     }

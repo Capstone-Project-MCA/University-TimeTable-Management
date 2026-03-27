@@ -109,7 +109,7 @@ CREATE TABLE IF NOT EXISTS ticket (
     LectureNo       SMALLINT         NOT NULL,
     Day             VARCHAR(10),
     Time            TIME,
-    MergedCode      VARCHAR(7)       NOT NULL DEFAULT '',
+    MergedCode      VARCHAR(7)       DEFAULT '',
     FacultyUID      VARCHAR(5),
     RoomNo          VARCHAR(10),
     CourseMappingId BIGINT,
