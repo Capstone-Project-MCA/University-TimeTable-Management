@@ -30,24 +30,34 @@ export default function DashboardNavbar({ activeTab }) {
     
     // Convert plural tab name to singular path if needed
     // e.g., 'courses' -> 'course', 'sections' -> 'section', 'faculties' -> 'faculty', 'rooms' -> 'room'
-    let endpointPrefix;
+    let endpointPath;
     let label;
+    let refreshKeyName;
     switch (activeTab) {
       case 'courses':
-        endpointPrefix = 'course';
+        endpointPath = 'course/delete/all';
         label = 'courses';
+        refreshKeyName = 'course';
         break;
       case 'sections':
-        endpointPrefix = 'section';
+        endpointPath = 'section/delete/all';
         label = 'sections';
+        refreshKeyName = 'section';
         break;
       case 'faculties':
-        endpointPrefix = 'faculty';
+        endpointPath = 'faculty/delete/all';
         label = 'faculties';
+        refreshKeyName = 'faculty';
         break;
       case 'rooms':
-        endpointPrefix = 'room';
+        endpointPath = 'room/delete/all';
         label = 'rooms';
+        refreshKeyName = 'room';
+        break;
+      case 'tickets':
+        endpointPath = 'ticket/delete-all-tickets';
+        label = 'tickets';
+        refreshKeyName = 'ticket';
         break;
       default:
         return; // For assign tabs or unknown, do nothing
@@ -58,7 +68,7 @@ export default function DashboardNavbar({ activeTab }) {
 
     setIsDeleting(true);
     try {
-      const response = await fetch(`${API_BASE}/${endpointPrefix}/delete/all`, {
+      const response = await fetch(`${API_BASE}/${endpointPath}`, {
         method: 'DELETE',
       });
       
@@ -67,7 +77,7 @@ export default function DashboardNavbar({ activeTab }) {
       }
       
       alert(`Successfully deleted all ${label}.`);
-      triggerRefresh(endpointPrefix); // refresh the list without page reload
+      triggerRefresh(refreshKeyName); // refresh the list without page reload
     } catch (error) {
       alert(error.message);
     } finally {
@@ -77,6 +87,9 @@ export default function DashboardNavbar({ activeTab }) {
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [warningModal, setWarningModal] = useState(null); // { assigned: [...], unassigned: [...] }
+
+  const [isGeneratingMerged, setIsGeneratingMerged] = useState(false);
+  const [warningModalMerged, setWarningModalMerged] = useState(null);
 
   const handleGenerateTickets = async () => {
     const confirmGenerate = window.confirm(
@@ -143,8 +156,74 @@ export default function DashboardNavbar({ activeTab }) {
 
   const handleWarningCancel = () => setWarningModal(null);
 
-  // Determine if Delete All button should be visible (only for the main 4 entity tabs)
-  const canDeleteAll = ['courses', 'sections', 'faculties', 'rooms'].includes(activeTab);
+  const handleGenerateMergedTickets = async () => {
+    const confirmGenerate = window.confirm(
+      "Generate tickets for all merged course mappings? This will create scheduling tickets for merged groups."
+    );
+    if (!confirmGenerate) return;
+
+    setIsGeneratingMerged(true);
+    try {
+      const mappingRes = await fetch(`${API_BASE}/mappings`);
+      if (!mappingRes.ok) throw new Error("Failed to load mappings.");
+      const mappings = await mappingRes.json();
+
+      const mergedMappings = mappings.filter(m => m.mergeStatus === true);
+      const assigned   = mergedMappings.filter(m => !!(m.facultyUid || m.facultyUID || m.FacultyUID));
+      const unassigned = mergedMappings.filter(m =>  !(m.facultyUid || m.facultyUID || m.FacultyUID));
+
+      if (assigned.length === 0 && unassigned.length === 0) {
+        alert("❌ Cannot generate merged tickets: no merged course mappings found.");
+        return;
+      }
+
+      if (assigned.length === 0) {
+        alert("❌ Cannot generate merged tickets: no merged course mappings have a faculty assigned.\nPlease assign faculty before generating tickets.");
+        return;
+      }
+
+      if (unassigned.length > 0) {
+        setIsGeneratingMerged(false);
+        setWarningModalMerged({ assigned, unassigned });
+        return;
+      }
+
+      await doGenerateMergedTickets(assigned.length);
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingMerged(false);
+    }
+  };
+
+  const doGenerateMergedTickets = async (expectedCount) => {
+    setIsGeneratingMerged(true);
+    try {
+      const response = await fetch(`${API_BASE}/ticket/generate-all-merged`, { method: 'POST' });
+      if (!response.ok) {
+        const err = await response.json().catch(() => null);
+        throw new Error(err?.error || err?.message || `Failed to generate merged tickets (${response.status})`);
+      }
+      const tickets = await response.json();
+      alert(`✅ Successfully generated ${tickets.length} merged ticket(s).\n${expectedCount - tickets.length > 0 ? `⚠️  ${expectedCount - tickets.length} mapping(s) were skipped (no faculty).` : ''}`);
+      triggerRefresh('ticket');
+    } catch (error) {
+      alert(`Error: ${error.message}`);
+    } finally {
+      setIsGeneratingMerged(false);
+    }
+  };
+
+  const handleWarningMergedConfirm = async () => {
+    const modal = warningModalMerged;
+    setWarningModalMerged(null);
+    await doGenerateMergedTickets(modal.assigned.length);
+  };
+
+  const handleWarningMergedCancel = () => setWarningModalMerged(null);
+
+  // Determine if Delete All button should be visible (only for the main 4 entity tabs plus tickets)
+  const canDeleteAll = ['courses', 'sections', 'faculties', 'rooms', 'tickets'].includes(activeTab);
 
   return (
     <>
@@ -175,6 +254,18 @@ export default function DashboardNavbar({ activeTab }) {
         {isGenerating ? "Generating..." : "Generate Tickets"}
       </button>
 
+      {/* Generate Merged Ticket button */}
+      <button
+        onClick={handleGenerateMergedTickets}
+        disabled={isGeneratingMerged}
+        className="flex items-center gap-2 px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-md shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+      >
+        <span className={`material-symbols-outlined text-[18px] ${isGeneratingMerged ? 'animate-spin' : ''}`}>
+          {isGeneratingMerged ? "progress_activity" : "merge"}
+        </span>
+        {isGeneratingMerged ? "Generating..." : "Generate Merged Tickets"}
+      </button>
+
       <div className="ml-auto flex items-center gap-4">
         <div>
           <input 
@@ -201,6 +292,77 @@ export default function DashboardNavbar({ activeTab }) {
         onDownloadReport={downloadReport}
       />
     </div>
+
+    {/* ── Warning Modal: partial faculty assignment (Merged) ─────────────────────── */}
+    {warningModalMerged && (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-amber-200 dark:border-amber-800 w-full max-w-lg mx-4 overflow-hidden">
+          <div className="bg-amber-50 dark:bg-amber-900/20 px-6 py-4 flex items-center gap-3 border-b border-amber-200 dark:border-amber-800">
+            <span className="material-symbols-outlined text-amber-500 text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+            <div>
+              <p className="font-bold text-amber-800 dark:text-amber-300 text-sm">Incomplete Faculty Assignment (Merged)</p>
+              <p className="text-amber-700/70 dark:text-amber-400/70 text-xs">{warningModalMerged.unassigned.length} merged mapping(s) have no faculty assigned</p>
+            </div>
+          </div>
+          <div className="px-6 py-5 space-y-4">
+            <div className="flex gap-3">
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-200 dark:border-emerald-800 rounded-lg">
+                <span className="material-symbols-outlined text-emerald-500 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+                <div>
+                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Will Generate</p>
+                  <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 leading-none">{warningModalMerged.assigned.length}</p>
+                </div>
+              </div>
+              <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <span className="material-symbols-outlined text-red-500 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>cancel</span>
+                <div>
+                  <p className="text-[10px] font-bold text-red-500 uppercase tracking-wide">Will Skip</p>
+                  <p className="text-lg font-extrabold text-red-600 dark:text-red-400 leading-none">{warningModalMerged.unassigned.length}</p>
+                </div>
+              </div>
+            </div>
+            <div>
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Mappings without faculty (will be skipped):</p>
+              <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                {warningModalMerged.unassigned.map((m, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-1.5 bg-red-50/60 dark:bg-red-900/10 rounded-lg border border-red-100 dark:border-red-900/30">
+                    <span className="material-symbols-outlined text-red-400 text-sm">person_off</span>
+                    <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+                      {m.courseCode || m.coursecode || m.Coursecode}
+                    </span>
+                    <span className="text-xs text-slate-500">·</span>
+                    <span className="text-xs text-slate-500">Section {m.section || m.Section}</span>
+                    <span className="text-xs text-slate-500">·</span>
+                    <span className="text-xs text-slate-500">G{m.groupNo ?? m.GroupNo}</span>
+                    <span className="ml-auto text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500">{m.mappingType}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
+              Tickets will only be created for the <span className="font-bold text-emerald-600 dark:text-emerald-400">{warningModalMerged.assigned.length} assigned</span> mapping(s).
+              You can assign faculty to the remaining mappings later and regenerate.
+            </p>
+          </div>
+          <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 flex justify-end gap-3">
+            <button
+              onClick={handleWarningMergedCancel}
+              className="px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleWarningMergedConfirm}
+              disabled={isGeneratingMerged}
+              className="px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
+            >
+              <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
+              {isGeneratingMerged ? "Generating..." : `Generate ${warningModalMerged.assigned.length} Ticket(s)`}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
 
     {/* ── Warning Modal: partial faculty assignment ─────────────────────── */}
     {warningModal && (

@@ -8,8 +8,10 @@ import com.capstone.University.Time.Table.manager.Repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.time.LocalTime;
+import java.util.Set;
 
 @Service
 public class TicketService {
@@ -42,6 +44,7 @@ public class TicketService {
     public List<TicketDto> generateMergedSectionsTicket(List<CourseMapping> courseMappings){
         List<Ticket> ticketList = new ArrayList<>();
         List<TicketDto> ticketDtoList = new ArrayList<>();
+        Set<String> uniqueMergeCodes = new HashSet<>();
 
         for (CourseMapping courseMapping : courseMappings) {
             Long courseMappingId = courseMapping.getCourseMappingId();
@@ -60,6 +63,7 @@ public class TicketService {
             String mergeCode = courseMapping.getMergeCode();
 
             if(Boolean.TRUE.equals(mergeStatus)){
+                if(uniqueMergeCodes.contains(mergeCode)) continue;
                 switch (mappingType) {
                     case "L" -> {
                         for (int i = 1; i <= L; i++) {
@@ -79,7 +83,7 @@ public class TicketService {
                     case "T" -> {
                         for (int i = 1; i <= T; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -94,7 +98,7 @@ public class TicketService {
                     case "P" -> {
                         for (int i = 1; i <= P; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -107,6 +111,7 @@ public class TicketService {
                         }
                     }
                 }
+                uniqueMergeCodes.add(mergeCode);
             }
         }
         ticketRepository.saveAll(ticketList);
@@ -116,6 +121,11 @@ public class TicketService {
         });
 
         return ticketDtoList;
+    }
+
+    public List<TicketDto> generateAllMergedSectionsTickets(){
+        List<CourseMapping> courseMappings = courseMappingRepository.findAll();
+        return generateMergedSectionsTicket(courseMappings);
     }
 
     public List<TicketDto> generateTicket(List<CourseMapping> courseMappings) {
@@ -153,7 +163,6 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
                         ticket.setCourseMappingId(courseMappingId);
-                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticketList.add(ticket);
                     }
                 }
@@ -167,7 +176,6 @@ public class TicketService {
                         ticket.setSection(sectionId);
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
-                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticket.setCourseMappingId(courseMappingId);
                         ticketList.add(ticket);
                     }
@@ -182,7 +190,6 @@ public class TicketService {
                         ticket.setSection(sectionId);
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
-                        ticket.setMergedCode(courseMapping.getMergeCode());
                         ticket.setCourseMappingId(courseMappingId);
                         ticketList.add(ticket);
                     }

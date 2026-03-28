@@ -49,6 +49,11 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.generateAllTickets());
     }
 
+    @PostMapping("/generate-all-merged")
+    public ResponseEntity<List<TicketDto>> generateAllMergeTickets(){
+        return ResponseEntity.ok(ticketService.generateAllMergedSectionsTickets());
+    }
+
     /**
      * PATCH /ticket/{ticketId}/schedule
      * Body: { "day": "Mon", "time": "09:00" }
