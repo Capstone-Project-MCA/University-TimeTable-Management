@@ -123,10 +123,6 @@ public class TicketService {
         return ticketDtoList;
     }
 
-    public List<TicketDto> generateAllMergedSectionsTickets(){
-        List<CourseMapping> courseMappings = courseMappingRepository.findAll();
-        return generateMergedSectionsTicket(courseMappings);
-    }
 
     public List<TicketDto> generateTicket(List<CourseMapping> courseMappings) {
         List<Ticket> ticketList = new ArrayList<>();
@@ -208,7 +204,28 @@ public class TicketService {
 
     public List<TicketDto> generateAllTickets() {
         List<CourseMapping> allMappings = courseMappingRepository.findAll();
-        return generateTicket(allMappings);
+
+        // Split: merged vs non-merged
+        List<CourseMapping> nonMerged = allMappings.stream()
+                .filter(m -> !Boolean.TRUE.equals(m.getMergeStatus()))
+                .toList();
+        List<CourseMapping> merged = allMappings.stream()
+                .filter(m -> Boolean.TRUE.equals(m.getMergeStatus()))
+                .toList();
+
+        List<TicketDto> result = new ArrayList<>(generateTicket(nonMerged));
+        if (!merged.isEmpty()) {
+            result.addAll(generateMergedSectionsTicket(merged));
+        }
+        return result;
+    }
+
+    public List<TicketDto> generateAllMergedSectionsTickets() {
+        List<CourseMapping> allMappings = courseMappingRepository.findAll();
+        List<CourseMapping> merged = allMappings.stream()
+                .filter(m -> Boolean.TRUE.equals(m.getMergeStatus()))
+                .toList();
+        return generateMergedSectionsTicket(merged);
     }
 
     public List<TicketDto> getAllTickets(){

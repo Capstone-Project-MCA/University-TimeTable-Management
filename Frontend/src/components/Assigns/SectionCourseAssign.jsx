@@ -140,9 +140,15 @@ const BulkAssignment = () => {
       }
 
       const data = await res.json();
-      // data is a list of [SectionDto, List<CourseDto>] pairs
+      // Backend returns List<Pair<SectionDto, List<CourseDto>>>
+      // Jackson serializes Map.Entry as { "sectionToString": [courses...] }
+      // so we extract values from each object entry
       const totalCreated = Array.isArray(data)
-        ? data.reduce((sum, pair) => sum + (pair.right?.length ?? pair[1]?.length ?? 0), 0)
+        ? data.reduce((sum, entry) => {
+            const vals = Object.values(entry);
+            const courses = vals.find(v => Array.isArray(v)) ?? [];
+            return sum + courses.length;
+          }, 0)
         : 0;
       setResult({ success: true, message: `Successfully assigned ${totalCreated} course mapping(s).` });
       setSelectedSections([]);

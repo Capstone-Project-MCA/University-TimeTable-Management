@@ -25,8 +25,9 @@ public class CourseMappingService {
 
     @Transactional
     public void deleteAllMappings() {
-        courseMappingRepository.deleteAll();
-        courseMappingRepository.resetAutoIncrement();
+        courseMappingRepository.disableForeignKeyChecks();
+        courseMappingRepository.truncateTable();
+        courseMappingRepository.enableForeignKeyChecks();
     }
 
     public List<CourseMappingDto> getAllCourseMappings() {

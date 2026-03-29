@@ -139,7 +139,7 @@ export default function DashboardNavbar({ activeTab }) {
         throw new Error(err?.error || err?.message || `Failed to generate tickets (${response.status})`);
       }
       const tickets = await response.json();
-      alert(`✅ Successfully generated ${tickets.length} ticket(s).\n${expectedCount - tickets.length > 0 ? `⚠️  ${expectedCount - tickets.length} mapping(s) were skipped (no faculty).` : ''}`);
+      alert(`✅ Successfully generated ${tickets.length} ticket(s).`);
       triggerRefresh('ticket'); // auto-refresh the Tickets panel
     } catch (error) {
       alert(`Error: ${error.message}`);
@@ -205,7 +205,7 @@ export default function DashboardNavbar({ activeTab }) {
         throw new Error(err?.error || err?.message || `Failed to generate merged tickets (${response.status})`);
       }
       const tickets = await response.json();
-      alert(`✅ Successfully generated ${tickets.length} merged ticket(s).\n${expectedCount - tickets.length > 0 ? `⚠️  ${expectedCount - tickets.length} mapping(s) were skipped (no faculty).` : ''}`);
+      alert(`✅ Successfully generated ${tickets.length} merged ticket(s).`);
       triggerRefresh('ticket');
     } catch (error) {
       alert(`Error: ${error.message}`);

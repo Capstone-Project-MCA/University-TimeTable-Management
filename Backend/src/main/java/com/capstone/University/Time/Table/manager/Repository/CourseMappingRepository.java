@@ -57,6 +57,16 @@ public interface CourseMappingRepository extends JpaRepository<CourseMapping, Lo
 
     @Modifying
     @Transactional
-    @Query(value = "ALTER TABLE coursemapping AUTO_INCREMENT = 1", nativeQuery = true)
-    void resetAutoIncrement();
+    @Query(value = "SET FOREIGN_KEY_CHECKS = 0", nativeQuery = true)
+    void disableForeignKeyChecks();
+
+    @Modifying
+    @Transactional
+    @Query(value = "TRUNCATE TABLE coursemapping", nativeQuery = true)
+    void truncateTable();
+
+    @Modifying
+    @Transactional
+    @Query(value = "SET FOREIGN_KEY_CHECKS = 1", nativeQuery = true)
+    void enableForeignKeyChecks();
 }
