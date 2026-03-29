@@ -91,6 +91,21 @@ export default function DashboardNavbar({ activeTab }) {
   const [isGeneratingMerged, setIsGeneratingMerged] = useState(false);
   const [warningModalMerged, setWarningModalMerged] = useState(null);
 
+  // Calculate the real expected ticket count from mapping rows
+  // Each mapping produces L, T, or P tickets based on its mappingType
+  const calcExpectedTickets = (mappings) => {
+    return mappings.reduce((sum, m) => {
+      const type = m.mappingType || m.MappingType || '';
+      const l = m.l ?? m.L ?? 0;
+      const t = m.t ?? m.T ?? 0;
+      const p = m.p ?? m.P ?? 0;
+      if (type === 'L') return sum + l;
+      if (type === 'T') return sum + t;
+      if (type === 'P') return sum + p;
+      return sum;
+    }, 0);
+  };
+
   const handleGenerateTickets = async () => {
     const confirmGenerate = window.confirm(
       "Generate tickets for all course mappings? This will create scheduling tickets based on current assignments."
@@ -310,7 +325,7 @@ export default function DashboardNavbar({ activeTab }) {
                 <span className="material-symbols-outlined text-emerald-500 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                 <div>
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Will Generate</p>
-                  <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 leading-none">{warningModalMerged.assigned.length}</p>
+                  <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 leading-none">{calcExpectedTickets(warningModalMerged.assigned)}</p>
                 </div>
               </div>
               <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -340,7 +355,7 @@ export default function DashboardNavbar({ activeTab }) {
               </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
-              Tickets will only be created for the <span className="font-bold text-emerald-600 dark:text-emerald-400">{warningModalMerged.assigned.length} assigned</span> mapping(s).
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">{calcExpectedTickets(warningModalMerged.assigned)} ticket(s)</span> will be generated from {warningModalMerged.assigned.length} assigned mapping(s).
               You can assign faculty to the remaining mappings later and regenerate.
             </p>
           </div>
@@ -357,7 +372,7 @@ export default function DashboardNavbar({ activeTab }) {
               className="px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-lg shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
-              {isGeneratingMerged ? "Generating..." : `Generate ${warningModalMerged.assigned.length} Ticket(s)`}
+              {isGeneratingMerged ? "Generating..." : `Generate ${calcExpectedTickets(warningModalMerged.assigned)} Ticket(s)`}
             </button>
           </div>
         </div>
@@ -387,7 +402,7 @@ export default function DashboardNavbar({ activeTab }) {
                 <span className="material-symbols-outlined text-emerald-500 text-base" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
                 <div>
                   <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-wide">Will Generate</p>
-                  <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 leading-none">{warningModal.assigned.length}</p>
+                  <p className="text-lg font-extrabold text-emerald-700 dark:text-emerald-400 leading-none">{calcExpectedTickets(warningModal.assigned)}</p>
                 </div>
               </div>
               <div className="flex-1 flex items-center gap-2 px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -420,7 +435,7 @@ export default function DashboardNavbar({ activeTab }) {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800 px-3 py-2 rounded-lg">
-              Tickets will only be created for the <span className="font-bold text-emerald-600 dark:text-emerald-400">{warningModal.assigned.length} assigned</span> mapping(s).
+              <span className="font-bold text-emerald-600 dark:text-emerald-400">{calcExpectedTickets(warningModal.assigned)} ticket(s)</span> will be generated from {warningModal.assigned.length} assigned mapping(s).
               You can assign faculty to the remaining mappings later and regenerate.
             </p>
           </div>
@@ -439,7 +454,7 @@ export default function DashboardNavbar({ activeTab }) {
               className="px-5 py-2 text-sm font-bold text-white bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 rounded-lg shadow-sm transition-all disabled:opacity-60 flex items-center gap-2"
             >
               <span className="material-symbols-outlined text-[16px]">confirmation_number</span>
-              {isGenerating ? "Generating..." : `Generate ${warningModal.assigned.length} Ticket(s)`}
+              {isGenerating ? "Generating..." : `Generate ${calcExpectedTickets(warningModal.assigned)} Ticket(s)`}
             </button>
           </div>
         </div>
