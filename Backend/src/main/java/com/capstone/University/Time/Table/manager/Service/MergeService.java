@@ -7,6 +7,7 @@ import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
 import com.capstone.University.Time.Table.manager.Exception.ResourceNotFoundException;
 import com.capstone.University.Time.Table.manager.Mapper.CourseMappingMapper;
 import com.capstone.University.Time.Table.manager.Repository.CourseMappingRepository;
+import com.capstone.University.Time.Table.manager.Repository.TicketRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,14 +20,17 @@ public class MergeService {
 
     private final CourseMappingRepository courseMappingRepository;
     private final CourseMappingMapper courseMappingMapper;
+    private final TicketRepository ticketRepository;
 
     @Autowired
     public MergeService(
             CourseMappingRepository courseMappingRepository,
-            CourseMappingMapper courseMappingMapper
+            CourseMappingMapper courseMappingMapper,
+            TicketRepository ticketRepository
     ) {
         this.courseMappingRepository = courseMappingRepository;
         this.courseMappingMapper = courseMappingMapper;
+        this.ticketRepository = ticketRepository;
     }
 
     @Transactional
@@ -140,6 +144,9 @@ public class MergeService {
             throw new ResourceNotFoundException("Merge group " + mergeCode + " not found.");
         }
 
+        // Delete any tickets that were generated for this merge group
+        ticketRepository.deleteByMergedCode(mergeCode);
+
         for (CourseMapping courseMapping : existingMappings) {
             courseMapping.setMergeCode(null);
             courseMapping.setMergeStatus(false);
@@ -200,6 +207,9 @@ public class MergeService {
         if (mappings.isEmpty()) {
             throw new IllegalArgumentException("Merge group " + mergeCode + " not found.");
         }
+
+        // Delete tickets associated with this merge group
+        ticketRepository.deleteByMergedCode(mergeCode);
 
         mappings.forEach(m -> {
             m.setMergeCode(null);

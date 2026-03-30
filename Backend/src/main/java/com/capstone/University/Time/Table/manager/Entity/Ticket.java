@@ -37,6 +37,9 @@ public class Ticket {
     @Column(name = "MergedCode", length = 7, nullable = false, columnDefinition = "VARCHAR(7) DEFAULT ''")
     private String mergedCode = "";
 
+    @Column(name = "MappingType", length = 1)
+    private String mappingType;
+
     @Column(name = "FacultyUID", length = 5)
     private String facultyUid;
 

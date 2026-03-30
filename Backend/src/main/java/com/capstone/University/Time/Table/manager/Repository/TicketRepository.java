@@ -14,6 +14,12 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     List<Ticket> findBySection(String section);
 
+    List<Ticket> findByMergedCode(String mergedCode);
+
+    @Modifying
+    @Transactional
+    void deleteByMergedCode(String mergedCode);
+
     @Modifying
     @Transactional
     @Query(value = "TRUNCATE TABLE ticket", nativeQuery = true)

@@ -13,6 +13,7 @@ public class TicketDto {
     private String day;
     private LocalTime time;
     private String mergedCode;
+    private String mappingType;
     private String facultyUid;
     private String roomNo;
 }

@@ -17,27 +17,18 @@ import java.util.Set;
 public class TicketService {
 
     private final TicketRepository ticketRepository;
-    private final CourseRepository courseRepository;
-    private final SectionRepository sectionRepository;
     private final CourseMappingRepository courseMappingRepository;
-    private final FacultyRepository facultyRepository;
     private final TicketMapper ticketMapper;
 
 
     @Autowired
     public TicketService(
             TicketRepository ticketRepository,
-            CourseRepository courseRepository,
-            SectionRepository sectionRepository,
             CourseMappingRepository courseMappingRepository,
-            FacultyRepository facultyRepository,
             TicketMapper ticketMapper
     ) {
         this.ticketRepository = ticketRepository;
-        this.courseRepository = courseRepository;
-        this.sectionRepository = sectionRepository;
         this.courseMappingRepository = courseMappingRepository;
-        this.facultyRepository = facultyRepository;
         this.ticketMapper = ticketMapper;
     }
 
@@ -62,13 +53,16 @@ public class TicketService {
             String mergeCode = courseMapping.getMergeCode();
             String sectionId = (mergeCode != null) ? "MS" + mergeCode.substring(2) : "";
 
+            // Null-safe group string for ticket ID construction
+            String groupStr = (groupNo != null) ? groupNo.toString() : "0";
+
             if(Boolean.TRUE.equals(mergeStatus)){
                 if(uniqueMergeCodes.contains(mergeCode)) continue;
                 switch (mappingType) {
                     case "L" -> {
                         for (int i = 1; i <= L; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupStr + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -77,13 +71,14 @@ public class TicketService {
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
                             ticket.setMergedCode(mergeCode);
+                            ticket.setMappingType(mappingType);
                             ticketList.add(ticket);
                         }
                     }
                     case "T" -> {
                         for (int i = 1; i <= T; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupStr + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -92,13 +87,14 @@ public class TicketService {
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
                             ticket.setMergedCode(mergeCode);
+                            ticket.setMappingType(mappingType);
                             ticketList.add(ticket);
                         }
                     }
                     case "P" -> {
                         for (int i = 1; i <= P; i++) {
                             Ticket ticket = new Ticket();
-                            String ticketId = mergeCode + courseCode + sectionId + groupNo.toString() + mappingType + i;
+                            String ticketId = mergeCode + courseCode + sectionId + groupStr + mappingType + i;
                             ticket.setTicketId(ticketId);
                             ticket.setGroupNo(groupNo);
                             ticket.setCourseCode(courseCode);
@@ -107,6 +103,7 @@ public class TicketService {
                             ticket.setFacultyUid(facultyUid);
                             ticket.setCourseMappingId(courseMappingId);
                             ticket.setMergedCode(mergeCode);
+                            ticket.setMappingType(mappingType);
                             ticketList.add(ticket);
                         }
                     }
@@ -143,6 +140,9 @@ public class TicketService {
             Short P = courseMapping.getP();
             Boolean mergeStatus = courseMapping.getMergeStatus();
 
+            // Null-safe group string for ticket ID construction
+            String groupStr = (groupNo != null) ? groupNo.toString() : "0";
+
             if(Boolean.TRUE.equals(mergeStatus)){
                 continue;
             }
@@ -151,7 +151,7 @@ public class TicketService {
                 case "L" -> {
                     for (int i = 1; i <= L; i++) {
                         Ticket ticket = new Ticket();
-                        String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                        String ticketId = courseCode + sectionId + groupStr + mappingType + i;
                         ticket.setTicketId(ticketId);
                         ticket.setGroupNo(groupNo);
                         ticket.setCourseCode(courseCode);
@@ -159,13 +159,14 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
                         ticket.setCourseMappingId(courseMappingId);
+                        ticket.setMappingType(mappingType);
                         ticketList.add(ticket);
                     }
                 }
                 case "T" -> {
                     for (int i = 1; i <= T; i++) {
                         Ticket ticket = new Ticket();
-                        String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                        String ticketId = courseCode + sectionId + groupStr + mappingType + i;
                         ticket.setTicketId(ticketId);
                         ticket.setGroupNo(groupNo);
                         ticket.setCourseCode(courseCode);
@@ -173,13 +174,14 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
                         ticket.setCourseMappingId(courseMappingId);
+                        ticket.setMappingType(mappingType);
                         ticketList.add(ticket);
                     }
                 }
                 case "P" -> {
                     for (int i = 1; i <= P; i++) {
                         Ticket ticket = new Ticket();
-                        String ticketId = courseCode + sectionId + groupNo.toString() + mappingType + i;
+                        String ticketId = courseCode + sectionId + groupStr + mappingType + i;
                         ticket.setTicketId(ticketId);
                         ticket.setGroupNo(groupNo);
                         ticket.setCourseCode(courseCode);
@@ -187,6 +189,7 @@ public class TicketService {
                         ticket.setLectureNo((short) i);
                         ticket.setFacultyUid(facultyUid);
                         ticket.setCourseMappingId(courseMappingId);
+                        ticket.setMappingType(mappingType);
                         ticketList.add(ticket);
                     }
                 }
