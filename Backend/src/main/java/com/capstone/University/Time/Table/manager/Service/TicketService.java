@@ -49,7 +49,6 @@ public class TicketService {
         for (CourseMapping courseMapping : courseMappings) {
             Long courseMappingId = courseMapping.getCourseMappingId();
             String courseCode = courseMapping.getCourseCode();
-            String sectionId = courseMapping.getSection();
             Short groupNo = courseMapping.getGroupNo();
             String mappingType = courseMapping.getMappingType();
 
@@ -61,6 +60,7 @@ public class TicketService {
             Short P = courseMapping.getP();
             Boolean mergeStatus = courseMapping.getMergeStatus();
             String mergeCode = courseMapping.getMergeCode();
+            String sectionId = (mergeCode != null) ? "MS" + mergeCode.substring(2) : "";
 
             if(Boolean.TRUE.equals(mergeStatus)){
                 if(uniqueMergeCodes.contains(mergeCode)) continue;
