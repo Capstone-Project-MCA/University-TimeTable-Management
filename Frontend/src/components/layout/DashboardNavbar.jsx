@@ -148,7 +148,7 @@ export default function DashboardNavbar({ activeTab }) {
   const doGenerateTickets = async (expectedCount) => {
     setIsGenerating(true);
     try {
-      const response = await fetch(`${API_BASE}/ticket/generate-all`, { method: 'POST' });
+      const response = await fetch(`${API_BASE}/ticket/generate`, { method: 'POST' });
       if (!response.ok) {
         const err = await response.json().catch(() => null);
         throw new Error(err?.error || err?.message || `Failed to generate tickets (${response.status})`);
@@ -170,70 +170,6 @@ export default function DashboardNavbar({ activeTab }) {
   };
 
   const handleWarningCancel = () => setWarningModal(null);
-
-  const handleGenerateMergedTickets = async () => {
-    const confirmGenerate = window.confirm(
-      "Generate tickets for all merged course mappings? This will create scheduling tickets for merged groups."
-    );
-    if (!confirmGenerate) return;
-
-    setIsGeneratingMerged(true);
-    try {
-      const mappingRes = await fetch(`${API_BASE}/mappings`);
-      if (!mappingRes.ok) throw new Error("Failed to load mappings.");
-      const mappings = await mappingRes.json();
-
-      const mergedMappings = mappings.filter(m => m.mergeStatus === true);
-      const assigned   = mergedMappings.filter(m => !!(m.facultyUid || m.facultyUID || m.FacultyUID));
-      const unassigned = mergedMappings.filter(m =>  !(m.facultyUid || m.facultyUID || m.FacultyUID));
-
-      if (assigned.length === 0 && unassigned.length === 0) {
-        alert("❌ Cannot generate merged tickets: no merged course mappings found.");
-        return;
-      }
-
-      if (assigned.length === 0) {
-        alert("❌ Cannot generate merged tickets: no merged course mappings have a faculty assigned.\nPlease assign faculty before generating tickets.");
-        return;
-      }
-
-      if (unassigned.length > 0) {
-        setIsGeneratingMerged(false);
-        setWarningModalMerged({ assigned, unassigned });
-        return;
-      }
-
-      await doGenerateMergedTickets(assigned.length);
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsGeneratingMerged(false);
-    }
-  };
-
-  const doGenerateMergedTickets = async (expectedCount) => {
-    setIsGeneratingMerged(true);
-    try {
-      const response = await fetch(`${API_BASE}/ticket/generate-all-merged`, { method: 'POST' });
-      if (!response.ok) {
-        const err = await response.json().catch(() => null);
-        throw new Error(err?.error || err?.message || `Failed to generate merged tickets (${response.status})`);
-      }
-      const tickets = await response.json();
-      alert(`✅ Successfully generated ${tickets.length} merged ticket(s).`);
-      triggerRefresh('ticket');
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsGeneratingMerged(false);
-    }
-  };
-
-  const handleWarningMergedConfirm = async () => {
-    const modal = warningModalMerged;
-    setWarningModalMerged(null);
-    await doGenerateMergedTickets(modal.assigned.length);
-  };
 
   const handleWarningMergedCancel = () => setWarningModalMerged(null);
 
@@ -267,18 +203,6 @@ export default function DashboardNavbar({ activeTab }) {
           {isGenerating ? "progress_activity" : "confirmation_number"}
         </span>
         {isGenerating ? "Generating..." : "Generate Tickets"}
-      </button>
-
-      {/* Generate Merged Ticket button */}
-      <button
-        onClick={handleGenerateMergedTickets}
-        disabled={isGeneratingMerged}
-        className="flex items-center gap-2 px-4 py-1.5 text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 rounded-md shadow-sm hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <span className={`material-symbols-outlined text-[18px] ${isGeneratingMerged ? 'animate-spin' : ''}`}>
-          {isGeneratingMerged ? "progress_activity" : "merge"}
-        </span>
-        {isGeneratingMerged ? "Generating..." : "Generate Merged Tickets"}
       </button>
 
       <div className="ml-auto flex items-center gap-4">

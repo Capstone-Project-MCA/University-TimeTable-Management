@@ -21,17 +21,10 @@ public class TicketController {
     private TicketService ticketService;
 
     @PostMapping("/generate")
-    public ResponseEntity<List<TicketDto>> generateTickets(
+    public ResponseEntity<List<TicketDto>> generateAllTickets(
             @RequestBody List<CourseMapping> courseMappings
     ) {
         return ResponseEntity.ok(ticketService.generateTicket(courseMappings));
-    }
-
-    @PostMapping("/generate-merged")
-    public ResponseEntity<List<TicketDto>> generateMergedTickets(
-            @RequestBody List<CourseMapping> courseMappings
-    ){
-        return ResponseEntity.ok(ticketService.generateMergedSectionsTicket(courseMappings));
     }
 
     @GetMapping("/get/{sectionId}")
@@ -42,16 +35,6 @@ public class TicketController {
     @GetMapping("/get-all")
     public ResponseEntity<List<TicketDto>> getAllTickets(){
         return ResponseEntity.ok(ticketService.getAllTickets());
-    }
-
-    @PostMapping("/generate-all")
-    public ResponseEntity<List<TicketDto>> generateAllTickets() {
-        return ResponseEntity.ok(ticketService.generateAllTickets());
-    }
-
-    @PostMapping("/generate-all-merged")
-    public ResponseEntity<List<TicketDto>> generateAllMergeTickets(){
-        return ResponseEntity.ok(ticketService.generateAllMergedSectionsTickets());
     }
 
     /**

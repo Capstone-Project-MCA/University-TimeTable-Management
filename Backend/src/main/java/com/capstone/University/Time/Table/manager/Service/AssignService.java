@@ -45,57 +45,6 @@ public class AssignService {
         this.facultyMapper = facultyMapper;
     }
 
-//    public List<CourseMappingDto> generateMergeCode(MergeDTO mergeDTO) {
-//        String courseCode = mergeDTO.getCourseCode();
-//        List<String> sections = mergeDTO.getSectionIds();
-//        String mappingType = mergeDTO.getMappingType();
-//        Short groupNo = mergeDTO.getGroupNo();
-//
-//        List<String> mergeCodes = new ArrayList<>();
-//
-//        // Collect existing merge codes
-//        List<CourseMapping> courseMappings = courseMappingRepository.findAllMergeCodes();
-//        courseMappings.forEach(courseMapping -> {
-//            if (Boolean.TRUE.equals(courseMapping.getMergeStatus())) {
-//                mergeCodes.add(courseMapping.getMergecode());
-//            }
-//        });
-//
-//        // Convert to integer list
-//        List<Integer> mergeCodesList = new ArrayList<>();
-//        for (String mergeCode : mergeCodes) {
-//            int num = Integer.parseInt(mergeCode.substring(1));
-//            mergeCodesList.add(num);
-//        }
-//
-//        Collections.sort(mergeCodesList);
-//
-//        // Find next merge number
-//        int nextMergeNumber = mergeCodesList.isEmpty() ? 1 :
-//                mergeCodesList.get(mergeCodesList.size() - 1) + 1;
-//
-//        String newMergeCode = "M" + nextMergeNumber;
-//
-//        List<CourseMappingDto> courseMappingDTOs = new ArrayList<>();
-//
-//        for (String section : sections) {
-//            Optional<CourseMapping> courseMapping = courseMappingRepository
-//                    .findBySectionAndCoursecodeAndGroupNoAndMappingType(
-//                            section, courseCode, groupNo, mappingType);
-//
-//            if (courseMapping.isPresent()) {
-//
-//                CourseMapping cm = courseMapping.get();
-//
-//                cm.setMergeStatus(true);
-//                cm.setMergecode(newMergeCode);
-//
-//                courseMappingDTOs.add(courseMappingMapper.toDto(cm));
-//            }
-//        }
-//        return courseMappingDTOs;
-//    }
-
     @Transactional
     public List<CourseMappingDto> saveAllFacultyAssign(List<CourseMapping> courseMappings) {
         List<CourseMappingDto> results = new ArrayList<>();
