@@ -136,7 +136,7 @@ export default function DashboardNavbar({ activeTab }) {
       }
 
       // ── Step 4: all assigned → generate directly ─────────────────────────
-      await doGenerateTickets(assigned.length);
+      await doGenerateTickets(assigned);
     } catch (error) {
       alert(`Error: ${error.message}`);
     } finally {
@@ -145,10 +145,14 @@ export default function DashboardNavbar({ activeTab }) {
   };
 
   // Called both from the direct path (all assigned) and from the modal confirm
-  const doGenerateTickets = async (expectedCount) => {
+  const doGenerateTickets = async (assignedMappings) => {
     setIsGenerating(true);
     try {
-      const response = await fetch(`${API_BASE}/ticket/generate`, { method: 'POST' });
+      const response = await fetch(`${API_BASE}/ticket/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(assignedMappings),
+      });
       if (!response.ok) {
         const err = await response.json().catch(() => null);
         throw new Error(err?.error || err?.message || `Failed to generate tickets (${response.status})`);
@@ -166,7 +170,7 @@ export default function DashboardNavbar({ activeTab }) {
   const handleWarningConfirm = async () => {
     const modal = warningModal;
     setWarningModal(null);
-    await doGenerateTickets(modal.assigned.length);
+    await doGenerateTickets(modal.assigned);
   };
 
   const handleWarningCancel = () => setWarningModal(null);

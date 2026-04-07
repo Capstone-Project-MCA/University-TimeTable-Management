@@ -89,7 +89,7 @@ export default function TicketsView() {
   const uniqueSections = ["All", ...Array.from(new Set(tickets.map(t => t.section || t.Section || ""))).filter(Boolean).sort()];
   const uniqueTypes    = ["All", ...Array.from(new Set(tickets.map(t => t.mappingType || t.MappingType || ""))).filter(Boolean).sort()];
 
-  // Apply filters
+  // Apply filters then sort merged tickets first
   const filtered = tickets.filter(t => {
     const course  = (t.courseCode  || t.coursecode  || t.Coursecode  || "").toLowerCase();
     const section = t.section || t.Section || "";
@@ -101,6 +101,10 @@ export default function TicketsView() {
       faculty.includes(filterFaculty.toLowerCase()) &&
       (filterType === "All" || type === filterType)
     );
+  }).sort((a, b) => {
+    const aMerged = !!(a.mergedCode || a.MergedCode);
+    const bMerged = !!(b.mergedCode || b.MergedCode);
+    return (bMerged ? 1 : 0) - (aMerged ? 1 : 0);
   });
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));

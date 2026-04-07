@@ -159,6 +159,15 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
       })
     : rawData
 
+  // ---------- sort: merged tickets first ----------
+  if (activeTab === 'tickets') {
+    data.sort((a, b) => {
+      const aMerged = !!(a.mergedCode || a.MergedCode)
+      const bMerged = !!(b.mergedCode || b.MergedCode)
+      return (bMerged ? 1 : 0) - (aMerged ? 1 : 0)
+    })
+  }
+
   // ---------- action stubs ----------
   const handleCreate = () => {
     console.log(`Create new ${activeTab.slice(0, -1)}`)
