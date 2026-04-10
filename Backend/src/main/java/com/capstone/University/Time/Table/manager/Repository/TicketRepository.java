@@ -14,7 +14,9 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     List<Ticket> findBySection(String section);
 
-    List<Ticket> findByMergedCode(String mergedCode);
+    List<Ticket> findByFacultyUid(String faculty);
+
+    List<Ticket> findByCourseCode(String courseCode);
 
     @Modifying
     @Transactional

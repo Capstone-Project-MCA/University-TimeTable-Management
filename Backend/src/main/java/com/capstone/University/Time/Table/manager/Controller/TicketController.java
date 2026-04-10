@@ -32,9 +32,34 @@ public class TicketController {
         return ResponseEntity.ok(ticketService.getAllTicketsBySectionId(sectionId));
     }
 
+    @GetMapping("/get/{facultyUid}")
+    public ResponseEntity<List<TicketDto>> getAllTicketsByFacultyUid(@PathVariable String facultyUid) {
+        return ResponseEntity.ok(ticketService.getAllTicketsByFacultyUid(facultyUid));
+    }
+
+    @GetMapping("/get/{courseCode}")
+    public ResponseEntity<List<TicketDto>> getAllTicketsByCourseCode(@PathVariable String courseCode) {
+        return ResponseEntity.ok(ticketService.getAllTicketsByCourseCode(courseCode));
+    }
+
     @GetMapping("/get-all")
     public ResponseEntity<List<TicketDto>> getAllTickets(){
         return ResponseEntity.ok(ticketService.getAllTickets());
+    }
+
+    @GetMapping("/get-all-bysection/{sectionId}")
+    public ResponseEntity<List<TicketDto>> getAlreadySetByFacultyUid(@PathVariable String sectionId) {
+        return ResponseEntity.ok(ticketService.getAlreadySetTicketsBySectionId(sectionId));
+    }
+
+    @GetMapping("/get-all-bycourse/{courseCode}")
+    public ResponseEntity<List<TicketDto>> getAlreadySetByCourseCode(@PathVariable String courseCode) {
+        return ResponseEntity.ok(ticketService.getAlreadySetTicketsByCourseCode(courseCode));
+    }
+
+    @GetMapping("/get-all-byfaculty/{facultyUid}")
+    public ResponseEntity<List<TicketDto>> getAlreadySetTicketsByFacultyUid(@PathVariable String facultyUid) {
+        return ResponseEntity.ok(ticketService.getAlreadySetTicketsByFacultyUID(facultyUid));
     }
 
     /**
