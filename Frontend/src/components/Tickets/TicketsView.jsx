@@ -61,6 +61,7 @@ export default function TicketsView() {
   const [filterSection, setFilterSection] = useState("All");
   const [filterFaculty, setFilterFaculty] = useState("");
   const [filterType,    setFilterType]    = useState("All");
+  const [filterStatus,  setFilterStatus]  = useState("All");
 
   // Pagination
   const [page,    setPage]    = useState(1);
@@ -95,11 +96,13 @@ export default function TicketsView() {
     const section = t.section || t.Section || "";
     const faculty = (t.facultyUid  || t.facultyUID  || t.FacultyUID  || "").toLowerCase();
     const type    = t.mappingType || t.MappingType || "";
+    const isScheduled = !!((t.day || t.Day) && (t.time || t.Time));
     return (
       course.includes(filterCourse.toLowerCase()) &&
       (filterSection === "All" || section === filterSection) &&
       faculty.includes(filterFaculty.toLowerCase()) &&
-      (filterType === "All" || type === filterType)
+      (filterType === "All" || type === filterType) &&
+      (filterStatus === "All" || (filterStatus === "Scheduled" ? isScheduled : !isScheduled))
     );
   }).sort((a, b) => {
     const aMerged = !!(a.mergedCode || a.MergedCode);
@@ -114,8 +117,10 @@ export default function TicketsView() {
   // Reset page on filter change
   const handleFilter = (setter) => (val) => { setter(val); setPage(1); };
 
-  const mergedCount   = tickets.filter(t => !!(t.mergedCode || t.MergedCode)).length;
-  const assignedCount = tickets.filter(t => !!(t.facultyUid || t.facultyUID || t.FacultyUID)).length;
+  const mergedCount      = tickets.filter(t => !!(t.mergedCode || t.MergedCode)).length;
+  const assignedCount    = tickets.filter(t => !!(t.facultyUid || t.facultyUID || t.FacultyUID)).length;
+  const scheduledCount   = tickets.filter(t => !!((t.day || t.Day) && (t.time || t.Time))).length;
+  const unscheduledCount = tickets.length - scheduledCount;
 
   return (
     <div className="min-h-screen bg-white dark:bg-slate-950 font-body text-slate-900 dark:text-slate-100">
@@ -143,10 +148,12 @@ export default function TicketsView() {
         {/* ── Stat chips ─────────────────────────────────────────────────── */}
         <div className="flex flex-wrap gap-3">
           {[
-            { label: "Total Tickets",   value: tickets.length,   icon: "confirmation_number", color: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300" },
-            { label: "With Faculty",    value: assignedCount,    icon: "person_check",         color: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300" },
-            { label: "Merged Sections", value: mergedCount,      icon: "call_merge",           color: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300" },
-            { label: "Filtered",        value: filtered.length,  icon: "filter_alt",           color: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300" },
+            { label: "Total Tickets",   value: tickets.length,    icon: "confirmation_number", color: "bg-indigo-50 dark:bg-indigo-900/20 border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300" },
+            { label: "With Faculty",    value: assignedCount,     icon: "person_check",         color: "bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300" },
+            { label: "Scheduled",       value: scheduledCount,    icon: "event_available",      color: "bg-teal-50 dark:bg-teal-900/20 border-teal-200 dark:border-teal-800 text-teal-700 dark:text-teal-300" },
+            { label: "Unscheduled",     value: unscheduledCount,  icon: "pending",              color: "bg-amber-50 dark:bg-amber-900/20 border-amber-200 dark:border-amber-800 text-amber-700 dark:text-amber-300" },
+            { label: "Merged Sections", value: mergedCount,       icon: "call_merge",           color: "bg-purple-50 dark:bg-purple-900/20 border-purple-200 dark:border-purple-800 text-purple-700 dark:text-purple-300" },
+            { label: "Filtered",        value: filtered.length,   icon: "filter_alt",           color: "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300" },
           ].map(({ label, value, icon, color }) => (
             <div key={label} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl border ${color}`}>
               <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24" }}>{icon}</span>
@@ -160,7 +167,7 @@ export default function TicketsView() {
 
         {/* ── Filters ─────────────────────────────────────────────────────── */}
         <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm p-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
             {/* Course Code */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Course Code</label>
@@ -197,6 +204,14 @@ export default function TicketsView() {
                 {uniqueTypes.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
             </div>
+            {/* Status */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest px-1">Status</label>
+              <select value={filterStatus} onChange={e => handleFilter(setFilterStatus)(e.target.value)}
+                className="w-full px-3 py-2 text-sm bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary dark:text-slate-200">
+                {["All", "Scheduled", "Unscheduled"].map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
           </div>
         </div>
 
@@ -225,7 +240,7 @@ export default function TicketsView() {
                 <table className="w-full text-left border-collapse min-w-[900px]">
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-700">
-                      {["Ticket ID", "Course", "Section", "Group", "Type", "Lecture #", "Faculty", "Merge Code", "Day", "Time", "Room"].map(h => (
+                      {["Ticket ID", "Course", "Section", "Group", "Type", "Lecture #", "Faculty", "Status", "Merge Code", "Day", "Time", "Room"].map(h => (
                         <th key={h} className="px-4 py-3.5 text-[10px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider whitespace-nowrap">{h}</th>
                       ))}
                     </tr>
@@ -258,10 +273,22 @@ export default function TicketsView() {
                               ? <span className="px-2 py-0.5 text-xs font-mono font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded">{faculty}</span>
                               : <span className="text-xs text-slate-400 italic">Unassigned</span>}
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          <td className="px-4 py-3">
                             {mergeCode && mergeCode !== ""
                               ? <span className="text-xs font-mono text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded">{mergeCode}</span>
                               : <span className="text-xs text-slate-300 dark:text-slate-600">—</span>}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            {day && time
+                              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                  <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+                                  Scheduled
+                                </span>
+                              : <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                  <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>pending</span>
+                                  Unscheduled
+                                </span>
+                            }
                           </td>
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{day || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
                           <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{time || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>

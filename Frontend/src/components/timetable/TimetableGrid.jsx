@@ -50,7 +50,7 @@ function typeBg(type) {
 }
 
 /* ── mini ticket card displayed inside a grid cell ─────────────────────── */
-function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
+function GridTicketCard({ ticket, onDragStart, onUnschedule, locked = false }) {
   // mappingType not in TicketDto — extract from TicketId
   const tid  = ticket.ticketId || ticket.TicketId || '';
   const typeMatch = String(tid).match(/([LTP])(\d+)$/);
@@ -71,17 +71,21 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
 
   return (
     <div
-      draggable
-      onDragStart={e => onDragStart(e, ticket)}
+      draggable={!locked}
+      onDragStart={e => { if (locked) { e.preventDefault(); return; } onDragStart(e, ticket); }}
       onDragEnd={() => clearDraggedTicket()}
-      className={`group relative rounded border cursor-grab active:cursor-grabbing shadow-sm select-none transition-all hover:shadow-md hover:scale-[1.02] overflow-visible ${
+      className={`group relative rounded border shadow-sm select-none transition-all overflow-visible ${
+        locked
+          ? 'cursor-default'
+          : 'cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-[1.02]'
+      } ${
         hasConflict
           ? 'border-amber-400 dark:border-amber-500 ring-1 ring-amber-400/60'
           : bgCard
       }`}
       title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}${
         hasConflict ? ' ⚠ Faculty conflict in this slot!' : ''
-      }`}
+      }${locked ? ' (Locked — pre-assigned)' : ''}`}
     >
       {/* Conflict warning badge */}
       {hasConflict && (
@@ -91,18 +95,28 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
         </div>
       )}
 
-      {/* Coloured left accent */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${hasConflict ? 'bg-amber-400' : accentBar}`} />
+      {/* Lock badge — shown when ticket is pre-assigned */}
+      {locked && !hasConflict && (
+        <div className="absolute -top-2 -right-2 z-30 w-5 h-5 rounded-full bg-emerald-500 dark:bg-emerald-600 flex items-center justify-center shadow"
+             title="Pre-assigned — this slot is locked">
+          <span className="material-symbols-outlined text-white" style={{ fontSize: 11, fontVariationSettings: "'FILL' 1" }}>lock</span>
+        </div>
+      )}
 
-      {/* × remove button */}
-      <button
-        onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
-        onClick={e => { e.stopPropagation(); onUnschedule(tid); }}
-        title="Remove from grid"
-        className="absolute -top-3 -right-3 z-30 w-8 h-8 rounded-full bg-slate-600 dark:bg-slate-400 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-110 shadow-md"
-      >
-        <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1,'wght' 900" }}>close</span>
-      </button>
+      {/* Coloured left accent */}
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${hasConflict ? 'bg-amber-400' : locked ? 'bg-emerald-500' : accentBar}`} />
+
+      {/* × remove button — hidden when locked */}
+      {!locked && (
+        <button
+          onMouseDown={e => { e.stopPropagation(); e.preventDefault(); }}
+          onClick={e => { e.stopPropagation(); onUnschedule(tid); }}
+          title="Remove from grid"
+          className="absolute -top-3 -right-3 z-30 w-8 h-8 rounded-full bg-slate-600 dark:bg-slate-400 text-white flex items-center justify-center opacity-70 group-hover:opacity-100 transition-all hover:bg-red-500 dark:hover:bg-red-400 hover:scale-110 shadow-md"
+        >
+          <span className="material-symbols-outlined" style={{ fontSize: 20, fontVariationSettings: "'FILL' 1,'wght' 900" }}>close</span>
+        </button>
+      )}
 
       <div className="pl-3 pr-2 py-1.5">
         {/* Row 1 — Course code (large) + type pill */}
@@ -142,7 +156,7 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule }) {
   );
 }
 
-export default function TimetableGrid({ filterSection = 'All' }) {
+export default function TimetableGrid({ filterSection = 'All', filterFaculty = 'All', filterCourse = 'All' }) {
   const days        = useMemo(() => getWeekDays(new Date()), []);
   const { refreshKey, triggerRefresh } = useDataRefresh();
 
@@ -179,6 +193,14 @@ export default function TimetableGrid({ filterSection = 'All' }) {
           const section = t.section || t.Section;
           if (section !== filterSection) return;
         }
+        if (filterFaculty !== 'All') {
+          const fac = t.facultyUid || t.facultyUID || t.FacultyUID || '';
+          if (fac !== filterFaculty) return;
+        }
+        if (filterCourse !== 'All') {
+          const cc = t.courseCode || t.coursecode || t.Coursecode || '';
+          if (cc !== filterCourse) return;
+        }
 
         // Normalise time to HH:MM
         const hhmm = String(time).slice(0, 5);
@@ -188,7 +210,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
       }
     });
     return map;
-  }, [tickets, filterSection]);
+  }, [tickets, filterSection, filterFaculty, filterCourse]);
 
   /* ── faculty conflict detection: slot key → Set of conflicting ticket IDs ── */
   const conflictTicketIds = useMemo(() => {
@@ -219,9 +241,17 @@ export default function TimetableGrid({ filterSection = 'All' }) {
         const section = t.section || t.Section;
         if (section !== filterSection) return false;
       }
+      if (filterFaculty !== 'All') {
+        const fac = t.facultyUid || t.facultyUID || t.FacultyUID || '';
+        if (fac !== filterFaculty) return false;
+      }
+      if (filterCourse !== 'All') {
+        const cc = t.courseCode || t.coursecode || t.Coursecode || '';
+        if (cc !== filterCourse) return false;
+      }
       return true;
     }).length,
-    [tickets, filterSection]
+    [tickets, filterSection, filterFaculty, filterCourse]
   );
 
   /* ── drag start (from grid cards) ────────────────────────────────────── */
@@ -485,6 +515,7 @@ export default function TimetableGrid({ filterSection = 'All' }) {
                             <GridTicketCard
                               key={tid}
                               ticket={{ ...t, _hasConflict: conflictTicketIds.has(tid) }}
+                              locked={true}
                               onDragStart={handleDragStart}
                               onUnschedule={handleUnschedule}
                             />

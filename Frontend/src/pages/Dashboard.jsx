@@ -13,6 +13,8 @@ import { DataRefreshProvider } from "../context/DataRefreshContext";
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState("courses");
   const [selectedSection, setSelectedSection] = useState("All");
+  const [selectedFaculty, setSelectedFaculty] = useState("All");
+  const [selectedCourse,  setSelectedCourse]  = useState("All");
 
   const isAssignView = activeTab === "facultyAssign" || activeTab === "sectionCourseAssign" || activeTab === "smartAssign" || activeTab === "mergeSections";
 
@@ -32,10 +34,19 @@ export default function Dashboard() {
             </main>
           ) : (
             <>
-              <UnscheduledSidebar activeTab={activeTab} filterSection={selectedSection} setFilterSection={setSelectedSection} />
+              <UnscheduledSidebar
+                activeTab={activeTab}
+                filterSection={selectedSection}  setFilterSection={setSelectedSection}
+                filterFaculty={selectedFaculty}  setFilterFaculty={setSelectedFaculty}
+                filterCourse={selectedCourse}    setFilterCourse={setSelectedCourse}
+              />
               <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950 relative">
                 <DashboardNavbar activeTab={activeTab} />
-                <TimetableGrid filterSection={selectedSection} />
+                <TimetableGrid
+                  filterSection={selectedSection}
+                  filterFaculty={selectedFaculty}
+                  filterCourse={selectedCourse}
+                />
               </main>
             </>
           )}

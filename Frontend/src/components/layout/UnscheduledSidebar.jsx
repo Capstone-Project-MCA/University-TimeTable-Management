@@ -10,7 +10,12 @@ import SectionCard from '../common/SectionCard'
 
 const ROOM_TYPE_MAP = { 0: 'Lecture Hall', 1: 'Lab', 2: 'Seminar Hall' }
 
-export default function UnscheduledSidebar({ activeTab = 'courses', filterSection = 'All', setFilterSection }) {
+export default function UnscheduledSidebar({
+  activeTab = 'courses',
+  filterSection = 'All', setFilterSection,
+  filterFaculty = 'All', setFilterFaculty,
+  filterCourse  = 'All', setFilterCourse,
+}) {
   const [courses,   setCourses]   = useState([])
   const [faculties, setFaculties] = useState([])
   const [rooms,     setRooms]     = useState([])
@@ -20,8 +25,6 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
 
   // Filter panel state (tickets tab)
   const [filterOpen,    setFilterOpen]    = useState(false)
-  const [filterFaculty, setFilterFaculty] = useState('All')
-  const [filterCourse,  setFilterCourse]  = useState('All')
 
   const { refreshKey, lastRefreshedEntity } = useDataRefresh()
 
@@ -31,7 +34,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
   // Reset all filters when switching tabs
   useEffect(() => {
     setSearchQuery('')
-    setFilterOpen(false); setFilterSection?.('All'); setFilterFaculty('All'); setFilterCourse('All')
+    setFilterOpen(false); setFilterSection?.('All'); setFilterFaculty?.('All'); setFilterCourse?.('All')
   }, [activeTab])
 
   useEffect(() => {
@@ -250,7 +253,7 @@ export default function UnscheduledSidebar({ activeTab = 'courses', filterSectio
           {/* Clear all */}
           {activeFilterCount > 0 && (
             <button
-              onClick={() => { setFilterSection?.('All'); setFilterFaculty('All'); setFilterCourse('All') }}
+              onClick={() => { setFilterSection?.('All'); setFilterFaculty?.('All'); setFilterCourse?.('All') }}
               className='w-full text-[10px] font-bold text-red-500 dark:text-red-400 py-1 rounded border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 transition-all flex items-center justify-center gap-1'
             >
               <span className='material-symbols-outlined text-[12px]'>filter_list_off</span>
