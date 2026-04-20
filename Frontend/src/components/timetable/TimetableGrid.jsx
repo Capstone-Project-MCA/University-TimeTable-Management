@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect, useCallback, useRef } from 'react';
 import { useDataRefresh } from '../../context/DataRefreshContext';
-import { setDraggedTicket, getDraggedTicket, clearDraggedTicket } from '../../utils/dragStore';
+import { setDraggedTicket, getDraggedTicket, clearDraggedTicket, setFocusedTicket, clearFocusedTicket, subscribeDragStore } from '../../utils/dragStore';
 
 const API_BASE = 'http://localhost:8080';
 
@@ -69,6 +69,9 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule, locked = false }) {
   const faculty   = ticket.facultyUid  || ticket.facultyUID  || ticket.FacultyUID  || null;
   const hasConflict = ticket._hasConflict || false;
 
+  const isFocused    = ticket._isFocused    || false;
+  const overlayDim   = ticket._overlayDim   || false;
+
   return (
     <div
       draggable={!locked}
@@ -79,14 +82,24 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule, locked = false }) {
           ? 'cursor-default'
           : 'cursor-grab active:cursor-grabbing hover:shadow-md hover:scale-[1.02]'
       } ${
-        hasConflict
+        isFocused
+          ? 'ring-2 ring-violet-400 dark:ring-violet-500 border-violet-300 dark:border-violet-600 shadow-md shadow-violet-200/40 dark:shadow-violet-900/40 scale-[1.03]'
+          : hasConflict
           ? 'border-amber-400 dark:border-amber-500 ring-1 ring-amber-400/60'
           : bgCard
-      }`}
+      } ${overlayDim && !isFocused ? 'opacity-50' : ''}`}
       title={`${course} · Section ${section} · Group ${group} · ${typeShort} #${lno}${faculty ? ` · ${faculty}` : ''}${
         hasConflict ? ' ⚠ Faculty conflict in this slot!' : ''
       }${locked ? ' (Locked — pre-assigned)' : ''}`}
     >
+      {/* Focused/selected ticket badge */}
+      {isFocused && !hasConflict && (
+        <div className="absolute -top-2 -left-2 z-30 w-5 h-5 rounded-full bg-violet-500 dark:bg-violet-600 flex items-center justify-center shadow"
+             title="Selected — viewing faculty availability">
+          <span className="material-symbols-outlined text-white" style={{ fontSize: 11, fontVariationSettings: "'FILL' 1" }}>push_pin</span>
+        </div>
+      )}
+
       {/* Conflict warning badge */}
       {hasConflict && (
         <div className="absolute -top-2 -left-2 z-30 w-5 h-5 rounded-full bg-amber-400 dark:bg-amber-500 flex items-center justify-center shadow"
@@ -104,7 +117,7 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule, locked = false }) {
       )}
 
       {/* Coloured left accent */}
-      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${hasConflict ? 'bg-amber-400' : locked ? 'bg-emerald-500' : accentBar}`} />
+      <div className={`absolute left-0 top-0 bottom-0 w-[3px] rounded-l ${isFocused ? 'bg-violet-400' : hasConflict ? 'bg-amber-400' : locked ? 'bg-emerald-500' : accentBar}`} />
 
       {/* × remove button — hidden when locked */}
       {!locked && (
@@ -171,6 +184,16 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
   const [dragOverKey, setDragOverKey] = useState(null);
   const dragEnterCounters = useRef({});
 
+  // dismiss the unscheduled-count hint banner
+  const [dismissedHint, setDismissedHint] = useState(false);
+
+  // ── focused ticket (faculty overlay mode) ──────────────────────────────
+  const [focusedTicket, setFocusedTicketState] = useState(null);
+  useEffect(() => {
+    const unsub = subscribeDragStore(({ focused }) => setFocusedTicketState(focused ?? null));
+    return unsub;
+  }, []);
+
   /* ── fetch all tickets ─────────────────────────────────────────────────── */
   const fetchTickets = useCallback(async () => {
     try {
@@ -211,6 +234,25 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
     });
     return map;
   }, [tickets, filterSection, filterFaculty, filterCourse]);
+
+  /* ── faculty overlay: slot key → list of that faculty's tickets (all sections) ── */
+  const facultyOverlayMap = useMemo(() => {
+    if (!focusedTicket?.facultyUID) return {};
+    const fac = focusedTicket.facultyUID;
+    const map = {};
+    tickets.forEach(t => {
+      const tFac = t.facultyUid || t.facultyUID || t.FacultyUID;
+      if (tFac !== fac) return;
+      const day  = t.day  || t.Day;
+      const time = t.time || t.Time;
+      if (!day || !time) return;
+      const hhmm = String(time).slice(0, 5);
+      const key  = `${day}|${hhmm}`;
+      if (!map[key]) map[key] = [];
+      map[key].push(t);
+    });
+    return map;
+  }, [focusedTicket, tickets]);
 
   /* ── faculty conflict detection: slot key → Set of conflicting ticket IDs ── */
   const conflictTicketIds = useMemo(() => {
@@ -254,18 +296,37 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
     [tickets, filterSection, filterFaculty, filterCourse]
   );
 
+  /* ── click a grid card → activate faculty overlay ─────────────────────── */
+  const handleCardClick = (ticket) => {
+    const tid        = ticket.ticketId  || ticket.TicketId;
+    const faculty    = ticket.facultyUid || ticket.facultyUID || ticket.FacultyUID || null;
+    const course     = ticket.courseCode || ticket.coursecode || ticket.Coursecode || '';
+    const section    = ticket.section   || ticket.Section    || '';
+    const typeCode   = ticket.mappingType || ticket.MappingType || '';
+    const lno        = ticket.lectureNo  ?? ticket.LectureNo  ?? '';
+    const day        = ticket.day  || ticket.Day  || null;
+    const rawTime    = ticket.time || ticket.Time || null;
+    const time       = rawTime ? String(rawTime).slice(0, 5) : null;
+    const isScheduled = !!(day && rawTime);
+    setFocusedTicket({ ticketId: tid, facultyUID: faculty, courseCode: course, section, type: typeCode, lectureNo: lno, day, time, isScheduled });
+  };
+
   /* ── drag start (from grid cards) ────────────────────────────────────── */
   const handleDragStart = (e, ticket) => {
     e.dataTransfer.effectAllowed = 'move';
     try { e.dataTransfer.setData('text/plain', ticket.ticketId || ticket.TicketId || ''); } catch {}
-    setDraggedTicket({
-      ticketId:   ticket.ticketId    || ticket.TicketId,
-      coursecode: ticket.courseCode  || ticket.coursecode  || ticket.Coursecode,
-      type:       ticket.mappingType || ticket.MappingType || '',
-      lectureNo:  ticket.lectureNo   || ticket.LectureNo,
-      section:    ticket.section     || ticket.Section,
-      facultyUID: ticket.facultyUid  || ticket.facultyUID  || ticket.FacultyUID,
-    });
+    const tid      = ticket.ticketId    || ticket.TicketId;
+    const faculty  = ticket.facultyUid  || ticket.facultyUID  || ticket.FacultyUID;
+    const course   = ticket.courseCode  || ticket.coursecode  || ticket.Coursecode;
+    const section  = ticket.section     || ticket.Section;
+    const typeCode = ticket.mappingType || ticket.MappingType || '';
+    const lno      = ticket.lectureNo   || ticket.LectureNo;
+    const day      = ticket.day  || ticket.Day  || null;
+    const rawTime  = ticket.time || ticket.Time || null;
+    const time     = rawTime ? String(rawTime).slice(0, 5) : null;
+    setDraggedTicket({ ticketId: tid, coursecode: course, type: typeCode, lectureNo: lno, section, facultyUID: faculty });
+    // Activate overlay while dragging
+    setFocusedTicket({ ticketId: tid, facultyUID: faculty, courseCode: course, section, type: typeCode, lectureNo: lno, day, time, isScheduled: !!(day && rawTime) });
   };
 
   /* ── drag over a cell (just preventDefault to allow drop) ──────────────── */
@@ -337,6 +398,10 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
         fetchTickets(); // revert
       } else {
         triggerRefresh('ticket'); // remove card from sidebar panel
+        // If this was the focused ticket, update the overlay position
+        if (focusedTicket?.ticketId === ticketId) {
+          setFocusedTicket({ ...focusedTicket, day, time, isScheduled: true });
+        }
       }
     } catch (err) {
       console.error('Network error during drop:', err);
@@ -366,6 +431,10 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
         fetchTickets();
       } else {
         triggerRefresh('ticket'); // tell sidebar to re-fetch and re-show this ticket
+        // If this was the focused ticket, update overlay to reflect it's now unscheduled
+        if (focusedTicket?.ticketId === ticketId) {
+          setFocusedTicket({ ...focusedTicket, day: null, time: null, isScheduled: false });
+        }
       }
     } catch (err) {
       console.error('Network error during unschedule:', err);
@@ -374,9 +443,40 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
     }
   };
 
+  /* ── overlay mode helpers ─────────────────────────────────────────────── */
+  const overlayActive   = !!focusedTicket?.facultyUID;
+  const focusedFaculty  = focusedTicket?.facultyUID ?? null;
+  const focusedTicketId = focusedTicket?.ticketId   ?? null;
+
   return (
     <div className="flex-1 overflow-hidden p-2 bg-slate-50 dark:bg-slate-900/50 flex flex-col relative z-0">
-      <div className="bg-white dark:bg-slate-800 rounded shadow-soft border border-slate-200 dark:border-slate-700 w-full h-full flex flex-col overflow-hidden relative">
+      <div className={`bg-white dark:bg-slate-800 rounded shadow-soft border w-full h-full flex flex-col overflow-hidden relative transition-all duration-300 ${
+        overlayActive
+          ? 'border-violet-400 dark:border-violet-600 shadow-lg shadow-violet-200/30 dark:shadow-violet-900/30'
+          : 'border-slate-200 dark:border-slate-700'
+      }`}>
+
+        {/* ── Faculty overlay banner ──────────────────────────────────────── */}
+        {overlayActive && (
+          <div className="px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 border-b border-violet-200 dark:border-violet-700 flex items-center gap-2 shrink-0 animate-pulse-once">
+            <span className="material-symbols-outlined text-[14px] text-violet-500 dark:text-violet-400" style={{ fontVariationSettings: "'FILL' 1" }}>person_search</span>
+            <span className="text-[11px] font-bold text-violet-700 dark:text-violet-300">
+              Faculty overlay: <span className="font-mono">{focusedFaculty}</span>
+            </span>
+            <div className="ml-2 flex items-center gap-2 text-[10px] font-semibold flex-wrap">
+              <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400/80"/> Busy elsewhere</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-400/80"/> Selected slot</span>
+              <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-emerald-400/60"/> Free slot</span>
+            </div>
+            <button
+              onClick={() => clearFocusedTicket()}
+              className="ml-auto flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold text-violet-600 dark:text-violet-400 hover:bg-violet-100 dark:hover:bg-violet-800/40 transition-colors"
+            >
+              <span className="material-symbols-outlined text-[12px]">close</span>
+              Dismiss
+            </button>
+          </div>
+        )}
 
         {/* ── Header Row + unscheduled badge ────────────────────────────── */}
         <div
@@ -433,13 +533,20 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
         </div>
 
         {/* Unscheduled count hint — compact single-line pill */}
-        {unscheduledCount > 0 && (
+        {unscheduledCount > 0 && !dismissedHint && (
           <div className="px-2 py-1 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex items-center gap-1.5 shrink-0">
             <span className="material-symbols-outlined text-[13px] text-amber-500 dark:text-amber-400" style={{ fontVariationSettings: "'FILL' 1" }}>pending</span>
             <span className="text-[10px] font-semibold text-amber-700 dark:text-amber-400">
               {unscheduledCount} unscheduled ticket{unscheduledCount !== 1 ? 's' : ''}
             </span>
             <span className="text-[10px] text-amber-500/70 dark:text-amber-500/60">— drag from Tickets panel to place</span>
+            <button
+              onClick={() => setDismissedHint(true)}
+              title="Dismiss"
+              className="ml-auto flex items-center justify-center w-5 h-5 rounded-full text-amber-500/60 hover:text-amber-700 dark:hover:text-amber-300 hover:bg-amber-200/60 dark:hover:bg-amber-800/40 transition-colors"
+            >
+              <span className="material-symbols-outlined" style={{ fontSize: 14 }}>close</span>
+            </button>
           </div>
         )}
 
@@ -481,6 +588,16 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                   const cellTickets = slotMap[key] || [];
                   const isOccupied = cellTickets.length > 0;
                   const isOver = dragOverKey === key;
+
+                  // ── Faculty overlay cell classification ────────────────
+                  // isFocusedSlot: the focused ticket itself lives here
+                  const isFocusedSlot = overlayActive && focusedTicket?.day === d.id && focusedTicket?.time === time;
+                  // isFacultyBusy: the focused faculty has a DIFFERENT ticket here
+                  const overlayTicketsHere = overlayActive ? (facultyOverlayMap[key] || []) : [];
+                  const isFacultyBusy = overlayActive && overlayTicketsHere.length > 0 && !isFocusedSlot;
+                  // isFacultyFree: overlay active, faculty has no class here (and not the focused slot)
+                  const isFacultyFree = overlayActive && !isFocusedSlot && !isFacultyBusy;
+
                   return (
                     <div
                       key={key}
@@ -488,21 +605,63 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                       onDragOver={handleDragOver}
                       onDragLeave={e => handleDragLeave(e, key)}
                       onDrop={e => handleDrop(e, d.id, time)}
-                      className={`p-0.5 h-full relative z-0 border-r border-slate-100/60 dark:border-slate-700/30 last:border-r-0 transition-colors ${
+                      className={`p-0.5 h-full relative z-0 border-r border-slate-100/60 dark:border-slate-700/30 last:border-r-0 transition-all duration-200 ${
                         d.isWeekend ? 'opacity-60' : ''
+                      } ${
+                        isFocusedSlot  ? 'bg-violet-50/80 dark:bg-violet-900/20' :
+                        isFacultyBusy  ? 'bg-amber-50/70  dark:bg-amber-900/15' :
+                        isFacultyFree  ? 'bg-emerald-50/60 dark:bg-emerald-900/10' :
+                        ''
                       }`}
                     >
+                      {/* ── Faculty overlay cell tint (behind cards) ─────── */}
+                      {overlayActive && !isOver && (
+                        <div className={`absolute inset-0 pointer-events-none z-0 rounded transition-all duration-200 ${
+                          isFocusedSlot ? 'ring-2 ring-inset ring-violet-400/50 dark:ring-violet-500/50' :
+                          isFacultyBusy ? 'ring-1 ring-inset ring-amber-300/60 dark:ring-amber-600/40' :
+                          isFacultyFree ? 'ring-1 ring-inset ring-emerald-300/40 dark:ring-emerald-700/30' :
+                          ''
+                        }`} />
+                      )}
+
+                      {/* ── Faculty-free slot hint (shown when no tickets here) ─ */}
+                      {isFacultyFree && !isOccupied && !isOver && (
+                        <div className="absolute inset-0 z-5 pointer-events-none flex items-center justify-center">
+                          <span className="text-[8px] font-bold text-emerald-500/60 dark:text-emerald-400/40 uppercase tracking-wide">free</span>
+                        </div>
+                      )}
+
+                      {/* ── Faculty-busy badge (no ticket from this section here) ─ */}
+                      {isFacultyBusy && !isOccupied && !isOver && (
+                        <div className="absolute inset-0 z-5 pointer-events-none flex flex-col items-center justify-center gap-0.5 px-1">
+                          <span className="material-symbols-outlined text-amber-400/70 dark:text-amber-500/60" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>event_busy</span>
+                          <span className="text-[8px] font-bold text-amber-600/70 dark:text-amber-400/60 text-center leading-tight">
+                            {overlayTicketsHere[0] ? (
+                              (overlayTicketsHere[0].courseCode || overlayTicketsHere[0].Coursecode || '') + ' · ' +
+                              (overlayTicketsHere[0].section    || overlayTicketsHere[0].Section    || '')
+                            ) : 'Busy'}
+                          </span>
+                        </div>
+                      )}
+
                       {/* ── Full-cell drop overlay — always on top of cards ── */}
                       {isOver && (
                         <div className={`absolute inset-0 z-40 pointer-events-none flex flex-col items-center justify-center gap-1 rounded transition-all ${
                           isOccupied
                             ? 'bg-red-500/20 dark:bg-red-500/30 ring-2 ring-inset ring-red-400/70'
+                            : isFacultyBusy
+                            ? 'bg-amber-400/25 dark:bg-amber-500/20 ring-2 ring-inset ring-amber-400/70'
                             : 'bg-primary/20 dark:bg-primary/25 ring-2 ring-inset ring-primary/60'
                         }`}>
                           {isOccupied ? (
                             <>
                               <span className="material-symbols-outlined text-red-500 dark:text-red-400" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>block</span>
                               <span className="text-[9px] font-bold text-red-600 dark:text-red-400 text-center leading-tight px-1">Slot occupied</span>
+                            </>
+                          ) : isFacultyBusy ? (
+                            <>
+                              <span className="material-symbols-outlined text-amber-500 dark:text-amber-400" style={{ fontSize: 22, fontVariationSettings: "'FILL' 1" }}>warning</span>
+                              <span className="text-[9px] font-bold text-amber-600 dark:text-amber-400 text-center leading-tight px-1">Faculty busy!</span>
                             </>
                           ) : (
                             <>
@@ -514,17 +673,24 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                       )}
 
                       {/* Placed ticket cards */}
-                      <div className="flex flex-col gap-0.5 p-0.5 h-full overflow-hidden">
+                      <div className="flex flex-col gap-0.5 p-0.5 h-full overflow-hidden relative z-10">
                         {cellTickets.map(t => {
                           const tid = t.ticketId || t.TicketId;
+                          const isTheFocused = overlayActive && tid === focusedTicketId;
                           return (
-                            <GridTicketCard
-                              key={tid}
-                              ticket={{ ...t, _hasConflict: conflictTicketIds.has(tid) }}
-                              locked={false}
-                              onDragStart={handleDragStart}
-                              onUnschedule={handleUnschedule}
-                            />
+                            <div key={tid} onClick={() => handleCardClick(t)} className="cursor-pointer">
+                              <GridTicketCard
+                                ticket={{
+                                  ...t,
+                                  _hasConflict: conflictTicketIds.has(tid),
+                                  _isFocused:   isTheFocused,
+                                  _overlayDim:  overlayActive && !isTheFocused,
+                                }}
+                                locked={false}
+                                onDragStart={handleDragStart}
+                                onUnschedule={handleUnschedule}
+                              />
+                            </div>
                           );
                         })}
                       </div>

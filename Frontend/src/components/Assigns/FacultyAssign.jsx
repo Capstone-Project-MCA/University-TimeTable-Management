@@ -161,14 +161,13 @@ const FacultyAssignmentWorkspace = () => {
       const res = await fetch(`${API_BASE}/assign/assign-faculty`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        // ⚠️  Keys MUST match the Java entity's PascalCase field names
+        // Keys MUST match Java entity camelCase field names (Jackson deserializes by field name)
         body: JSON.stringify({
-          Section:    row.section,
-          Coursecode: row.courseCode,
-          GroupNo:    row.groupRaw,
+          section:     row.section,
+          courseCode:  row.courseCode,
+          groupNo:     row.groupRaw,
           mappingType: row.type,
-          FacultyUID: row.uid || null,
-          facultyUid: row.uid || null,
+          facultyUid:  row.uid || null,
         }),
       });
       if (res.ok) {
@@ -192,23 +191,22 @@ const FacultyAssignmentWorkspace = () => {
     if (empty.length)   { alert(`Empty UID in: ${empty.map(r => r.courseCode).join(", ")}`);   return; }
     if (invalid.length) { alert(`Invalid UID in: ${invalid.map(r => r.courseCode).join(", ")}`); return; }
 
-    // ⚠️  Keys MUST match the Java entity's PascalCase field names
+    // Keys MUST match Java entity camelCase field names (Jackson deserializes by field name)
     const payload = toSave.map(row => ({
       courseMappingId: row.courseMappingId ?? null,
-      Section:        row.section,
-      Coursecode:     row.courseCode,
-      GroupNo:        row.groupRaw,
-      mappingType:    row.type,
-      AttendanceType: row.attendance,
-      CourseNature:   String(row.nature || "C"),
-      FacultyUID:     row.uid || null,
-      facultyUid:     row.uid || null,
-      L:              row.l,
-      T:              row.t,
-      P:              row.p,
-      Mergecode:      row.mergeCode !== "---" ? row.mergeCode : null,
-      MergeStatus:    row.mergeStatus === "check_circle",
-      Reserveslot:    row.reserve    !== "---" ? row.reserve   : null,
+      section:         row.section,
+      courseCode:      row.courseCode,
+      groupNo:         row.groupRaw,
+      mappingType:     row.type,
+      attendanceType:  row.attendance,
+      courseNature:    String(row.nature || "C"),
+      facultyUid:      row.uid || null,
+      l:               row.l,
+      t:               row.t,
+      p:               row.p,
+      mergeCode:       row.mergeCode !== "---" ? row.mergeCode : null,
+      mergeStatus:     row.mergeStatus === "check_circle",
+      reserveSlot:     row.reserve    !== "---" ? row.reserve   : null,
     }));
 
     try {

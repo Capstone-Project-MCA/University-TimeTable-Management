@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import axios from 'axios'
 import { useDataRefresh } from '../../context/DataRefreshContext'
-import { setDraggedTicket, clearDraggedTicket } from '../../utils/dragStore'
+import { setDraggedTicket, clearDraggedTicket, setFocusedTicket, subscribeDragStore } from '../../utils/dragStore'
 
 import CourseCard from '../common/CourseCard'
 import FacultyCard from '../common/FacultyCard'
@@ -26,7 +26,18 @@ export default function UnscheduledSidebar({
   // Filter panel state (tickets tab)
   const [filterOpen,    setFilterOpen]    = useState(false)
 
+  // Track focused ticket from dragStore for highlight
+  const [focusedTicketId, setFocusedTicketId] = useState(null)
+
   const { refreshKey, lastRefreshedEntity } = useDataRefresh()
+
+  // Subscribe to dragStore focused ticket changes
+  useEffect(() => {
+    const unsub = subscribeDragStore(({ focused }) => {
+      setFocusedTicketId(focused?.ticketId ?? null)
+    })
+    return unsub
+  }, [])
 
   // Map entity type → tab name (used to scope auto-refresh to the right tab)
   const entityToTab = { course: 'courses', faculty: 'faculties', room: 'rooms', section: 'sections', ticket: 'tickets' }
@@ -358,13 +369,31 @@ export default function UnscheduledSidebar({
               const scheduledDay  = item.day  || item.Day  || ''
               const scheduledTime = item.time || item.Time || ''
               const scheduledHHMM = String(scheduledTime).slice(0, 5)
+              const isFocused = focusedTicketId === tid
+
+              // Build a normalised focused-ticket payload for dragStore
+              const focusedPayload = {
+                ticketId:   tid,
+                facultyUID: faculty,
+                courseCode: course,
+                section,
+                type:       typeCode,
+                lectureNo:  lno,
+                day:        scheduledDay  || null,
+                time:       scheduledHHMM || null,
+                isScheduled,
+              }
+
               return (
                 <div key={tid}
                   draggable={!isScheduled}
+                  onClick={() => setFocusedTicket(focusedPayload)}
                   onDragStart={e => {
                     if (isScheduled) { e.preventDefault(); return; }
                     e.dataTransfer.effectAllowed = 'move'
                     setDraggedTicket({ ticketId: tid, coursecode: course, type: typeCode, lectureNo: lno, section, facultyUID: faculty })
+                    // Also focus on drag start so the grid overlay activates
+                    setFocusedTicket(focusedPayload)
                     try { e.dataTransfer.setData('text/plain', tid) } catch {}
 
                     /* ── tiny drag-ghost so the large card doesn't block drop zones ── */
@@ -389,9 +418,11 @@ export default function UnscheduledSidebar({
                   }}
                   onDragEnd={() => clearDraggedTicket()}
                   className={`rounded-xl border bg-white dark:bg-slate-800 transition-all select-none overflow-hidden relative ${
-                    isScheduled
-                      ? 'border-emerald-300 dark:border-emerald-700 cursor-default'
-                      : 'cursor-grab active:cursor-grabbing group hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-md border-slate-200 dark:border-slate-700'
+                    isFocused
+                      ? 'ring-2 ring-violet-400 dark:ring-violet-500 border-violet-400 dark:border-violet-500 shadow-lg shadow-violet-200/40 dark:shadow-violet-900/40'
+                      : isScheduled
+                        ? 'border-emerald-300 dark:border-emerald-700 cursor-default'
+                        : 'cursor-grab active:cursor-grabbing group hover:border-primary/40 dark:hover:border-primary/40 hover:shadow-md border-slate-200 dark:border-slate-700'
                   }`}
                 >
                   {/* Coloured top stripe — green when scheduled */}
