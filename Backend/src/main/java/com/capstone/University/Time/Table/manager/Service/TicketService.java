@@ -217,8 +217,22 @@ public class TicketService {
 
     public TicketDto scheduleTicket(String ticketId, String day, String time) {
         return ticketRepository.findById(ticketId).map(ticket -> {
-            ticket.setDay(day);
-            ticket.setTime(time != null ? LocalTime.parse(time) : null);
+            if (day != null && time != null) {
+                LocalTime parsedTime = LocalTime.parse(time);
+                if (ticket.getFacultyUid() != null && !ticket.getFacultyUid().isEmpty()) {
+                    boolean conflict = ticketRepository.existsByFacultyUidAndDayAndTimeAndTicketIdNot(
+                            ticket.getFacultyUid(), day, parsedTime, ticketId
+                    );
+                    if (conflict) {
+                        throw new IllegalArgumentException("Faculty is already assigned to another class at this time slot.");
+                    }
+                }
+                ticket.setDay(day);
+                ticket.setTime(parsedTime);
+            } else {
+                ticket.setDay(null);
+                ticket.setTime(null);
+            }
             ticketRepository.save(ticket);
             return ticketMapper.toDto(ticket);
         }).orElse(null);

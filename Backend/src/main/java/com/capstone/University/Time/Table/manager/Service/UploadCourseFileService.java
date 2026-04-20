@@ -24,9 +24,8 @@ public class UploadCourseFileService {
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
-            int rowIndex = 0;
             for (Row row : sheet) {
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
                 if (row == null || row.getCell(0) == null)
                     continue;
@@ -54,11 +53,9 @@ public class UploadCourseFileService {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
-            int rowIndex = 0;
-
             for (Row row : sheet) {
                 // Skip header row
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
 
                 // Skip empty rows
@@ -124,12 +121,14 @@ public class UploadCourseFileService {
                     String lStr = formatter.formatCellValue(row.getCell(2));
                     if (!lStr.isEmpty()) {
                         short lValue = Short.parseShort(lStr);
-                        if (lValue <= 5) {
-                            course.setL(lValue);
-                        } else {
-                            faults.add("L value is above 5!!");
+                         if(lValue < 0) {
+                            faults.add("L value is less than 0!!");
                         }
-                    } else {
+                         else{
+                             course.setL(lValue);
+                         }
+                    }
+                    else {
                         faults.add("L value is empty!!");
                     }
                 } catch (NumberFormatException e) {
@@ -141,10 +140,11 @@ public class UploadCourseFileService {
                     String tStr = formatter.formatCellValue(row.getCell(3));
                     if (!tStr.isEmpty()) {
                         short tValue = Short.parseShort(tStr);
-                        if (tValue <= 5) {
+                        if(tValue < 0) {
+                            faults.add("T value is less than 0!!");
+                        }
+                        else{
                             course.setT(tValue);
-                        } else {
-                            faults.add("T value is above 5!!");
                         }
                     } else {
                         faults.add("T value is empty!!");
@@ -158,11 +158,12 @@ public class UploadCourseFileService {
                     String pStr = formatter.formatCellValue(row.getCell(4));
                     if (!pStr.isEmpty()) {
                         short pValue = Short.parseShort(pStr);
-                        if (pValue <= 5) {
-                            course.setP(pValue);
-                        } else {
-                            faults.add("P value is above 5!!");
+                         if(pValue < 0) {
+                            faults.add("P value is less than 0!!");
                         }
+                         else{
+                             course.setP(pValue);
+                         }
                     } else {
                         faults.add("P value is empty!!");
                     }

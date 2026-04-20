@@ -68,15 +68,19 @@ public class TicketController {
      * Stores the day + time slot chosen by drag-and-drop.
      */
     @PatchMapping("/{ticketId}/schedule")
-    public ResponseEntity<TicketDto> scheduleTicket(
+    public ResponseEntity<?> scheduleTicket(
             @PathVariable String ticketId,
             @RequestBody Map<String, String> body
     ) {
         String day  = body.get("day");
         String time = body.get("time");
-        TicketDto updated = ticketService.scheduleTicket(ticketId, day, time);
-        if (updated == null) return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(updated);
+        try {
+            TicketDto updated = ticketService.scheduleTicket(ticketId, day, time);
+            if (updated == null) return ResponseEntity.notFound().build();
+            return ResponseEntity.ok(updated);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.CONFLICT).body(e.getMessage());
+        }
     }
 
     @DeleteMapping("/delete-all-tickets")

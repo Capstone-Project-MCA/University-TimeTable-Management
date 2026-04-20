@@ -27,9 +27,8 @@ public class UploadSectionFileService {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
-            int rowIndex = 0;
             for (Row row : sheet) {
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
 
                 if (row == null || row.getCell(0) == null)
@@ -57,10 +56,8 @@ public class UploadSectionFileService {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
-            int rowIndex = 0;
-
             for (Row row : sheet) {
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
                 if (row == null || row.getCell(0) == null)
                     continue;
@@ -111,7 +108,7 @@ public class UploadSectionFileService {
                         }
                     } else {
                         faults.add("Section Strength is empty!! at Row "
-                                + (rowIndex + 1) + " and Column " + colIndex);
+                                + (row.getRowNum() + 1) + " and Column " + colIndex);
                     }
                 } else {
                     faults.add("Cell is empty OR null -> " + (row.getRowNum() + 1));

@@ -20,7 +20,7 @@ CREATE TABLE IF NOT EXISTS sectionmaster (
     SectionId       VARCHAR(5)        PRIMARY KEY,
     Strength        SMALLINT UNSIGNED NOT NULL,
     NumberOfGroups  TINYINT UNSIGNED  NOT NULL,
-    ProgramName     VARCHAR(12)       NOT NULL,
+    ProgramName     VARCHAR(255)       NOT NULL,
     Semester        TINYINT UNSIGNED  NOT NULL,
     Batch           SMALLINT UNSIGNED NOT NULL,
     ProgramType     TINYINT UNSIGNED  NOT NULL,

@@ -14,7 +14,7 @@ import java.util.*;
 @Table(name = "sectionmaster")
 public class Section {
     @Id
-    @Column(name = "SectionId", length = 5)
+    @Column(name = "SectionId", length = 50)
     private String sectionId;
 
     @Column(name = "Strength", nullable = false)
@@ -23,7 +23,7 @@ public class Section {
     @Column(name = "NumberOfGroups", nullable = false)
     private Short numberOfGroups;
 
-    @Column(name = "ProgramName", length = 12, nullable = false)
+    @Column(name = "ProgramName", length = 255, nullable = false)
     private String programName;
 
     @Column(name = "Semester", nullable = false)
@@ -38,7 +38,7 @@ public class Section {
     @Column(name = "ProgramDuration", nullable = false)
     private Double programDuration;
 
-    @Column(name = "ProgramCode", length = 9, nullable = false)
+    @Column(name = "ProgramCode", length = 50, nullable = false)
     private String programCode;
 
     @ManyToMany

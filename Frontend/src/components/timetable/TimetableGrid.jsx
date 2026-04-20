@@ -331,13 +331,16 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
         body:    JSON.stringify({ day, time }),
       });
       if (!res.ok) {
-        console.error('Schedule failed:', await res.text());
+        const errorText = await res.text();
+        console.error('Schedule failed:', errorText);
+        alert(errorText || 'Failed to schedule class. Please try again.');
         fetchTickets(); // revert
       } else {
         triggerRefresh('ticket'); // remove card from sidebar panel
       }
     } catch (err) {
       console.error('Network error during drop:', err);
+      alert('Network error during drop. Please try again.');
       fetchTickets();
     }
   };
@@ -357,13 +360,16 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
         body:    JSON.stringify({ day: null, time: null }),
       });
       if (!res.ok) {
-        console.error('Unschedule failed:', await res.text());
+        const errorText = await res.text();
+        console.error('Unschedule failed:', errorText);
+        alert(errorText || 'Failed to unschedule class. Please try again.');
         fetchTickets();
       } else {
         triggerRefresh('ticket'); // tell sidebar to re-fetch and re-show this ticket
       }
     } catch (err) {
       console.error('Network error during unschedule:', err);
+      alert('Network error during unschedule. Please try again.');
       fetchTickets();
     }
   };
@@ -515,7 +521,7 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                             <GridTicketCard
                               key={tid}
                               ticket={{ ...t, _hasConflict: conflictTicketIds.has(tid) }}
-                              locked={true}
+                              locked={false}
                               onDragStart={handleDragStart}
                               onUnschedule={handleUnschedule}
                             />

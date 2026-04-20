@@ -18,6 +18,8 @@ public interface TicketRepository extends JpaRepository<Ticket, String> {
 
     List<Ticket> findByCourseCode(String courseCode);
 
+    boolean existsByFacultyUidAndDayAndTimeAndTicketIdNot(String facultyUid, String day, java.time.LocalTime time, String ticketId);
+
     @Modifying
     @Transactional
     void deleteByMergedCode(String mergedCode);

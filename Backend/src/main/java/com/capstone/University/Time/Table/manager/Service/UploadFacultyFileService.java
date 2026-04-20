@@ -25,9 +25,8 @@ public class UploadFacultyFileService {
             DataFormatter formatter = new DataFormatter();
             formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
-            int rowIndex = 0;
             for (Row row : sheet) {
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
 
                 if (row == null || row.getCell(0) == null)
@@ -56,10 +55,9 @@ public class UploadFacultyFileService {
             DataFormatter formatter = new DataFormatter();
             Sheet sheet = workbook.getSheetAt(0);
 
-            int rowIndex = 0;
             for (Row row : sheet) {
                 // Skip header row
-                if (rowIndex++ == 0)
+                if (row.getRowNum() <= 1)
                     continue;
 
                 if (row == null || row.getCell(0) == null)
