@@ -10,6 +10,121 @@ import SectionCard from '../common/SectionCard'
 
 const ROOM_TYPE_MAP = { 0: 'Lecture Hall', 1: 'Lab', 2: 'Seminar Hall' }
 
+/* ── Reusable form field used in the CRUD modal ─────────────────────────── */
+function Field({ label, value, onChange, type = 'text', disabled = false }) {
+  return (
+    <div>
+      <label className='block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1'>{label}</label>
+      <input
+        type={type}
+        value={value ?? ''}
+        onChange={e => onChange?.(e.target.value)}
+        disabled={disabled}
+        className={`w-full px-3 py-2 text-xs rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 ${
+          disabled
+            ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+        }`}
+      />
+    </div>
+  )
+}
+
+
+
+
+/* ── Delete-All footer bar (lives in sidebar, replaces navbar button) ─────── */
+const DELETE_ALL_CONFIG = {
+  courses:   { endpoint: 'course/delete/all',          label: 'All Courses',   entity: 'course'  },
+  sections:  { endpoint: 'section/delete/all',         label: 'All Sections',  entity: 'section' },
+  faculties: { endpoint: 'faculty/delete/all',         label: 'All Faculties', entity: 'faculty' },
+  rooms:     { endpoint: 'room/delete/all',            label: 'All Rooms',     entity: 'room'    },
+  tickets:   { endpoint: 'ticket/delete-all-tickets',  label: 'All Tickets',   entity: 'ticket'  },
+}
+
+function DeleteAllBar({ activeTab, onDeleted }) {
+  const [deleting,    setDeleting]    = React.useState(false)
+  const [confirmOpen, setConfirmOpen] = React.useState(false)
+  const cfg = DELETE_ALL_CONFIG[activeTab]
+  if (!cfg) return null
+
+  const doDelete = async () => {
+    setDeleting(true)
+    setConfirmOpen(false)
+    try {
+      const res = await fetch(`http://localhost:8080/${cfg.endpoint}`, { method: 'DELETE' })
+      if (!res.ok && res.status !== 204) throw new Error(`Failed (${res.status})`)
+      onDeleted?.(cfg.entity)
+    } catch (e) {
+      alert(e.message)
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  return (
+    <>
+      {/* ── Centered confirm modal ─────────────────────────────────────── */}
+      {confirmOpen && (
+        <div className='fixed inset-0 z-[10000] flex items-center justify-center px-6 bg-black/50 backdrop-blur-sm'>
+          <div className='bg-white dark:bg-slate-900 rounded-2xl border border-red-200 dark:border-red-800 shadow-2xl w-full max-w-sm overflow-hidden'>
+
+            {/* Header */}
+            <div className='px-6 py-5 bg-red-50 dark:bg-red-900/20 border-b border-red-100 dark:border-red-800 flex items-start gap-4'>
+              <div className='w-11 h-11 rounded-xl bg-red-100 dark:bg-red-900/40 flex items-center justify-center shrink-0'>
+                <span className='material-symbols-outlined text-red-500 text-2xl' style={{ fontVariationSettings: "'FILL' 1" }}>delete_sweep</span>
+              </div>
+              <div className='flex-1'>
+                <p className='text-base font-bold text-red-700 dark:text-red-300 leading-tight'>Delete {cfg.label}?</p>
+                <p className='text-xs text-red-500/80 dark:text-red-400/70 mt-1'>
+                  All {cfg.label.toLowerCase()} will be permanently removed. This action <strong>cannot be undone</strong>.
+                </p>
+              </div>
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className='text-red-300 hover:text-red-500 transition-colors shrink-0 mt-0.5'
+              >
+                <span className='material-symbols-outlined text-lg'>close</span>
+              </button>
+            </div>
+
+            {/* Footer buttons */}
+            <div className='px-6 py-4 flex gap-3 bg-slate-50 dark:bg-slate-800/60'>
+              <button
+                onClick={() => setConfirmOpen(false)}
+                className='flex-1 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all'
+              >
+                Cancel
+              </button>
+              <button
+                onClick={doDelete}
+                disabled={deleting}
+                className='flex-1 py-2.5 text-sm font-bold text-white bg-red-500 hover:bg-red-600 active:scale-95 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/25 disabled:opacity-50'
+              >
+                {deleting
+                  ? <><span className='material-symbols-outlined text-base animate-spin'>refresh</span>Deleting…</>
+                  : <><span className='material-symbols-outlined text-base'>delete_sweep</span>Delete All</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Trigger button in sidebar footer ──────────────────────────── */}
+      <button
+        onClick={() => setConfirmOpen(true)}
+        disabled={deleting}
+        className='w-full px-3 py-2.5 flex items-center justify-center gap-2 text-xs font-semibold text-red-500 dark:text-red-400 hover:text-red-600 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-900/20 border-t border-slate-200 dark:border-slate-700/60 transition-all disabled:opacity-40'
+      >
+        <span className='material-symbols-outlined text-[15px]' style={{ fontVariationSettings: "'FILL' 0" }}>
+          {deleting ? 'refresh' : 'delete_sweep'}
+        </span>
+        <span>{deleting ? 'Deleting…' : `Delete ${cfg.label}`}</span>
+      </button>
+    </>
+  )
+}
+
 export default function UnscheduledSidebar({
   activeTab = 'courses',
   filterSection = 'All', setFilterSection,
@@ -29,7 +144,7 @@ export default function UnscheduledSidebar({
   // Track focused ticket from dragStore for highlight
   const [focusedTicketId, setFocusedTicketId] = useState(null)
 
-  const { refreshKey, lastRefreshedEntity } = useDataRefresh()
+  const { refreshKey, lastRefreshedEntity, triggerRefresh } = useDataRefresh()
 
   // Subscribe to dragStore focused ticket changes
   useEffect(() => {
@@ -182,15 +297,169 @@ export default function UnscheduledSidebar({
     })
   }
 
-  // ---------- action stubs ----------
-  const handleCreate = () => {
-    console.log(`Create new ${activeTab.slice(0, -1)}`)
+  // ---------- CRUD Modal State ----------
+
+  const [modalOpen,    setModalOpen]    = useState(false)
+  const [modalMode,    setModalMode]    = useState('edit')   // 'edit' | 'delete' | 'create'
+  const [modalEntity,  setModalEntity]  = useState(null)     // the raw item being edited/deleted
+  const [modalSaving,  setModalSaving]  = useState(false)
+  const [modalError,   setModalError]   = useState(null)
+
+  // Generic form fields state (keyed by entity type)
+  const [formData, setFormData] = useState({})
+
+  const openEdit   = (item) => { setModalEntity(item); setModalMode('edit');   buildForm(item); setModalError(null); setModalOpen(true) }
+  const openDelete = (item) => { setModalEntity(item); setModalMode('delete'); setModalError(null); setModalOpen(true) }
+  const openCreate = ()     => { setModalEntity(null); setModalMode('create'); buildForm(null); setModalError(null); setModalOpen(true) }
+
+  function buildForm(item) {
+    switch (activeTab) {
+      case 'courses':
+        setFormData({
+          courseCode:  item?.courseCode  || item?.CourseCode  || '',
+          courseTitle: item?.courseTitle || item?.CourseTitle || '',
+          credit:      item?.credit      ?? item?.Credit      ?? '',
+          courseType:  item?.courseType  || item?.CourseType  || '',
+        })
+        break
+      case 'faculties':
+        setFormData({
+          facultyUid:    item?.facultyUid    || item?.FacultyUID    || '',
+          facultyName:   item?.facultyName   || item?.FacultyName   || '',
+          facultyDomain: item?.facultyDomain || item?.FacultyDomain || '',
+          currentLoad:   item?.currentLoad   ?? item?.CurrentLoad   ?? 0,
+          expectedLoad:  item?.expectedLoad  ?? item?.ExpectedLoad  ?? 0,
+        })
+        break
+      case 'sections':
+        setFormData({
+          sectionId:   item?.sectionId   || item?.SectionId   || '',
+          programName: item?.programName || item?.ProgramName || '',
+          semester:    item?.semester    ?? item?.Semester    ?? '',
+          strength:    item?.strength    ?? item?.Strength    ?? '',
+        })
+        break
+      case 'rooms':
+        setFormData({
+          roomNo:          item?.roomNo          || item?.RoomNo          || '',
+          seatingCapacity: item?.seatingCapacity ?? item?.SeatingCapacity ?? '',
+          roomType:        item?.roomType        ?? item?.RoomType        ?? 0,
+          level:           item?.level           ?? item?.Level           ?? '',
+          building:        item?.building        || item?.Building        || '',
+        })
+        break
+      default:
+        setFormData({})
+    }
   }
-  const handleEdit = (item) => {
-    console.log('Edit', item)
+
+  const handleEdit   = (item) => openEdit(item)
+  const handleDelete = (item) => openDelete(item)
+  const handleCreate = ()     => openCreate()
+
+  const getEntityId = (item) => {
+    switch (activeTab) {
+      case 'courses':   return item?.courseCode  || item?.CourseCode
+      case 'faculties': return item?.facultyUid  || item?.FacultyUID
+      case 'sections':  return item?.sectionId   || item?.SectionId
+      case 'rooms':     return item?.roomNo      || item?.RoomNo
+      default:          return null
+    }
   }
-  const handleDelete = (item) => {
-    console.log('Delete', item)
+
+  const handleSaveEdit = async () => {
+    setModalSaving(true)
+    setModalError(null)
+    const id = getEntityId(modalEntity)
+    try {
+      let url, body
+      switch (activeTab) {
+        case 'courses':
+          url  = `http://localhost:8080/course/update/${encodeURIComponent(id)}`
+          body = { courseCode: formData.courseCode, courseTitle: formData.courseTitle, credit: Number(formData.credit), courseType: formData.courseType }
+          break
+        case 'faculties':
+          url  = `http://localhost:8080/faculty/update/${encodeURIComponent(id)}`
+          body = { FacultyUID: formData.facultyUid, FacultyName: formData.facultyName, FacultyDomain: formData.facultyDomain, CurrentLoad: Number(formData.currentLoad), ExpectedLoad: Number(formData.expectedLoad) }
+          break
+        case 'sections':
+          url  = `http://localhost:8080/section/update/${encodeURIComponent(id)}`
+          body = { sectionId: formData.sectionId, programName: formData.programName, semester: Number(formData.semester), strength: Number(formData.strength) }
+          break
+        case 'rooms':
+          url  = `http://localhost:8080/room/update/${encodeURIComponent(id)}`
+          body = { roomNo: formData.roomNo, seatingCapacity: Number(formData.seatingCapacity), roomType: Number(formData.roomType), level: Number(formData.level), building: formData.building }
+          break
+        default: return
+      }
+      const res = await fetch(url, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!res.ok) { const txt = await res.text().catch(() => ''); throw new Error(txt || `HTTP ${res.status}`) }
+      triggerRefresh(activeTab === 'courses' ? 'course' : activeTab === 'faculties' ? 'faculty' : activeTab === 'sections' ? 'section' : 'room')
+      setModalOpen(false)
+    } catch (e) {
+      setModalError(e.message)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleSaveCreate = async () => {
+    setModalSaving(true)
+    setModalError(null)
+    try {
+      let url, body
+      switch (activeTab) {
+        case 'courses':
+          url  = `http://localhost:8080/course/create`
+          body = { courseCode: formData.courseCode, courseTitle: formData.courseTitle, credit: Number(formData.credit), courseType: formData.courseType }
+          break
+        case 'faculties':
+          url  = `http://localhost:8080/faculty/create`
+          body = { FacultyUID: formData.facultyUid, FacultyName: formData.facultyName, FacultyDomain: formData.facultyDomain, CurrentLoad: Number(formData.currentLoad), ExpectedLoad: Number(formData.expectedLoad) }
+          break
+        case 'sections':
+          url  = `http://localhost:8080/section/create`
+          body = { sectionId: formData.sectionId, programName: formData.programName, semester: Number(formData.semester), strength: Number(formData.strength) }
+          break
+        case 'rooms':
+          url  = `http://localhost:8080/room/create`
+          body = { roomNo: formData.roomNo, seatingCapacity: Number(formData.seatingCapacity), roomType: Number(formData.roomType), level: Number(formData.level), building: formData.building }
+          break
+        default: return
+      }
+      const res = await fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      if (!res.ok) { const txt = await res.text().catch(() => ''); throw new Error(txt || `HTTP ${res.status}`) }
+      triggerRefresh(activeTab === 'courses' ? 'course' : activeTab === 'faculties' ? 'faculty' : activeTab === 'sections' ? 'section' : 'room')
+      setModalOpen(false)
+    } catch (e) {
+      setModalError(e.message)
+    } finally {
+      setModalSaving(false)
+    }
+  }
+
+  const handleConfirmDelete = async () => {
+    setModalSaving(true)
+    setModalError(null)
+    const id = getEntityId(modalEntity)
+    try {
+      let url
+      switch (activeTab) {
+        case 'courses':   url = `http://localhost:8080/course/delete/code/${encodeURIComponent(id)}`; break
+        case 'faculties': url = `http://localhost:8080/faculty/delete/${encodeURIComponent(id)}`; break
+        case 'sections':  url = `http://localhost:8080/section/delete/${encodeURIComponent(id)}`; break
+        case 'rooms':     url = `http://localhost:8080/room/delete/${encodeURIComponent(id)}`; break
+        default: return
+      }
+      const res = await fetch(url, { method: 'DELETE' })
+      if (!res.ok && res.status !== 204) { const txt = await res.text().catch(() => ''); throw new Error(txt || `HTTP ${res.status}`) }
+      triggerRefresh(activeTab === 'courses' ? 'course' : activeTab === 'faculties' ? 'faculty' : activeTab === 'sections' ? 'section' : 'room')
+      setModalOpen(false)
+    } catch (e) {
+      setModalError(e.message)
+    } finally {
+      setModalSaving(false)
+    }
   }
 
   // ---------- label helpers ----------
@@ -199,11 +468,155 @@ export default function UnscheduledSidebar({
 
   return (
     <aside className='w-64 bg-background-light dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 flex flex-col shrink-0 shadow-[4px_0_24px_-12px_rgba(0,0,0,0.1)] z-10 relative'>
+
+      {/* ── CRUD Modal ───────────────────────────────────────────────────────── */}
+      {modalOpen && (
+        <div className='fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm'>
+          <div className='bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden'>
+
+            {/* Modal Header */}
+            <div className={`px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 ${
+              modalMode === 'delete'
+                ? 'bg-red-50 dark:bg-red-900/20'
+                : 'bg-slate-50 dark:bg-slate-800/60'
+            }`}>
+              <span className={`material-symbols-outlined text-xl ${
+                modalMode === 'delete' ? 'text-red-500' : modalMode === 'create' ? 'text-emerald-500' : 'text-primary'
+              }`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {modalMode === 'delete' ? 'delete' : modalMode === 'create' ? 'add_circle' : 'edit'}
+              </span>
+              <div>
+                <h3 className='font-bold text-slate-800 dark:text-white text-sm'>
+                  {modalMode === 'delete' ? `Delete ${tabLabel.slice(0,-1)}` : modalMode === 'create' ? `Add ${tabLabel.slice(0,-1)}` : `Edit ${tabLabel.slice(0,-1)}`}
+                </h3>
+                {modalMode !== 'delete' && <p className='text-xs text-slate-400 mt-0.5'>All fields required unless marked optional</p>}
+              </div>
+              <button onClick={() => setModalOpen(false)} className='ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors'>
+                <span className='material-symbols-outlined text-lg'>close</span>
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <div className='px-6 py-5 space-y-3'>
+              {modalMode === 'delete' ? (
+                <div className='space-y-3'>
+                  <p className='text-sm text-slate-600 dark:text-slate-400'>
+                    Are you sure you want to delete this {activeTab.slice(0,-1)}?
+                    This action <strong className='text-red-500'>cannot be undone</strong>.
+                  </p>
+                  <div className='p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs font-mono text-red-700 dark:text-red-300'>
+                    {getEntityId(modalEntity)}
+                  </div>
+                </div>
+              ) : (
+                /* Edit / Create Form */
+                <div className='space-y-3'>
+                  {activeTab === 'courses' && (
+                    <>
+                      <Field label='Course Code' value={formData.courseCode} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, courseCode: v}))} />
+                      <Field label='Course Title' value={formData.courseTitle} onChange={v => setFormData(p => ({...p, courseTitle: v}))} />
+                      <Field label='Credits' type='number' value={formData.credit} onChange={v => setFormData(p => ({...p, credit: v}))} />
+                      <Field label='Course Type (optional)' value={formData.courseType} onChange={v => setFormData(p => ({...p, courseType: v}))} />
+                    </>
+                  )}
+                  {activeTab === 'faculties' && (
+                    <>
+                      <Field label='Faculty UID' value={formData.facultyUid} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, facultyUid: v}))} />
+                      <Field label='Faculty Name' value={formData.facultyName} onChange={v => setFormData(p => ({...p, facultyName: v}))} />
+                      <Field label='Domain / Department' value={formData.facultyDomain} onChange={v => setFormData(p => ({...p, facultyDomain: v}))} />
+                      <div className='grid grid-cols-2 gap-2'>
+                        <Field label='Current Load' type='number' value={formData.currentLoad} onChange={v => setFormData(p => ({...p, currentLoad: v}))} />
+                        <Field label='Expected Load' type='number' value={formData.expectedLoad} onChange={v => setFormData(p => ({...p, expectedLoad: v}))} />
+                      </div>
+                    </>
+                  )}
+                  {activeTab === 'sections' && (
+                    <>
+                      <Field label='Section ID' value={formData.sectionId} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, sectionId: v}))} />
+                      <Field label='Program Name' value={formData.programName} onChange={v => setFormData(p => ({...p, programName: v}))} />
+                      <div className='grid grid-cols-2 gap-2'>
+                        <Field label='Semester' type='number' value={formData.semester} onChange={v => setFormData(p => ({...p, semester: v}))} />
+                        <Field label='Strength' type='number' value={formData.strength} onChange={v => setFormData(p => ({...p, strength: v}))} />
+                      </div>
+                    </>
+                  )}
+                  {activeTab === 'rooms' && (
+                    <>
+                      <Field label='Room No' value={formData.roomNo} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, roomNo: v}))} />
+                      <Field label='Building (optional)' value={formData.building} onChange={v => setFormData(p => ({...p, building: v}))} />
+                      <div className='grid grid-cols-2 gap-2'>
+                        <Field label='Capacity' type='number' value={formData.seatingCapacity} onChange={v => setFormData(p => ({...p, seatingCapacity: v}))} />
+                        <Field label='Floor / Level' type='number' value={formData.level} onChange={v => setFormData(p => ({...p, level: v}))} />
+                      </div>
+                      <div>
+                        <label className='block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1'>Room Type</label>
+                        <select
+                          value={formData.roomType}
+                          onChange={e => setFormData(p => ({...p, roomType: e.target.value}))}
+                          className='w-full px-3 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 transition-all'
+                        >
+                          <option value={0}>Lecture Hall</option>
+                          <option value={1}>Lab</option>
+                          <option value={2}>Seminar Hall</option>
+                        </select>
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+
+              {/* Error */}
+              {modalError && (
+                <div className='px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-400 flex items-start gap-2'>
+                  <span className='material-symbols-outlined text-sm shrink-0 mt-0.5'>error</span>
+                  <span>{modalError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className='px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex gap-3'>
+              <button
+                onClick={() => setModalOpen(false)}
+                className='flex-1 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all'
+              >Cancel</button>
+              {modalMode === 'delete' ? (
+                <button
+                  onClick={handleConfirmDelete}
+                  disabled={modalSaving}
+                  className='flex-1 px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-red-500/20 disabled:opacity-50'
+                >
+                  {modalSaving ? <><span className='material-symbols-outlined text-sm animate-spin'>refresh</span>Deleting…</> : <><span className='material-symbols-outlined text-sm'>delete</span>Delete</>}
+                </button>
+              ) : (
+                <button
+                  onClick={modalMode === 'create' ? handleSaveCreate : handleSaveEdit}
+                  disabled={modalSaving}
+                  className='flex-1 px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/90 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-primary/20 disabled:opacity-50'
+                >
+                  {modalSaving ? <><span className='material-symbols-outlined text-sm animate-spin'>refresh</span>Saving…</> : <><span className='material-symbols-outlined text-sm'>save</span>Save</>}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header — same height as DashboardNavbar (h-12 = 48px) so borders align */}
       <div className='h-12 flex items-center px-4 border-b border-slate-200 dark:border-slate-700 bg-surface dark:bg-surface-dark shrink-0'>
         <h2 className='text-xs font-bold uppercase tracking-wider text-slate-500'>
           Unscheduled
         </h2>
+        {/* Add button — visible for entity tabs (not tickets) */}
+        {activeTab !== 'tickets' && (
+          <button
+            onClick={handleCreate}
+            title={`Add ${tabLabel.slice(0,-1)}`}
+            className='ml-auto w-7 h-7 flex items-center justify-center rounded-lg bg-primary/10 hover:bg-primary/20 text-primary transition-all'
+          >
+            <span className='material-symbols-outlined text-[16px]' style={{ fontVariationSettings: "'FILL' 1" }}>add</span>
+          </button>
+        )}
       </div>
 
       {/* Section dropdown REMOVED — now in filter panel below */}
@@ -288,13 +701,14 @@ export default function UnscheduledSidebar({
               const courseCode  = item.courseCode  || item.CourseCode  || ''
               const courseTitle = item.courseTitle || item.CourseTitle || ''
               const credit      = item.credit      ?? item.Credit
+              const courseType  = item.courseType  || item.CourseType  || ''
               return (
                 <CourseCard
                   key={courseCode}
                   course={courseCode}
                   title={courseTitle}
                   credits={credit}
-                  teacher={'TBA'}
+                  courseType={courseType}
                   color='blue'
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
@@ -305,11 +719,18 @@ export default function UnscheduledSidebar({
               const facultyUID    = item.facultyUid    || item.FacultyUID    || ''
               const facultyName   = item.facultyName   || item.FacultyName   || ''
               const facultyDomain = item.facultyDomain || item.FacultyDomain || ''
+              const designation   = item.designation   || item.Designation   || ''
+              const currentLoad   = item.currentLoad   ?? item.CurrentLoad   ?? 0
+              const expectedLoad  = item.expectedLoad  ?? item.ExpectedLoad  ?? 0
               return (
                 <FacultyCard
                   key={facultyUID}
+                  uid={facultyUID}
                   name={facultyName}
                   department={facultyDomain}
+                  designation={designation}
+                  currentLoad={currentLoad}
+                  expectedLoad={expectedLoad}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
@@ -320,6 +741,7 @@ export default function UnscheduledSidebar({
               const capacity = item.seatingCapacity ?? item.SeatingCapacity
               const rType    = item.roomType        ?? item.RoomType
               const level    = item.level           ?? item.Level
+              const building = item.building        || item.Building        || ''
               return (
                 <RoomCard
                   key={roomNo}
@@ -327,6 +749,7 @@ export default function UnscheduledSidebar({
                   capacity={capacity}
                   type={ROOM_TYPE_MAP[rType] || 'Other'}
                   floor={level}
+                  building={building}
                   onEdit={() => handleEdit(item)}
                   onDelete={() => handleDelete(item)}
                 />
@@ -497,16 +920,21 @@ export default function UnscheduledSidebar({
         })}
       </div>
 
-      {/* Footer */}
-      <div className='p-2 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-center'>
-        <p className='text-[11px] text-slate-400'>
-          {activeTab === 'tickets'
-            ? `${data.length} unscheduled ticket${data.length !== 1 ? 's' : ''}`
-            : `${data.length} unscheduled`}
+      {/* Footer — count + Delete All */}
+      <div className='border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 shrink-0'>
+        {/* Count row */}
+        <div className='px-3 py-1.5 flex items-center justify-between'>
+          <p className='text-[10px] text-slate-400'>
+            {activeTab === 'tickets'
+              ? `${data.length} unscheduled ticket${data.length !== 1 ? 's' : ''}`
+              : `${data.length} item${data.length !== 1 ? 's' : ''}`}
+          </p>
           {activeTab === 'tickets' && data.length > 0 && (
-            <span className='block text-[9px] text-slate-400 mt-0.5'>← drag to place in grid</span>
+            <span className='text-[9px] text-slate-400 italic'>← drag to place</span>
           )}
-        </p>
+        </div>
+        {/* Delete All row — only for entity tabs */}
+        <DeleteAllBar activeTab={activeTab} onDeleted={triggerRefresh} />
       </div>
     </aside>
   )

@@ -618,7 +618,7 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                       {overlayActive && !isOver && (
                         <div className={`absolute inset-0 pointer-events-none z-0 rounded transition-all duration-200 ${
                           isFocusedSlot ? 'ring-2 ring-inset ring-violet-400/50 dark:ring-violet-500/50' :
-                          isFacultyBusy ? 'ring-1 ring-inset ring-amber-300/60 dark:ring-amber-600/40' :
+                          isFacultyBusy ? 'ring-2 ring-inset ring-amber-700/80 dark:ring-amber-400/60' :
                           isFacultyFree ? 'ring-1 ring-inset ring-emerald-300/40 dark:ring-emerald-700/30' :
                           ''
                         }`} />

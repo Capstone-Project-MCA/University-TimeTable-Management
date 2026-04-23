@@ -66,13 +66,93 @@ export default function CoursesAndSections() {
       )
     : sections;
 
-  // ── Action stubs ────────────────────────────────────────
-  const handleAddCourse = () => console.log("Add new course");
-  const handleAddSection = () => console.log("Add new section");
-  const handleEditCourse = (item) => console.log("Edit course", item);
-  const handleDeleteCourse = (item) => console.log("Delete course", item);
-  const handleEditSection = (item) => console.log("Edit section", item);
-  const handleDeleteSection = (item) => console.log("Delete section", item);
+  const { triggerRefresh } = useDataRefresh();
+
+  // ── Modal state ──────────────────────────────────────────────────────────
+  const [modalOpen,   setModalOpen]   = useState(false);
+  const [modalMode,   setModalMode]   = useState('edit');  // 'edit' | 'delete' | 'create'
+  const [modalType,   setModalType]   = useState('course'); // 'course' | 'section'
+  const [modalEntity, setModalEntity] = useState(null);
+  const [modalSaving, setModalSaving] = useState(false);
+  const [modalError,  setModalError]  = useState(null);
+  const [formData,    setFormData]    = useState({});
+
+  function buildCourseForm(item) {
+    setFormData({
+      courseCode:  item?.courseCode  || item?.CourseCode  || '',
+      courseTitle: item?.courseTitle || item?.CourseTitle || '',
+      credit:      item?.credit      ?? item?.Credit      ?? '',
+      courseType:  item?.courseType  || item?.CourseType  || '',
+    });
+  }
+  function buildSectionForm(item) {
+    setFormData({
+      sectionId:   item?.sectionId   || item?.SectionId   || '',
+      programName: item?.programName || item?.ProgramName || '',
+      semester:    item?.semester    ?? item?.Semester    ?? '',
+      strength:    item?.strength    ?? item?.Strength    ?? '',
+    });
+  }
+
+  const handleAddCourse    = () => { setModalType('course');  setModalMode('create'); buildCourseForm(null);  setModalError(null); setModalOpen(true); };
+  const handleAddSection   = () => { setModalType('section'); setModalMode('create'); buildSectionForm(null); setModalError(null); setModalOpen(true); };
+  const handleEditCourse   = (item) => { setModalType('course');  setModalMode('edit');   buildCourseForm(item);  setModalEntity(item); setModalError(null); setModalOpen(true); };
+  const handleDeleteCourse = (item) => { setModalType('course');  setModalMode('delete'); setModalEntity(item); setModalError(null); setModalOpen(true); };
+  const handleEditSection  = (item) => { setModalType('section'); setModalMode('edit');   buildSectionForm(item); setModalEntity(item); setModalError(null); setModalOpen(true); };
+  const handleDeleteSection= (item) => { setModalType('section'); setModalMode('delete'); setModalEntity(item); setModalError(null); setModalOpen(true); };
+
+  const getEntityId = () => {
+    if (modalType === 'course')  return modalEntity?.courseCode  || modalEntity?.CourseCode;
+    if (modalType === 'section') return modalEntity?.sectionId   || modalEntity?.SectionId;
+    return null;
+  };
+
+  const handleSave = async () => {
+    setModalSaving(true); setModalError(null);
+    try {
+      let url, body, method;
+      if (modalMode === 'create') {
+        method = 'POST';
+        if (modalType === 'course') {
+          url  = 'http://localhost:8080/course/create';
+          body = { courseCode: formData.courseCode, courseTitle: formData.courseTitle, credit: Number(formData.credit), courseType: formData.courseType };
+        } else {
+          url  = 'http://localhost:8080/section/create';
+          body = { sectionId: formData.sectionId, programName: formData.programName, semester: Number(formData.semester), strength: Number(formData.strength) };
+        }
+      } else {
+        method = 'PUT';
+        const id = getEntityId();
+        if (modalType === 'course') {
+          url  = `http://localhost:8080/course/update/${encodeURIComponent(id)}`;
+          body = { courseCode: formData.courseCode, courseTitle: formData.courseTitle, credit: Number(formData.credit), courseType: formData.courseType };
+        } else {
+          url  = `http://localhost:8080/section/update/${encodeURIComponent(id)}`;
+          body = { sectionId: formData.sectionId, programName: formData.programName, semester: Number(formData.semester), strength: Number(formData.strength) };
+        }
+      }
+      const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      if (!res.ok) { const txt = await res.text().catch(() => ''); throw new Error(txt || `HTTP ${res.status}`); }
+      triggerRefresh(modalType);
+      setModalOpen(false);
+    } catch (e) { setModalError(e.message); }
+    finally { setModalSaving(false); }
+  };
+
+  const handleConfirmDelete = async () => {
+    setModalSaving(true); setModalError(null);
+    const id = getEntityId();
+    try {
+      const url = modalType === 'course'
+        ? `http://localhost:8080/course/delete/code/${encodeURIComponent(id)}`
+        : `http://localhost:8080/section/delete/${encodeURIComponent(id)}`;
+      const res = await fetch(url, { method: 'DELETE' });
+      if (!res.ok && res.status !== 204) { const txt = await res.text().catch(() => ''); throw new Error(txt || `HTTP ${res.status}`); }
+      triggerRefresh(modalType);
+      setModalOpen(false);
+    } catch (e) { setModalError(e.message); }
+    finally { setModalSaving(false); }
+  };
 
   // ── Skeleton loader ─────────────────────────────────────
   const SkeletonCard = () => (
@@ -86,8 +166,104 @@ export default function CoursesAndSections() {
     </div>
   );
 
+  const Field = ({ label, value, onChange, type = 'text', disabled = false }) => (
+    <div>
+      <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1">{label}</label>
+      <input
+        type={type}
+        value={value ?? ''}
+        onChange={e => onChange?.(e.target.value)}
+        disabled={disabled}
+        className={`w-full px-3 py-2 text-xs rounded-lg border transition-all focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary/50 ${
+          disabled
+            ? 'bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400 cursor-not-allowed'
+            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200'
+        }`}
+      />
+    </div>
+  );
+
   return (
-    <div className="flex-1 overflow-auto p-6">
+    <div className="flex-1 overflow-auto p-6 relative">
+
+      {/* ── CRUD Modal ─────────────────────────────────────────────────── */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-md overflow-hidden">
+            {/* Header */}
+            <div className={`px-6 py-4 border-b border-slate-200 dark:border-slate-700 flex items-center gap-3 ${modalMode === 'delete' ? 'bg-red-50 dark:bg-red-900/20' : 'bg-slate-50 dark:bg-slate-800/60'}`}>
+              <span className={`material-symbols-outlined text-xl ${modalMode === 'delete' ? 'text-red-500' : modalMode === 'create' ? 'text-emerald-500' : 'text-primary'}`} style={{ fontVariationSettings: "'FILL' 1" }}>
+                {modalMode === 'delete' ? 'delete' : modalMode === 'create' ? 'add_circle' : 'edit'}
+              </span>
+              <div>
+                <h3 className="font-bold text-slate-800 dark:text-white text-sm">
+                  {modalMode === 'delete' ? `Delete ${modalType}` : modalMode === 'create' ? `Add ${modalType}` : `Edit ${modalType}`}
+                </h3>
+                {modalMode !== 'delete' && <p className="text-xs text-slate-400 mt-0.5">All fields required unless marked optional</p>}
+              </div>
+              <button onClick={() => setModalOpen(false)} className="ml-auto text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="px-6 py-5 space-y-3">
+              {modalMode === 'delete' ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-slate-600 dark:text-slate-400">
+                    Are you sure you want to delete this {modalType}? This action <strong className="text-red-500">cannot be undone</strong>.
+                  </p>
+                  <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs font-mono text-red-700 dark:text-red-300">
+                    {getEntityId()}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {modalType === 'course' && (
+                    <>
+                      <Field label="Course Code" value={formData.courseCode} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, courseCode: v}))} />
+                      <Field label="Course Title" value={formData.courseTitle} onChange={v => setFormData(p => ({...p, courseTitle: v}))} />
+                      <Field label="Credits" type="number" value={formData.credit} onChange={v => setFormData(p => ({...p, credit: v}))} />
+                      <Field label="Course Type (optional)" value={formData.courseType} onChange={v => setFormData(p => ({...p, courseType: v}))} />
+                    </>
+                  )}
+                  {modalType === 'section' && (
+                    <>
+                      <Field label="Section ID" value={formData.sectionId} disabled={modalMode === 'edit'} onChange={v => setFormData(p => ({...p, sectionId: v}))} />
+                      <Field label="Program Name" value={formData.programName} onChange={v => setFormData(p => ({...p, programName: v}))} />
+                      <div className="grid grid-cols-2 gap-2">
+                        <Field label="Semester" type="number" value={formData.semester} onChange={v => setFormData(p => ({...p, semester: v}))} />
+                        <Field label="Strength" type="number" value={formData.strength} onChange={v => setFormData(p => ({...p, strength: v}))} />
+                      </div>
+                    </>
+                  )}
+                </div>
+              )}
+              {modalError && (
+                <div className="px-3 py-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-400 flex items-start gap-2">
+                  <span className="material-symbols-outlined text-sm shrink-0 mt-0.5">error</span>
+                  <span>{modalError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex gap-3">
+              <button onClick={() => setModalOpen(false)} className="flex-1 px-4 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all">Cancel</button>
+              {modalMode === 'delete' ? (
+                <button onClick={handleConfirmDelete} disabled={modalSaving} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-red-500 hover:bg-red-600 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                  {modalSaving ? <><span className="material-symbols-outlined text-sm animate-spin">refresh</span>Deleting…</> : <><span className="material-symbols-outlined text-sm">delete</span>Delete</>}
+                </button>
+              ) : (
+                <button onClick={handleSave} disabled={modalSaving} className="flex-1 px-4 py-2 text-sm font-bold text-white bg-primary hover:bg-primary/90 rounded-xl transition-all flex items-center justify-center gap-2 disabled:opacity-50">
+                  {modalSaving ? <><span className="material-symbols-outlined text-sm animate-spin">refresh</span>Saving…</> : <><span className="material-symbols-outlined text-sm">save</span>Save</>}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Page header */}
       <div className="mb-6">
         <h1 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">

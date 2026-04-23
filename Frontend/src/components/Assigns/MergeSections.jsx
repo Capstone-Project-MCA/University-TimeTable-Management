@@ -371,7 +371,7 @@ export default function MergeSections() {
         document.body
       )}
 
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="px-6 py-6">
 
         {/* ── Error Banner ── */}
         {fetchError && (
@@ -383,14 +383,14 @@ export default function MergeSections() {
         )}
         
         {/* ── Header Area ── */}
-        <header className="mb-10 animate-fade-in-up">
-            <h1 className="text-3xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 tracking-tight">
-                <div className="w-12 h-12 rounded-2xl bg-primary flex items-center justify-center shadow-xl">
-                    <span className="material-symbols-outlined text-white text-2xl">group_work</span>
+        <header className="mb-6 animate-fade-in-up">
+            <h1 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center gap-3 tracking-tight">
+                <div className="w-10 h-10 rounded-2xl bg-primary flex items-center justify-center shadow-xl">
+                    <span className="material-symbols-outlined text-white text-xl">group_work</span>
                 </div>
                 Course Mapping & Merge
             </h1>
-            <p className="text-slate-500 dark:text-slate-400 mt-2 font-medium">
+            <p className="text-slate-500 dark:text-slate-400 mt-1 text-sm font-medium">
                 Combine specific groups across different sections into merge groups under a specific Mapping Type (L/T/P).
             </p>
         </header>

@@ -49,6 +49,10 @@ const BulkAssignment = () => {
   const [errorList, setErrorList] = useState([]);
   const [showErrors, setShowErrors] = useState(false);
 
+  // Pre-check conflict dialog
+  const [conflictDialogOpen, setConflictDialogOpen] = useState(false);
+  const [conflictList, setConflictList] = useState([]); // [{section, course}] already assigned
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
@@ -106,7 +110,44 @@ const BulkAssignment = () => {
 
   const handleAssign = async () => {
     if (selectedSections.length === 0 || selectedCourses.length === 0) return;
+
+    // ── Step 1: Pre-check for already-assigned combos ────────────────────
     setAssigning(true);
+    setResult(null);
+    setErrorList([]);
+    setShowErrors(false);
+    try {
+      const mappingsRes = await fetch(`${API_BASE}/mappings`);
+      const allMappings = mappingsRes.ok ? await mappingsRes.json() : [];
+      const conflicts = [];
+      for (const section of selectedSections) {
+        const sid = getSecId(section);
+        for (const course of selectedCourses) {
+          const cid = getCourseCode(course);
+          const alreadyExists = allMappings.some(m =>
+            (m.section || m.Section || '') === sid &&
+            ((m.courseCode || m.coursecode || m.Coursecode || '') === cid)
+          );
+          if (alreadyExists) conflicts.push({ section: sid, course: cid });
+        }
+      }
+      if (conflicts.length > 0) {
+        // Show dialog — user decides continue or go back
+        setConflictList(conflicts);
+        setConflictDialogOpen(true);
+        setAssigning(false);
+        return;
+      }
+    } catch (e) {
+      // If pre-check fails, proceed anyway and let backend handle duplicates
+    }
+
+    await doAssign();
+  };
+
+  const doAssign = async () => {
+    setAssigning(true);
+    setConflictDialogOpen(false);
     setResult(null);
     setErrorList([]);
     setShowErrors(false);
@@ -124,8 +165,6 @@ const BulkAssignment = () => {
         const errData = await res.json().catch(() => null);
         const rawMessage = errData?.message || `Server error (${res.status})`;
 
-        // Parse inline duplicate-entry warnings from the message
-        // Backend now returns: "Courses are already assigned to sections: Course with id - X connected to Section with id - Y already exists, ..."
         const colonIdx = rawMessage.indexOf(":");
         if (colonIdx !== -1 && rawMessage.toLowerCase().includes("already assigned")) {
           const detailsPart = rawMessage.substring(colonIdx + 1).trim();
@@ -140,9 +179,6 @@ const BulkAssignment = () => {
       }
 
       const data = await res.json();
-      // Backend returns List<Pair<SectionDto, List<CourseDto>>>
-      // Jackson serializes Map.Entry as { "sectionToString": [courses...] }
-      // so we extract values from each object entry
       const totalCreated = Array.isArray(data)
         ? data.reduce((sum, entry) => {
             const vals = Object.values(entry);
@@ -162,6 +198,72 @@ const BulkAssignment = () => {
 
   return (
     <div className="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen flex flex-col">
+
+      {/* ── Conflict Pre-check Dialog ──────────────────────────────────────── */}
+      {conflictDialogOpen && (
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl border border-amber-200 dark:border-amber-800 shadow-2xl shadow-amber-900/20 max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+            {/* Dialog header */}
+            <div className="px-6 py-4 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-200 dark:border-amber-800 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center shrink-0">
+                <span className="material-symbols-outlined text-amber-500 text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>warning</span>
+              </div>
+              <div>
+                <h3 className="font-bold text-amber-800 dark:text-amber-300 text-sm">Already Assigned Detected</h3>
+                <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">Some section-course pairs are already assigned</p>
+              </div>
+              <button
+                onClick={() => setConflictDialogOpen(false)}
+                className="ml-auto text-amber-400 hover:text-amber-600 dark:hover:text-amber-300 transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">close</span>
+              </button>
+            </div>
+
+            {/* Conflict list */}
+            <div className="px-6 py-4 space-y-3 max-h-64 overflow-y-auto">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                The following <span className="font-bold text-amber-600 dark:text-amber-400">{conflictList.length}</span> assignment{conflictList.length !== 1 ? 's' : ''} already exist:
+              </p>
+              <div className="space-y-1.5">
+                {conflictList.map((c, i) => (
+                  <div key={i} className="flex items-center gap-2 px-3 py-2 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg text-xs">
+                    <span className="material-symbols-outlined text-amber-500 text-sm shrink-0" style={{ fontVariationSettings: "'FILL' 1" }}>link</span>
+                    <span className="font-mono font-bold text-amber-700 dark:text-amber-300">{c.course}</span>
+                    <span className="text-amber-500/60">→</span>
+                    <span className="font-mono font-bold text-amber-700 dark:text-amber-300">{c.section}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Question + actions */}
+            <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 space-y-3">
+              <p className="text-sm text-slate-600 dark:text-slate-400">
+                Do you want to <strong>continue assigning</strong> (already-assigned ones will be skipped), or <strong>go back</strong> and remove them from the selection?
+              </p>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setConflictDialogOpen(false)}
+                  className="flex-1 px-4 py-2.5 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all flex items-center justify-center gap-2"
+                >
+                  <span className="material-symbols-outlined text-lg">arrow_back</span>
+                  Go Back & Remove
+                </button>
+                <button
+                  onClick={doAssign}
+                  disabled={assigning}
+                  className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                >
+                  {assigning
+                    ? <><span className="material-symbols-outlined text-lg animate-spin">refresh</span>Assigning…</>
+                    : <><span className="material-symbols-outlined text-lg">skip_next</span>Continue Anyway</>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       <main className="flex flex-1 overflow-hidden">
 
