@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [selectedSection, setSelectedSection] = useState("All");
   const [selectedFaculty, setSelectedFaculty] = useState("All");
   const [selectedCourse,  setSelectedCourse]  = useState("All");
+  const [exportOpen, setExportOpen]           = useState(false);
 
   const isAssignView = activeTab === "facultyAssign" || activeTab === "sectionCourseAssign" || activeTab === "smartAssign" || activeTab === "mergeSections";
 
@@ -41,11 +42,13 @@ export default function Dashboard() {
                 filterCourse={selectedCourse}    setFilterCourse={setSelectedCourse}
               />
               <main className="flex-1 flex flex-col min-w-0 bg-white dark:bg-slate-950 relative">
-                <DashboardNavbar activeTab={activeTab} />
+                <DashboardNavbar activeTab={activeTab} onExport={() => setExportOpen(true)} />
                 <TimetableGrid
                   filterSection={selectedSection}
                   filterFaculty={selectedFaculty}
                   filterCourse={selectedCourse}
+                  exportOpen={exportOpen}
+                  setExportOpen={setExportOpen}
                 />
               </main>
             </>

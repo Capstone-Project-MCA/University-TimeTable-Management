@@ -243,11 +243,11 @@ export default function UnscheduledSidebar({
     default: rawData = []
   }
 
-  // Derive filter options from ALL unscheduled tickets (irrespective of other filters)
-  const unscheduledTickets = tickets.filter(t => !(t.day || t.Day) || !(t.time || t.Time))
-  const sectionOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.section  || t.Section  || '').filter(Boolean))).sort()]
-  const facultyOptions  = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.facultyUid || t.facultyUID || t.FacultyUID || '').filter(Boolean))).sort()]
-  const courseOptions   = ['All', ...Array.from(new Set(unscheduledTickets.map(t => t.courseCode || t.coursecode || t.Coursecode || '').filter(Boolean))).sort()]
+  // Derive filter options from ALL tickets (scheduled + unscheduled) so sections never
+  // disappear from the dropdown even after all their tickets have been placed on the grid.
+  const sectionOptions  = ['All', ...Array.from(new Set(tickets.map(t => t.section  || t.Section  || '').filter(Boolean))).sort()]
+  const facultyOptions  = ['All', ...Array.from(new Set(tickets.map(t => t.facultyUid || t.facultyUID || t.FacultyUID || '').filter(Boolean))).sort()]
+  const courseOptions   = ['All', ...Array.from(new Set(tickets.map(t => t.courseCode || t.coursecode || t.Coursecode || '').filter(Boolean))).sort()]
   const activeFilterCount = [filterSection, filterFaculty, filterCourse].filter(v => v !== 'All').length
 
   // ---------- search filter ----------

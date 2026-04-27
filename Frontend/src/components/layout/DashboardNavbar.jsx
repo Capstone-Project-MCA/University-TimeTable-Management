@@ -6,7 +6,7 @@ import { useDataRefresh } from '../../context/DataRefreshContext';
 
 const API_BASE = "http://localhost:8080";
 
-export default function DashboardNavbar({ activeTab }) {
+export default function DashboardNavbar({ activeTab, onExport }) {
   const { triggerRefresh } = useDataRefresh();
 
   const {
@@ -131,6 +131,16 @@ export default function DashboardNavbar({ activeTab }) {
           {isGenerating ? "progress_activity" : "confirmation_number"}
         </span>
         {isGenerating ? "Generating..." : "Generate Tickets"}
+      </button>
+
+      {/* Export Timetable button */}
+      <button
+        onClick={onExport}
+        title="Export timetable as CSV"
+        className="flex items-center gap-2 px-4 py-1.5 text-sm font-semibold text-teal-700 dark:text-teal-300 bg-teal-50 dark:bg-teal-900/30 border border-teal-200 dark:border-teal-700 hover:bg-teal-100 dark:hover:bg-teal-900/50 rounded-md shadow-sm hover:shadow-md transition-all"
+      >
+        <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>download</span>
+        Export
       </button>
 
       <div className="ml-auto flex items-center gap-4">

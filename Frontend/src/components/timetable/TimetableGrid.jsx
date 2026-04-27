@@ -4,6 +4,350 @@ import { setDraggedTicket, getDraggedTicket, clearDraggedTicket, setFocusedTicke
 
 const API_BASE = 'http://localhost:8080';
 
+/* ── Export helpers ─────────────────────────────────────────────────────── */
+
+// All time slots shown in the grid
+const EXPORT_TIMES = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+const EXPORT_DAYS  = ['Mon','Tue','Wed','Thu','Fri'];
+
+function buildCellHtml(cellTickets, showSection) {
+  if (!cellTickets || cellTickets.length === 0) return '<span style="color:#94a3b8;font-size:11px;">—</span>';
+  return cellTickets.map(t => {
+    const tid       = t.ticketId || t.TicketId || '';
+    const typeMatch = String(tid).match(/([LTP])(\d+)$/);
+    const typeCode  = t.mappingType || t.MappingType || (typeMatch ? typeMatch[1] : '');
+    const course    = t.courseCode || t.coursecode || t.Coursecode || '—';
+    const section   = t.section || t.Section || '';
+    const group     = t.groupNo ?? t.GroupNo ?? '';
+    const faculty   = t.facultyUid || t.facultyUID || t.FacultyUID || '';
+    const lno       = t.lectureNo ?? t.LectureNo ?? '';
+    const typeLabel = { L: 'Lecture', T: 'Tutorial', P: 'Practical' }[typeCode] || typeCode;
+    const typeShort = { L: 'Lec', T: 'Tut', P: 'Prac' }[typeCode] || typeCode;
+    const colors = {
+      L: { bg: '#eff6ff', border: '#93c5fd', badge: '#3b82f6', text: '#1e40af' },
+      T: { bg: '#f5f3ff', border: '#c4b5fd', badge: '#8b5cf6', text: '#5b21b6' },
+      P: { bg: '#f0fdf4', border: '#86efac', badge: '#10b981', text: '#065f46' },
+    };
+    const c = colors[typeCode] || { bg:'#f8fafc', border:'#cbd5e1', badge:'#64748b', text:'#1e293b' };
+    const groupLabel = Number(group) === 0 ? 'All' : group;
+    return `
+      <div style="
+        background:${c.bg};
+        border:1.5px solid ${c.border};
+        border-radius:8px;
+        padding:7px 9px;
+        margin-bottom:4px;
+        font-family:'Segoe UI',Arial,sans-serif;
+      ">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
+          <span style="font-weight:800;font-size:13px;color:#0f172a;letter-spacing:-0.3px;">${course}</span>
+          <span style="
+            background:${c.badge};color:#fff;
+            font-size:9px;font-weight:700;
+            padding:2px 6px;border-radius:20px;
+            letter-spacing:0.5px;text-transform:uppercase;
+          ">${typeShort}</span>
+        </div>
+        ${showSection ? `<div style="font-size:10px;color:#475569;margin-bottom:2px;"><b>Section:</b> ${section} &nbsp;|&nbsp; <b>Group:</b> ${groupLabel}</div>` : `<div style="font-size:10px;color:#475569;margin-bottom:2px;"><b>Group:</b> ${groupLabel}</div>`}
+        <div style="font-size:10px;color:#475569;margin-bottom:2px;"><b>${typeLabel} #</b>${lno}</div>
+        ${faculty ? `<div style="font-size:10px;color:${c.text};font-weight:600;">&#128100; ${faculty}</div>` : ''}
+      </div>`;
+  }).join('');
+}
+
+function exportTimetableAsHtml(tickets, filterType, filterValue) {
+  const DAY_ORDER = { Mon: 0, Tue: 1, Wed: 2, Thu: 3, Fri: 4, Sat: 5, Sun: 6 };
+
+  // Filter to scheduled tickets
+  let rows = tickets.filter(t => (t.day || t.Day) && (t.time || t.Time));
+  if (filterType === 'section' && filterValue && filterValue !== 'All') {
+    rows = rows.filter(t => (t.section || t.Section) === filterValue);
+  } else if (filterType === 'faculty' && filterValue && filterValue !== 'All') {
+    rows = rows.filter(t => (t.facultyUid || t.facultyUID || t.FacultyUID) === filterValue);
+  }
+
+  // Detect which days are actually used (for compact export)
+  const usedDaySet = new Set(rows.map(t => t.day || t.Day).filter(Boolean));
+  const days = EXPORT_DAYS.filter(d => usedDaySet.has(d));
+  if (days.length === 0) return; // nothing to export
+
+  // Build lookup: "Day|HH:MM" -> [tickets]
+  const slotMap = {};
+  rows.forEach(t => {
+    const day  = t.day  || t.Day;
+    const time = String(t.time || t.Time || '').slice(0, 5);
+    const key  = `${day}|${time}`;
+    if (!slotMap[key]) slotMap[key] = [];
+    slotMap[key].push(t);
+  });
+
+  // Detect which time rows have content
+  const usedTimeSet = new Set(rows.map(t => String(t.time || t.Time || '').slice(0,5)));
+  const times = EXPORT_TIMES.filter(t => usedTimeSet.has(t));
+
+  const label      = filterValue && filterValue !== 'All' ? filterValue : 'All';
+  const title      = filterType === 'section' ? `Section: ${label}` : `Faculty: ${label}`;
+  const showSection = filterType === 'faculty'; // show section info in cells when viewing by faculty
+  const generated  = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+  const dayWidth   = Math.floor(78 / days.length);
+
+  const colHeaders = days.map(d => `
+    <th style="
+      background:linear-gradient(135deg,#4f46e5 0%,#7c3aed 100%);
+      color:#fff;font-weight:800;font-size:13px;
+      padding:12px 8px;text-align:center;
+      border:1px solid #4338ca;
+      letter-spacing:0.5px;
+    ">${d}</th>
+  `).join('');
+
+  const bodyRows = times.map(time => {
+    const cells = days.map(day => {
+      const cellHtml = buildCellHtml(slotMap[`${day}|${time}`], showSection);
+      return `<td style="
+        vertical-align:top;padding:8px 7px;
+        border:1px solid #e2e8f0;
+        background:#ffffff;
+        min-width:120px;
+      ">${cellHtml}</td>`;
+    }).join('');
+    return `
+      <tr>
+        <td style="
+          font-weight:700;font-size:12px;color:#374151;
+          padding:10px 12px;text-align:center;
+          background:#f8fafc;
+          border:1px solid #e2e8f0;
+          white-space:nowrap;
+          vertical-align:middle;
+        ">${time}</td>
+        ${cells}
+      </tr>`;
+  }).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Timetable — ${title}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      background: #f1f5f9;
+      padding: 28px 20px;
+      color: #1e293b;
+    }
+    @media print {
+      body { background: #fff; padding: 10px; }
+      .no-print { display: none !important; }
+      table { page-break-inside: avoid; }
+    }
+    .card {
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.08);
+      overflow: hidden;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .header {
+      background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+      padding: 24px 32px;
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .header h1 { color: #fff; font-size: 22px; font-weight: 800; letter-spacing: -0.5px; }
+    .header p  { color: rgba(255,255,255,0.75); font-size: 12px; margin-top: 4px; }
+    .legend {
+      display: flex; gap: 14px; flex-wrap: wrap;
+      padding: 14px 32px;
+      background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .legend-item { display:flex; align-items:center; gap:6px; font-size:11px; font-weight:600; color:#475569; }
+    .dot { width:10px;height:10px;border-radius:50%; flex-shrink:0; }
+    .table-wrap { overflow-x: auto; padding: 20px 24px 28px; }
+    table { border-collapse: collapse; width: 100%; table-layout: fixed; }
+    .print-btn {
+      background: linear-gradient(135deg,#4f46e5,#7c3aed);
+      color:#fff; border:none; border-radius:8px;
+      padding:9px 20px; font-size:13px; font-weight:700;
+      cursor:pointer; letter-spacing:0.3px;
+      box-shadow:0 2px 8px rgba(79,70,229,0.3);
+    }
+    .print-btn:hover { opacity:0.9; }
+    .footer { text-align:center; color:#94a3b8; font-size:11px; padding:0 0 20px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">
+      <div>
+        <h1>&#128197; University Timetable</h1>
+        <p>${filterType === 'section' ? '&#128218; Section' : '&#128100; Faculty'}: <b style="color:#fff">${label}</b> &nbsp;|&nbsp; Generated: ${generated}</p>
+      </div>
+      <button class="print-btn no-print" onclick="window.print()">&#128438; Print / Save PDF</button>
+    </div>
+    <div class="legend">
+      <span class="legend-item"><span class="dot" style="background:#3b82f6"></span>Lecture</span>
+      <span class="legend-item"><span class="dot" style="background:#8b5cf6"></span>Tutorial</span>
+      <span class="legend-item"><span class="dot" style="background:#10b981"></span>Practical</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="
+              background:#1e293b;color:#94a3b8;
+              font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+              padding:10px 8px;text-align:center;
+              border:1px solid #334155;
+              width:7%;
+            ">TIME</th>
+            ${colHeaders}
+          </tr>
+        </thead>
+        <tbody>
+          ${bodyRows}
+        </tbody>
+      </table>
+    </div>
+    <p class="footer">University Time Table Management System &nbsp;·&nbsp; Exported ${generated}</p>
+  </div>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8;' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = `timetable_${filterType}_${label}.html`;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+/* ── Export Modal ───────────────────────────────────────────────────────── */
+function ExportModal({ tickets, onClose }) {
+  const [exportType, setExportType]   = useState('section');
+  const [exportValue, setExportValue] = useState('All');
+
+  const scheduledTickets = useMemo(() => tickets.filter(t => (t.day || t.Day) && (t.time || t.Time)), [tickets]);
+
+  const sections = useMemo(() => {
+    const s = new Set(scheduledTickets.map(t => t.section || t.Section || '').filter(Boolean));
+    return ['All', ...Array.from(s).sort()];
+  }, [scheduledTickets]);
+
+  const faculties = useMemo(() => {
+    const f = new Set(scheduledTickets.map(t => t.facultyUid || t.facultyUID || t.FacultyUID || '').filter(Boolean));
+    return ['All', ...Array.from(f).sort()];
+  }, [scheduledTickets]);
+
+  const options = exportType === 'section' ? sections : faculties;
+  const handleTypeChange = (type) => { setExportType(type); setExportValue('All'); };
+
+  const scheduledCount = useMemo(() => {
+    let rows = scheduledTickets;
+    if (exportType === 'section' && exportValue !== 'All') rows = rows.filter(t => (t.section || t.Section) === exportValue);
+    else if (exportType === 'faculty' && exportValue !== 'All') rows = rows.filter(t => (t.facultyUid || t.facultyUID || t.FacultyUID) === exportValue);
+    return rows.length;
+  }, [scheduledTickets, exportType, exportValue]);
+
+  const handleExport = () => { exportTimetableAsHtml(tickets, exportType, exportValue); onClose(); };
+
+  return (
+    <div
+      className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+      onClick={e => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-2xl w-full max-w-sm overflow-hidden">
+        {/* Header */}
+        <div className="px-6 py-4 bg-gradient-to-r from-teal-500 to-emerald-500 flex items-center gap-3">
+          <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>download</span>
+          <div className="flex-1">
+            <h3 className="font-bold text-white text-sm leading-tight">Export Timetable</h3>
+            <p className="text-white/70 text-xs mt-0.5">Download as HTML timetable grid (open in browser &amp; print)</p>
+          </div>
+          <button onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+            <span className="material-symbols-outlined text-lg">close</span>
+          </button>
+        </div>
+        {/* Body */}
+        <div className="px-6 py-5 space-y-4">
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Export By</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[['section','class','Section'],['faculty','person','Faculty']].map(([val, icon, lbl]) => (
+                <button
+                  key={val}
+                  onClick={() => handleTypeChange(val)}
+                  className={`flex items-center justify-center gap-2 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                    exportType === val
+                      ? 'border-teal-400 bg-teal-50 dark:bg-teal-900/30 text-teal-700 dark:text-teal-300 shadow-sm'
+                      : 'border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[16px]" style={{ fontVariationSettings: `'FILL' ${exportType === val ? 1 : 0}` }}>{icon}</span>
+                  {lbl}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1.5">
+              {exportType === 'section' ? 'Select Section' : 'Select Faculty'}
+            </label>
+            <div className="relative">
+              <select
+                value={exportValue}
+                onChange={e => setExportValue(e.target.value)}
+                className="w-full pl-3 pr-7 py-2 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-teal-400/30 focus:border-teal-400/60 transition-all appearance-none cursor-pointer"
+              >
+                {options.map(o => <option key={o} value={o}>{o === 'All' ? `All ${exportType === 'section' ? 'Sections' : 'Faculties'}` : o}</option>)}
+              </select>
+              <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-[14px] pointer-events-none">expand_more</span>
+            </div>
+          </div>
+          <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border text-xs ${
+            scheduledCount > 0
+              ? 'bg-emerald-50 dark:bg-emerald-900/20 border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-400'
+              : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-400'
+          }`}>
+            <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>
+              {scheduledCount > 0 ? 'check_circle' : 'info'}
+            </span>
+            <span className="font-semibold">
+              {scheduledCount > 0
+                ? `${scheduledCount} scheduled slot${scheduledCount !== 1 ? 's' : ''} will be exported`
+                : 'No scheduled slots match this filter'}
+            </span>
+          </div>
+        </div>
+        {/* Footer */}
+        <div className="px-6 py-4 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-200 dark:border-slate-700 flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 py-2 text-sm font-semibold text-slate-600 dark:text-slate-300 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl hover:bg-slate-50 dark:hover:bg-slate-700 transition-all"
+          >Cancel</button>
+          <button
+            onClick={handleExport}
+            disabled={scheduledCount === 0}
+            className="flex-1 py-2 text-sm font-bold text-white bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-teal-500/20 disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <span className="material-symbols-outlined text-[15px]">download</span>
+            Export Timetable
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ── times: 09:00 → 17:00 ──────────────────────────────────────────────── */
 const TIMES = [
   '09:00','10:00','11:00','12:00',
@@ -169,7 +513,7 @@ function GridTicketCard({ ticket, onDragStart, onUnschedule, locked = false }) {
   );
 }
 
-export default function TimetableGrid({ filterSection = 'All', filterFaculty = 'All', filterCourse = 'All' }) {
+export default function TimetableGrid({ filterSection = 'All', filterFaculty = 'All', filterCourse = 'All', exportOpen = false, setExportOpen }) {
   const days        = useMemo(() => getWeekDays(new Date()), []);
   const { refreshKey, triggerRefresh } = useDataRefresh();
 
@@ -450,6 +794,8 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
 
   return (
     <div className="flex-1 overflow-hidden p-2 bg-slate-50 dark:bg-slate-900/50 flex flex-col relative z-0">
+      {/* Export Modal */}
+      {exportOpen && <ExportModal tickets={tickets} onClose={() => setExportOpen(false)} />}
       <div className={`bg-white dark:bg-slate-800 rounded shadow-soft border w-full h-full flex flex-col overflow-hidden relative transition-all duration-300 ${
         overlayActive
           ? 'border-violet-400 dark:border-violet-600 shadow-lg shadow-violet-200/30 dark:shadow-violet-900/30'
