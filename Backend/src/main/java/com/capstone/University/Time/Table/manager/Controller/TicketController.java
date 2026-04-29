@@ -2,14 +2,10 @@ package com.capstone.University.Time.Table.manager.Controller;
 
 import com.capstone.University.Time.Table.manager.DTO.TicketDto;
 import com.capstone.University.Time.Table.manager.Entity.CourseMapping;
-import com.capstone.University.Time.Table.manager.Service.TicketExcelExportService;
 import com.capstone.University.Time.Table.manager.Service.TicketService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -23,9 +19,6 @@ public class TicketController {
 
     @Autowired
     private TicketService ticketService;
-
-    @Autowired
-    private TicketExcelExportService ticketExcelExportService;
 
     @PostMapping("/generate")
     public ResponseEntity<List<TicketDto>> generateAllTickets(
@@ -93,15 +86,5 @@ public class TicketController {
     @DeleteMapping("/delete-all-tickets")
     public void deleteTicket(){
         ticketService.deleteAllTickets();
-    }
-
-    @GetMapping("/download-excel")
-    public ResponseEntity<byte[]> downloadTicketsExcel() throws IOException {
-        byte[] excelBytes = ticketExcelExportService.exportTicketsToExcel();
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.setContentDispositionFormData("attachment", "tickets.xlsx");
-        headers.setContentLength(excelBytes.length);
-        return ResponseEntity.ok().headers(headers).body(excelBytes);
     }
 }

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import UploadDropdown from '../upload/UploadDropdown';
 import UploadModal from '../upload/UploadModal';
 import { useFileUpload } from '../upload/useFileUpload';
@@ -7,7 +7,7 @@ import { useDataRefresh } from '../../context/DataRefreshContext';
 const API_BASE = "http://localhost:8080";
 
 export default function DashboardNavbar({ activeTab, onExport }) {
-  const { triggerRefresh, refreshKey } = useDataRefresh();
+  const { triggerRefresh } = useDataRefresh();
 
   const {
     fileInputRef,
@@ -23,100 +23,6 @@ export default function DashboardNavbar({ activeTab, onExport }) {
     closeResultMode
   } = useFileUpload({ onRefresh: triggerRefresh });
 
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [ticketCount, setTicketCount] = useState(0);
-  const [isDownloading, setIsDownloading] = useState(false);
-
-  // Fetch ticket count to enable/disable the download button
-  useEffect(() => {
-    if (activeTab === 'tickets') {
-      fetch(`${API_BASE}/ticket/get-all`)
-        .then(res => res.ok ? res.json() : [])
-        .then(data => setTicketCount(Array.isArray(data) ? data.length : 0))
-        .catch(() => setTicketCount(0));
-    }
-  }, [activeTab, refreshKey]);
-
-  const handleDownloadTickets = async () => {
-    setIsDownloading(true);
-    try {
-      const response = await fetch(`${API_BASE}/ticket/download-excel`);
-      if (!response.ok) throw new Error('Failed to download tickets');
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'tickets.xlsx';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      alert(`Error: ${error.message}`);
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
-  const handleDeleteAll = async () => {
-    if (!activeTab) return;
-    
-    // Convert plural tab name to singular path if needed
-    // e.g., 'courses' -> 'course', 'sections' -> 'section', 'faculties' -> 'faculty', 'rooms' -> 'room'
-    let endpointPath;
-    let label;
-    let refreshKeyName;
-    switch (activeTab) {
-      case 'courses':
-        endpointPath = 'course/delete/all';
-        label = 'courses';
-        refreshKeyName = 'course';
-        break;
-      case 'sections':
-        endpointPath = 'section/delete/all';
-        label = 'sections';
-        refreshKeyName = 'section';
-        break;
-      case 'faculties':
-        endpointPath = 'faculty/delete/all';
-        label = 'faculties';
-        refreshKeyName = 'faculty';
-        break;
-      case 'rooms':
-        endpointPath = 'room/delete/all';
-        label = 'rooms';
-        refreshKeyName = 'room';
-        break;
-      case 'tickets':
-        endpointPath = 'ticket/delete-all-tickets';
-        label = 'tickets';
-        refreshKeyName = 'ticket';
-        break;
-      default:
-        return; // For assign tabs or unknown, do nothing
-    }
-
-    const confirmDelete = window.confirm(`Are you sure you want to delete all ${label}? This cannot be undone.`);
-    if (!confirmDelete) return;
-
-    setIsDeleting(true);
-    try {
-      const response = await fetch(`${API_BASE}/${endpointPath}`, {
-        method: 'DELETE',
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Failed to delete ${label}`);
-      }
-      
-      alert(`Successfully deleted all ${label}.`);
-      triggerRefresh(refreshKeyName); // refresh the list without page reload
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      setIsDeleting(false);
-    }
-  };
 
   const [isGenerating, setIsGenerating] = useState(false);
   const [warningModal, setWarningModal] = useState(null); // { assigned: [...], unassigned: [...] }
@@ -214,34 +120,6 @@ export default function DashboardNavbar({ activeTab, onExport }) {
   return (
     <>
     <div className="h-12 bg-white dark:bg-surface-dark border-b border-slate-200 dark:border-slate-700 flex items-center px-4 gap-4 shadow-sm z-10 shrink-0 relative transition-colors duration-300">
-
-      {canDeleteAll && (
-        <button
-          onClick={handleDeleteAll}
-          disabled={isDeleting || isUploading}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 hover:bg-red-100 dark:hover:bg-red-900/40 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className="material-symbols-outlined text-[18px]">
-            {isDeleting ? "refresh" : "delete_sweep"}
-          </span>
-          {isDeleting ? "Deleting..." : `Delete All ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`}
-        </button>
-      )}
-
-      {/* Download Tickets Excel button – visible only when tickets tab is active */}
-      {activeTab === 'tickets' && (
-        <button
-          onClick={handleDownloadTickets}
-          disabled={isDownloading || ticketCount === 0}
-          title={ticketCount === 0 ? 'Generate tickets first to enable download' : `Download ${ticketCount} ticket(s) as Excel`}
-          className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/20 hover:bg-emerald-100 dark:hover:bg-emerald-900/40 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          <span className={`material-symbols-outlined text-[18px] ${isDownloading ? 'animate-spin' : ''}`}>
-            {isDownloading ? 'progress_activity' : 'download'}
-          </span>
-          {isDownloading ? 'Downloading...' : 'Download Tickets'}
-        </button>
-      )}
 
       {/* Generate Ticket button */}
       <button
