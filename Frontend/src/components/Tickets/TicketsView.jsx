@@ -51,10 +51,98 @@ function PaginationBar({ page, totalPages, perPage, total, onPageChange, onPerPa
   );
 }
 
+/* ── Mini timetable for the expanded ticket detail ───────────────────── */
+const DETAIL_DAYS  = ['Mon','Tue','Wed','Thu','Fri'];
+const DETAIL_TIMES = ['09:00','10:00','11:00','12:00','13:00','14:00','15:00','16:00','17:00'];
+
+function MiniTimetable({ title, icon, color, tickets: tix }) {
+  // Build slot map: "Day|HH:MM" → [ticket, ...]
+  const slotMap = {};
+  tix.forEach(t => {
+    const day  = t.day  || t.Day;
+    const time = t.time || t.Time;
+    if (!day || !time) return;
+    const hhmm = String(time).slice(0, 5);
+    const key  = `${day}|${hhmm}`;
+    if (!slotMap[key]) slotMap[key] = [];
+    slotMap[key].push(t);
+  });
+
+  const scheduledCount = tix.filter(t => (t.day || t.Day) && (t.time || t.Time)).length;
+
+  const colorMap = {
+    indigo: { headerBg: 'bg-indigo-50 dark:bg-indigo-900/20', headerText: 'text-indigo-700 dark:text-indigo-300', headerBorder: 'border-indigo-200 dark:border-indigo-800', badge: 'bg-indigo-100 dark:bg-indigo-800 text-indigo-700 dark:text-indigo-300', cellOccupied: 'bg-indigo-50/60 dark:bg-indigo-900/15' },
+    emerald: { headerBg: 'bg-emerald-50 dark:bg-emerald-900/20', headerText: 'text-emerald-700 dark:text-emerald-300', headerBorder: 'border-emerald-200 dark:border-emerald-800', badge: 'bg-emerald-100 dark:bg-emerald-800 text-emerald-700 dark:text-emerald-300', cellOccupied: 'bg-emerald-50/60 dark:bg-emerald-900/15' },
+  };
+  const c = colorMap[color] || colorMap.indigo;
+
+  return (
+    <div className="flex-1 min-w-[320px]">
+      <div className={`flex items-center gap-2 px-3 py-2 rounded-t-lg border ${c.headerBg} ${c.headerBorder}`}>
+        <span className="material-symbols-outlined text-[15px]" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
+        <span className={`text-xs font-bold ${c.headerText}`}>{title}</span>
+        <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full ${c.badge}`}>{scheduledCount} scheduled</span>
+      </div>
+      <div className="border border-t-0 border-slate-200 dark:border-slate-700 rounded-b-lg overflow-x-auto">
+        <table className="w-full text-left border-collapse text-[10px]">
+          <thead>
+            <tr className="bg-slate-50 dark:bg-slate-800/60">
+              <th className="px-2 py-1.5 font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider border-r border-slate-200 dark:border-slate-700 w-12">Time</th>
+              {DETAIL_DAYS.map(day => (
+                <th key={day} className="px-2 py-1.5 font-bold text-slate-500 dark:text-slate-400 text-center border-r border-slate-200 dark:border-slate-700 last:border-r-0">{day}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            {DETAIL_TIMES.map(time => (
+              <tr key={time}>
+                <td className="px-2 py-1 font-semibold text-slate-400 dark:text-slate-500 border-r border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30 whitespace-nowrap">{time}</td>
+                {DETAIL_DAYS.map(day => {
+                  const key = `${day}|${time}`;
+                  const cellTix = slotMap[key] || [];
+                  return (
+                    <td key={key} className={`px-1 py-0.5 border-r border-slate-100/60 dark:border-slate-800/40 last:border-r-0 align-top ${cellTix.length > 0 ? c.cellOccupied : ''}`}>
+                      {cellTix.map(ct => {
+                        const tid   = ct.ticketId  || ct.TicketId  || '';
+                        const crs   = ct.courseCode || ct.coursecode || ct.Coursecode || '';
+                        const sec   = ct.section   || ct.Section   || '';
+                        const fac   = ct.facultyUid || ct.facultyUID || ct.FacultyUID || '';
+                        const typeM = String(tid).match(/([LTP])\d+$/);
+                        const tp    = ct.mappingType || ct.MappingType || (typeM ? typeM[1] : '');
+                        const tpLbl = { L: 'Lec', T: 'Tut', P: 'Prac' }[tp] || tp;
+                        const tpClr = tp === 'L' ? 'bg-blue-500' : tp === 'T' ? 'bg-purple-500' : 'bg-emerald-500';
+                        return (
+                          <div key={tid} className="rounded border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1 mb-0.5 shadow-sm">
+                            <div className="flex items-center justify-between gap-0.5 mb-0.5">
+                              <span className="font-black text-slate-800 dark:text-slate-100 text-[10px] truncate">{crs}</span>
+                              <span className={`shrink-0 text-[7px] font-bold px-1 py-px rounded text-white ${tpClr}`}>{tpLbl}</span>
+                            </div>
+                            <div className="text-[9px] text-slate-500 dark:text-slate-400">
+                              Sec <b className="text-slate-700 dark:text-slate-200">{sec}</b>
+                              {fac && <> · <span className="font-mono text-emerald-600 dark:text-emerald-400">{fac}</span></>}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
 export default function TicketsView() {
   const [tickets,  setTickets]  = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState(null);
+
+  // Expanded ticket row
+  const [expandedTicketId, setExpandedTicketId] = useState(null);
 
   // Filters
   const [filterCourse,  setFilterCourse]  = useState("");
@@ -245,7 +333,7 @@ export default function TicketsView() {
                       ))}
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                  <tbody>
                     {pageRows.map(t => {
                       const ticketId   = t.ticketId   || t.TicketId  || "—";
                       const course     = t.courseCode  || t.coursecode || t.Coursecode || "—";
@@ -258,42 +346,131 @@ export default function TicketsView() {
                       const day        = t.day  || t.Day  || null;
                       const time       = t.time || t.Time || null;
                       const room       = t.roomNo || t.RoomNo || null;
+                      const isExpanded = expandedTicketId === ticketId;
+
+                      // Tickets for the same section
+                      const sectionTickets = section && section !== "—"
+                        ? tickets.filter(st => (st.section || st.Section) === section)
+                        : [];
+                      // Tickets for the same faculty
+                      const facultyTickets = faculty
+                        ? tickets.filter(ft => (ft.facultyUid || ft.facultyUID || ft.FacultyUID) === faculty)
+                        : [];
+
                       return (
-                        <tr key={ticketId} className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors">
-                          <td className="px-4 py-3 font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400 whitespace-nowrap">{ticketId}</td>
-                          <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{course}</td>
-                          <td className="px-4 py-3 text-slate-600 dark:text-slate-300">{section}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400">G{group}</td>
-                          <td className="px-4 py-3">
-                            <span className="px-2 py-0.5 text-[10px] font-bold rounded uppercase border bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700">{type}</span>
-                          </td>
-                          <td className="px-4 py-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{lectureNo}</td>
-                          <td className="px-4 py-3">
-                            {faculty
-                              ? <span className="px-2 py-0.5 text-xs font-mono font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded">{faculty}</span>
-                              : <span className="text-xs text-slate-400 italic">Unassigned</span>}
-                          </td>
-                          <td className="px-4 py-3">
-                            {mergeCode && mergeCode !== ""
-                              ? <span className="text-xs font-mono text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded">{mergeCode}</span>
-                              : <span className="text-xs text-slate-300 dark:text-slate-600">—</span>}
-                          </td>
-                          <td className="px-4 py-3 text-center">
-                            {day && time
-                              ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
-                                  <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
-                                  Scheduled
-                                </span>
-                              : <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-                                  <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>pending</span>
-                                  Unscheduled
-                                </span>
-                            }
-                          </td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{day || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{time || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-                          <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{room || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
-                        </tr>
+                        <React.Fragment key={ticketId}>
+                          <tr
+                            onClick={() => setExpandedTicketId(isExpanded ? null : ticketId)}
+                            className={`cursor-pointer transition-colors ${
+                              isExpanded
+                                ? 'bg-indigo-50/60 dark:bg-indigo-900/15 border-l-2 border-l-indigo-500'
+                                : 'hover:bg-slate-50/60 dark:hover:bg-slate-800/40 border-l-2 border-l-transparent'
+                            }`}
+                          >
+                            <td className="px-4 py-3 whitespace-nowrap">
+                              <div className="flex items-center gap-1.5">
+                                <span className={`material-symbols-outlined text-[14px] text-slate-400 dark:text-slate-500 transition-transform ${isExpanded ? 'rotate-90' : ''}`} style={{ fontVariationSettings: "'FILL' 0" }}>chevron_right</span>
+                                <span className="font-mono text-xs font-bold text-indigo-600 dark:text-indigo-400">{ticketId}</span>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 font-semibold text-slate-900 dark:text-slate-100 whitespace-nowrap">{course}</td>
+                            <td className="px-4 py-3">
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold bg-indigo-50 dark:bg-indigo-900/20 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 rounded">
+                                <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>class</span>
+                                {section}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400">G{group}</td>
+                            <td className="px-4 py-3">
+                              <span className="px-2 py-0.5 text-[10px] font-bold rounded uppercase border bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700">{type}</span>
+                            </td>
+                            <td className="px-4 py-3 text-center text-sm font-bold text-slate-700 dark:text-slate-200">{lectureNo}</td>
+                            <td className="px-4 py-3">
+                              {faculty
+                                ? <span className="px-2 py-0.5 text-xs font-mono font-semibold bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 rounded">{faculty}</span>
+                                : <span className="text-xs text-slate-400 italic">Unassigned</span>}
+                            </td>
+                            <td className="px-4 py-3">
+                              {mergeCode && mergeCode !== ""
+                                ? <span className="text-xs font-mono text-purple-700 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 px-2 py-0.5 rounded">{mergeCode}</span>
+                                : <span className="text-xs text-slate-300 dark:text-slate-600">—</span>}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {day && time
+                                ? <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                                    <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>lock</span>
+                                    Scheduled
+                                  </span>
+                                : <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                                    <span className="material-symbols-outlined text-[11px]" style={{ fontVariationSettings: "'FILL' 1" }}>pending</span>
+                                    Unscheduled
+                                  </span>
+                              }
+                            </td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{day || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs whitespace-nowrap">{time || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                            <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs">{room || <span className="text-slate-300 dark:text-slate-600">—</span>}</td>
+                          </tr>
+
+                          {/* ── Expanded detail row: Section + Faculty timetables ── */}
+                          {isExpanded && (
+                            <tr>
+                              <td colSpan={12} className="p-0">
+                                <div className="px-6 py-4 bg-slate-50/80 dark:bg-slate-800/40 border-y border-slate-200 dark:border-slate-700">
+                                  {/* Ticket summary header */}
+                                  <div className="flex items-center gap-3 mb-4 flex-wrap">
+                                    <span className="material-symbols-outlined text-[18px] text-indigo-500" style={{ fontVariationSettings: "'FILL' 1" }}>info</span>
+                                    <span className="text-sm font-bold text-slate-800 dark:text-white">Timetable for Ticket <span className="font-mono text-indigo-600 dark:text-indigo-400">{ticketId}</span></span>
+                                    <span className="text-xs text-slate-500 dark:text-slate-400">—</span>
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-900/20 px-2 py-0.5 rounded border border-indigo-200 dark:border-indigo-800">
+                                      <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>class</span>
+                                      Section: {section}
+                                    </span>
+                                    {faculty && (
+                                      <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-900/20 px-2 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                                        <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>person</span>
+                                        Faculty: {faculty}
+                                      </span>
+                                    )}
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700">
+                                      <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>book</span>
+                                      {course}
+                                    </span>
+                                  </div>
+
+                                  {/* Two side-by-side mini timetables */}
+                                  <div className="flex gap-4 flex-wrap">
+                                    {section && section !== "—" && (
+                                      <MiniTimetable
+                                        title={`Section ${section} Timetable`}
+                                        icon="class"
+                                        color="indigo"
+                                        tickets={sectionTickets}
+                                      />
+                                    )}
+                                    {faculty && (
+                                      <MiniTimetable
+                                        title={`Faculty ${faculty} Timetable`}
+                                        icon="person"
+                                        color="emerald"
+                                        tickets={facultyTickets}
+                                      />
+                                    )}
+                                    {!faculty && (
+                                      <div className="flex-1 min-w-[320px] flex items-center justify-center p-8 rounded-lg border border-dashed border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800/50">
+                                        <div className="text-center">
+                                          <span className="material-symbols-outlined text-3xl text-slate-300 dark:text-slate-600 mb-2 block">person_off</span>
+                                          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">No faculty assigned</p>
+                                          <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-0.5">Assign a faculty to see their timetable here</p>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                        </React.Fragment>
                       );
                     })}
                   </tbody>
