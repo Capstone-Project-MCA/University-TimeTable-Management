@@ -47,7 +47,6 @@ public class UploadCourseFileService {
         List<Pair<Course, List<String>>> faultyCourses = new ArrayList<>();
 
         Set<String> courseCodesSet = new HashSet<>();
-        Set<String> courseTitlesSet = new HashSet<>();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
             DataFormatter formatter = new DataFormatter();
@@ -96,15 +95,7 @@ public class UploadCourseFileService {
                     int colIndex = cellTitle.getColumnIndex() + 1;
 
                     if (!courseTitle.isEmpty()) {
-                        if (courseTitlesSet.add(courseTitle)) {
-                            course.setCourseTitle(courseTitle);
-                        } else {
-                            faults.add("Duplicate Course Title found at Row -> "
-                                    + (row.getRowNum() + 1)
-                                    + " and Col -> "
-                                    + colIndex);
-                        }
-
+                        course.setCourseTitle(courseTitle);
                     } else {
                         faults.add("Course Title is empty at Row -> "
                                 + (row.getRowNum() + 1)

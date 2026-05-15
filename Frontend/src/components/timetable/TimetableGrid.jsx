@@ -807,8 +807,20 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
           <div className="px-3 py-1.5 bg-violet-50 dark:bg-violet-900/30 border-b border-violet-200 dark:border-violet-700 flex items-center gap-2 shrink-0 animate-pulse-once">
             <span className="material-symbols-outlined text-[14px] text-violet-500 dark:text-violet-400" style={{ fontVariationSettings: "'FILL' 1" }}>person_search</span>
             <span className="text-[11px] font-bold text-violet-700 dark:text-violet-300">
-              Faculty overlay: <span className="font-mono">{focusedFaculty}</span>
+              Faculty: <span className="font-mono">{focusedFaculty}</span>
             </span>
+            {focusedTicket?.section && (
+              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-700">
+                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>class</span>
+                Section: <span className="font-mono">{focusedTicket.section}</span>
+              </span>
+            )}
+            {focusedTicket?.courseCode && (
+              <span className="text-[11px] font-bold text-slate-600 dark:text-slate-400 flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                <span className="material-symbols-outlined text-[12px]" style={{ fontVariationSettings: "'FILL' 1" }}>book</span>
+                {focusedTicket.courseCode}
+              </span>
+            )}
             <div className="ml-2 flex items-center gap-2 text-[10px] font-semibold flex-wrap">
               <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-amber-400/80"/> Busy elsewhere</span>
               <span className="flex items-center gap-1"><span className="inline-block w-2.5 h-2.5 rounded-sm bg-violet-400/80"/> Selected slot</span>
@@ -983,7 +995,7 @@ export default function TimetableGrid({ filterSection = 'All', filterFaculty = '
                           <span className="material-symbols-outlined text-amber-400/70 dark:text-amber-500/60" style={{ fontSize: 14, fontVariationSettings: "'FILL' 1" }}>event_busy</span>
                           <span className="text-[8px] font-bold text-amber-600/70 dark:text-amber-400/60 text-center leading-tight">
                             {overlayTicketsHere[0] ? (
-                              (overlayTicketsHere[0].courseCode || overlayTicketsHere[0].Coursecode || '') + ' · ' +
+                              (overlayTicketsHere[0].courseCode || overlayTicketsHere[0].Coursecode || '') + ' · Sec ' +
                               (overlayTicketsHere[0].section    || overlayTicketsHere[0].Section    || '')
                             ) : 'Busy'}
                           </span>

@@ -116,6 +116,13 @@ export default function DashboardNavbar({ activeTab, onExport }) {
 
   const handleWarningMergedCancel = () => setWarningModalMerged(null);
 
+  const handleWarningMergedConfirm = async () => {
+    const modal = warningModalMerged;
+    setWarningModalMerged(null);
+    await doGenerateTickets(modal.assigned);
+  };
+
+  const canDeleteAll = ['courses', 'sections', 'faculties', 'rooms', 'tickets'].includes(activeTab);
 
   return (
     <>
