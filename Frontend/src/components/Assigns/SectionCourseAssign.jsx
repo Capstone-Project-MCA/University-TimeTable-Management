@@ -145,7 +145,8 @@ const BulkAssignment = () => {
     await doAssign();
   };
 
-  const doAssign = async () => {
+  const doAssign = async (skippingConflicts = false) => {
+    const skippedCount = skippingConflicts ? conflictList.length : 0;
     setAssigning(true);
     setConflictDialogOpen(false);
     setResult(null);
@@ -165,13 +166,14 @@ const BulkAssignment = () => {
         const errData = await res.json().catch(() => null);
         const rawMessage = errData?.message || `Server error (${res.status})`;
 
-        const colonIdx = rawMessage.indexOf(":");
-        if (colonIdx !== -1 && rawMessage.toLowerCase().includes("already assigned")) {
-          const detailsPart = rawMessage.substring(colonIdx + 1).trim();
-          const lines = detailsPart.split(",").map(s => s.trim()).filter(Boolean);
-          setErrorList(lines);
-          setShowErrors(lines.length > 0);
-          setResult({ success: false, message: "Some courses are already assigned. See warnings below." });
+        // If all combinations were duplicates, the backend now throws only in that case
+        if (rawMessage.toLowerCase().includes("already assigned")) {
+          setResult({
+            success: false,
+            message: skippingConflicts
+              ? "All selected combinations were already assigned — nothing new to add."
+              : "Some courses are already assigned. Use \"Continue Anyway\" to skip them.",
+          });
         } else {
           setResult({ success: false, message: rawMessage });
         }
@@ -186,7 +188,12 @@ const BulkAssignment = () => {
             return sum + courses.length;
           }, 0)
         : 0;
-      setResult({ success: true, message: `Successfully assigned ${totalCreated} course mapping(s).` });
+
+      let successMsg = `Successfully assigned ${totalCreated} course mapping(s).`;
+      if (skippedCount > 0) {
+        successMsg += ` (${skippedCount} already-assigned pair${skippedCount !== 1 ? 's' : ''} skipped)`;
+      }
+      setResult({ success: true, message: successMsg });
       setSelectedSections([]);
       setSelectedCourses([]);
     } catch (err) {
@@ -251,7 +258,7 @@ const BulkAssignment = () => {
                   Go Back & Remove
                 </button>
                 <button
-                  onClick={doAssign}
+                  onClick={() => doAssign(true)}
                   disabled={assigning}
                   className="flex-1 px-4 py-2.5 text-sm font-bold text-white bg-amber-500 hover:bg-amber-600 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-amber-500/20 disabled:opacity-50"
                 >

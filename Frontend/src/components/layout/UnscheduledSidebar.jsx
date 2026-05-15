@@ -131,12 +131,14 @@ export default function UnscheduledSidebar({
   filterFaculty = 'All', setFilterFaculty,
   filterCourse  = 'All', setFilterCourse,
 }) {
-  const [courses,   setCourses]   = useState([])
-  const [faculties, setFaculties] = useState([])
-  const [rooms,     setRooms]     = useState([])
-  const [sections,  setSections]  = useState([])
-  const [tickets,   setTickets]   = useState([])
-  const [searchQuery, setSearchQuery] = useState('')
+  const [courses,        setCourses]        = useState([])
+  const [faculties,      setFaculties]      = useState([])
+  const [rooms,          setRooms]          = useState([])
+  const [sections,       setSections]       = useState([])
+  const [tickets,        setTickets]        = useState([])
+  const [searchQuery,    setSearchQuery]    = useState('')
+  // Dynamically computed load per faculty UID: { [uid]: number }
+  const [facultyLoadMap, setFacultyLoadMap] = useState({})
 
   // Filter panel state (tickets tab)
   const [filterOpen,    setFilterOpen]    = useState(false)
@@ -163,6 +165,34 @@ export default function UnscheduledSidebar({
     setFilterOpen(false); setFilterSection?.('All'); setFilterFaculty?.('All'); setFilterCourse?.('All')
   }, [activeTab])
 
+  // ── Helper: compute currentLoad for every faculty from real mapping data ──
+  const fetchAndComputeFacultyLoads = async () => {
+    try {
+      const res = await fetch('http://localhost:8080/mappings')
+      if (!res.ok) return
+      const mappings = await res.json()
+      const loadMap = {}
+      for (const m of mappings) {
+        const uid = m.facultyUID || m.facultyUid || m.FacultyUID || ''
+        if (!uid) continue  // skip unassigned mappings
+        // Only count the hours relevant to this mapping's type:
+        //   L-type → L hours (lecture), T-type → T hours (tutorial), P-type → P hours (practical)
+        // DO NOT sum all three — each mapping row stores the full course LTP but
+        // represents only one component, so triple-counting would inflate the load.
+        const type = m.mappingType || m.MappingType || ''
+        let contrib = 0
+        if (type === 'L')      contrib = m.l ?? m.L ?? 0
+        else if (type === 'T') contrib = m.t ?? m.T ?? 0
+        else if (type === 'P') contrib = m.p ?? m.P ?? 0
+        else                   contrib = (m.l ?? m.L ?? 0) // fallback: lecture hours only
+        loadMap[uid] = (loadMap[uid] ?? 0) + contrib
+      }
+      setFacultyLoadMap(loadMap)
+    } catch (e) {
+      console.warn('Could not compute faculty loads from mappings:', e)
+    }
+  }
+
   useEffect(() => {
     setSearchQuery('')
 
@@ -179,6 +209,8 @@ export default function UnscheduledSidebar({
           .get('http://localhost:8080/faculty/all')
           .then((res) => setFaculties(res.data))
           .catch((err) => console.error('Error fetching faculties:', err))
+        // Also compute real loads from mappings
+        fetchAndComputeFacultyLoads()
         break
 
       case 'rooms':
@@ -205,6 +237,7 @@ export default function UnscheduledSidebar({
       default:
         break
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab])
 
   // Auto-refresh when an upload/delete completes for the currently visible tab
@@ -222,6 +255,10 @@ export default function UnscheduledSidebar({
       tickets:   () => axios.get('http://localhost:8080/ticket/get-all').then(r => setTickets(r.data)),
     };
     fetchers[activeTab]?.().catch(err => console.error('Auto-refresh failed:', err));
+    // Always recompute faculty loads when any mappings/faculty refresh fires
+    if (!lastRefreshedEntity || lastRefreshedEntity === 'faculty' || lastRefreshedEntity === 'mappings') {
+      fetchAndComputeFacultyLoads()
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey])
 
@@ -720,8 +757,14 @@ export default function UnscheduledSidebar({
               const facultyName   = item.facultyName   || item.FacultyName   || ''
               const facultyDomain = item.facultyDomain || item.FacultyDomain || ''
               const designation   = item.designation   || item.Designation   || ''
-              const currentLoad   = item.currentLoad   ?? item.CurrentLoad   ?? 0
+              // ExpectedLoad from DB = the faculty's total load quota (max hours they should carry)
+              // CurrentLoad from DB  = a stale static value from file upload (not reliable after assignments)
+              // computedLoad from mappings = dynamically computed actual load = true numerator
               const expectedLoad  = item.expectedLoad  ?? item.ExpectedLoad  ?? 0
+              const computedLoad  = facultyLoadMap[facultyUID]
+              const currentLoad   = computedLoad !== undefined
+                ? computedLoad
+                : (item.currentLoad ?? item.CurrentLoad ?? 0)
               return (
                 <FacultyCard
                   key={facultyUID}

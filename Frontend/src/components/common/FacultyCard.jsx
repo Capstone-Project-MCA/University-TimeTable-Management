@@ -48,18 +48,44 @@ export default function FacultyCard({ uid, name, department, designation, curren
       </div>
 
       {/* Row 4: load bar */}
-      {(currentLoad != null || expectedLoad != null) && (
-        <div className="flex items-center gap-1.5 mt-1 pt-1 border-t border-slate-100 dark:border-slate-700/50">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Load</span>
-          <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-400 dark:bg-indigo-500 rounded-full transition-all"
-              style={{ width: expectedLoad > 0 ? `${Math.min(100, (currentLoad / expectedLoad) * 100)}%` : '0%' }}
-            />
+      {(currentLoad != null || expectedLoad != null) && (() => {
+        const cl  = currentLoad  ?? 0;
+        const el  = expectedLoad ?? 0;
+        const pct = el > 0 ? Math.min(100, Math.round((cl / el) * 100)) : 0;
+        const remaining = el - cl;
+        const barColor =
+          pct >= 100 ? 'bg-red-500 dark:bg-red-500' :
+          pct >= 90  ? 'bg-red-400 dark:bg-red-400' :
+          pct >= 70  ? 'bg-amber-400 dark:bg-amber-400' :
+          'bg-emerald-400 dark:bg-emerald-500';
+        const textColor =
+          pct >= 90 ? 'text-red-500 dark:text-red-400' :
+          pct >= 70 ? 'text-amber-500 dark:text-amber-400' :
+          'text-emerald-600 dark:text-emerald-400';
+        return (
+          <div className="mt-1 pt-1 border-t border-slate-100 dark:border-slate-700/50 space-y-0.5">
+            <div className="flex items-center gap-1.5">
+              <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider shrink-0">Load</span>
+              <div className="flex-1 h-1 bg-slate-100 dark:bg-slate-700 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-500 ${barColor}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              <span className={`text-[9px] font-bold shrink-0 ${textColor}`}>{cl}/{el}</span>
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-[9px] text-slate-400">{pct}% used</span>
+              {pct >= 100
+                ? <span className="text-[8px] font-bold text-red-500 bg-red-50 dark:bg-red-900/30 px-1 py-0.5 rounded leading-none">Full</span>
+                : pct >= 70
+                ? <span className="text-[8px] font-bold text-amber-500 bg-amber-50 dark:bg-amber-900/30 px-1 py-0.5 rounded leading-none">Near limit</span>
+                : <span className="text-[8px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-900/30 px-1 py-0.5 rounded leading-none">+{remaining} free</span>
+              }
+            </div>
           </div>
-          <span className="text-[9px] text-slate-400 shrink-0">{currentLoad ?? 0}/{expectedLoad ?? 0}</span>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }

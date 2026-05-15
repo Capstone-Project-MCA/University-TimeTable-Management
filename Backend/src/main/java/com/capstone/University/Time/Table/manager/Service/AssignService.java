@@ -181,7 +181,10 @@ public class AssignService {
             assigns.add(Pair.of(sectionDto, courses));
         }
 
-        if(!errors.isEmpty()){
+        // If there were some duplicates but also some new assignments were created, return the successes.
+        // Only throw if every single combination was a duplicate (nothing new was saved).
+        boolean anyNewAssignment = assigns.stream().anyMatch(p -> !p.getRight().isEmpty());
+        if (!anyNewAssignment && !errors.isEmpty()) {
             throw new DuplicateResourceException("Courses are already assigned to sections: " + String.join(", ", errors));
         }
 
